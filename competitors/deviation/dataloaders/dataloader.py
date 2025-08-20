@@ -1,7 +1,7 @@
 #from datasets import mvtecad
 from math import ceil
 
-from datasets import custom
+from competitors.deviation.datasets import custom
 from torch.utils.data import DataLoader
 from competitors.deviation.dataloaders.utlis import worker_init_fn_seed, BalancedBatchSampler
 
