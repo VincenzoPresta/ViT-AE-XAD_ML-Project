@@ -1,11 +1,11 @@
 import numpy as np
 import torch
-from modeling.net import SemiADNet
-from datasets import mvtecad
+from competitors.deviation.modeling.net import SemiADNet
+from competitors.deviation.datasets import mvtecad
 import cv2
 import os
 import argparse
-from modeling.layers import build_criterion
+from competitors.deviation.modeling.layers import build_criterion
 from utils import aucPerformance
 from scipy.ndimage.filters import gaussian_filter
 
