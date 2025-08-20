@@ -2,7 +2,7 @@ import numpy as np
 import os, sys
 
 import torch
-from datasets.base_dataset import BaseADDataset
+from competitors.deviation.datasets.base_dataset import BaseADDataset
 from PIL import Image
 from torchvision.transforms.functional import to_tensor, to_pil_image
 from torchvision import transforms
