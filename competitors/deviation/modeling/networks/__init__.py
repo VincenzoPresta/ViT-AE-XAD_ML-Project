@@ -1,6 +1,9 @@
 from torchvision.models import alexnet
-from modeling.networks.resnet18 import feature_resnet18, feature_resnet50
-from modeling.networks.alexnet import feature_alexnet
+#from modeling.networks.resnet18 import feature_resnet18, feature_resnet50
+#from modeling.networks.alexnet import feature_alexnet
+
+from competitors.deviation.modeling.networks.resnet18 import feature_resnet18, feature_resnet50
+from competitors.deviation.modeling.networks.alexnet import feature_alexnet
 
 NET_OUT_DIM = {'alexnet': 256, 'resnet18': 512, 'resnet50': 2048}
 
