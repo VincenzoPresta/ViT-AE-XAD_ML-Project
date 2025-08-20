@@ -5,7 +5,8 @@ from tqdm import tqdm
 
 #from modeling.net import SemiADNet
 from competitors.deviation.modeling.net import SemiADNet
-from datasets import mvtecad
+#from datasets import mvtecad
+from competitors.deviation.datasets import mvtecad
 import cv2
 import os
 import argparse
