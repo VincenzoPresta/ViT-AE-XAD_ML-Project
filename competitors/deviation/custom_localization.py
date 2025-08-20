@@ -10,11 +10,10 @@ from competitors.deviation.datasets import mvtecad
 import cv2
 import os
 import argparse
-from competitors.deviation.modeling.layers import build_criterion
 #from utils import aucPerformance
 
-from competitors.deviation import utils 
-from utils import aucPerformance
+from competitors.deviation.modeling.layers import build_criterion
+
 from scipy.ndimage.filters import gaussian_filter
 
 np.seterr(divide='ignore',invalid='ignore')
