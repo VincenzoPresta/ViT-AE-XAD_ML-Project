@@ -10,7 +10,7 @@ from competitors.deviation.datasets import mvtecad
 import cv2
 import os
 import argparse
-from modeling.layers import build_criterion
+from competitors.deviation.modeling.layers import build_criterion
 from utils import aucPerformance
 from scipy.ndimage.filters import gaussian_filter
 
