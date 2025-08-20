@@ -7,7 +7,9 @@ import os
 
 from scipy.ndimage import gaussian_filter
 
-from custom_localization import get_heatmaps_and_scores
+#from custom_localization import get_heatmaps_and_scores
+
+from competitors.deviation.custom_localization import get_heatmaps_and_scores
 from dataloaders.dataloader import build_dataloader
 from localization import farward_hook, backward_hook, convert_to_grayscale
 from modeling.net import SemiADNet
