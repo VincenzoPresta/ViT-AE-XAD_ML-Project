@@ -3,7 +3,8 @@ import torch
 from PIL import Image
 from tqdm import tqdm
 
-from modeling.net import SemiADNet
+#from modeling.net import SemiADNet
+from competitors.deviation.modeling.net import SemiADNet
 from datasets import mvtecad
 import cv2
 import os
