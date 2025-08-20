@@ -1,6 +1,5 @@
 import argparse
 import os
-import sys
 import shutil
 import pickle
 
@@ -8,22 +7,12 @@ import numpy as np
 import torch
 from codecarbon import EmissionsTracker
 
-# --- Patch per far trovare FCDD ---
-fcdd_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "fcdd/python"))
-if fcdd_path not in sys.path:
-    sys.path.insert(0, fcdd_path)
-
-print("[DEBUG] PYTHONPATH patchato, FCDD import disponibile da:", fcdd_path)
-# ----------------------------------
 
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
     mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes
-#from run_fcdd import launch as launch_fcdd - questo non funziona
-#from run_deviation import launch as launch_dev - idem
 
-
-from competitors.fcdd.run_fcdd import launch as launch_fcdd
-from competitors.deviation.run_deviation import launch as launch_dev
+from run_fcdd import launch as launch_fcdd 
+from run_deviation import launch as launch_dev 
 
 from aexad_script import launch as launch_aexad
 
