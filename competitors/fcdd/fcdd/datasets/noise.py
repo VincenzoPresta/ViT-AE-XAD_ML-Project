@@ -3,7 +3,7 @@ from typing import Tuple
 import numpy as np
 import torch
 from kornia import gaussian_blur2d
-from scipy import signal
+from scipy.signal import windows as signal
 from skimage.transform import rotate as im_rotate
 
 
