@@ -29,7 +29,7 @@ class ADImageDatasetGTM(TorchvisionDataset):
 
     def __init__(self, root: str, normal_class: int, preproc: str, nominal_label: int,
                  supervise_mode: str, noise_mode: str, oe_limit: int, online_supervision: bool,
-                 logger: Logger = None, shape: tuple = (3, 28, 28)):
+                 logger: Logger = None, shape: tuple = (3, 224, 224)):
         """
         :param root: root directory where data is found.
         :param normal_class: the class considered normal.
@@ -46,6 +46,7 @@ class ADImageDatasetGTM(TorchvisionDataset):
         """
         assert online_supervision, 'Artificial anomaly generation for custom datasets needs to be online'
         super().__init__(root, logger=logger)
+        
 
         self.n_classes = 2
         self.normal_classes = tuple([0])
@@ -53,6 +54,10 @@ class ADImageDatasetGTM(TorchvisionDataset):
         assert nominal_label in [0, 1]
         self.nominal_label = nominal_label
         self.anomalous_label = 1 if self.nominal_label == 0 else 0
+        
+        #forzo la shape a quello che il modello si aspetta
+        self.shape = (3, 224, 224)
+
 
         # min max after gcn l1 norm has been applied
         min_max_l1 = [
@@ -177,9 +182,11 @@ class ADImageDatasetGTM(TorchvisionDataset):
         if preproc == 'lcn':
             assert self.raw_shape == self.shape, 'in case of no augmentation, raw shape needs to fit net input shape'
             img_gtm_transform = img_gtm_test_transform = MultiCompose([
+                transforms.Resize((224,224), interpolation=Image.NEAREST),
                 transforms.ToTensor(),
             ])
             test_transform = transform = transforms.Compose([
+                transforms.Resize((224,224)),
                 transforms.Lambda(lambda x: local_contrast_normalization(x, scale='l1')),
                 transforms.Normalize(
                     min_max_l1[normal_class][0],
@@ -189,25 +196,28 @@ class ADImageDatasetGTM(TorchvisionDataset):
         elif preproc in ['', None, 'default', 'none']:
             assert self.raw_shape == self.shape, 'in case of no augmentation, raw shape needs to fit net input shape'
             img_gtm_transform = img_gtm_test_transform = MultiCompose([
+                transforms.Resize((224,224), interpolation=Image.NEAREST),
                 transforms.ToTensor(),
             ])
             test_transform = transform = transforms.Compose([
+                transforms.Resize((224,224)),
                 transforms.Normalize(mean[normal_class], std[normal_class])
             ])
         elif preproc in ['aug1']:
             img_gtm_transform = MultiCompose([
-                transforms.RandomChoice(
-                    [transforms.RandomCrop(self.shape[-1], padding=0), transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST)]
-                ),
+                transforms.Resize((224,224), interpolation=Image.NEAREST),   # 🔧 forza la size
                 transforms.ToTensor(),
             ])
-            img_gtm_test_transform = MultiCompose(
-                [transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST), transforms.ToTensor()]
-            )
+            img_gtm_test_transform = MultiCompose([
+                transforms.Resize((224,224), interpolation=Image.NEAREST),
+                transforms.ToTensor()
+            ])
             test_transform = transforms.Compose([
+                transforms.Resize((224,224)),   # 🔧
                 transforms.Normalize(mean[normal_class], std[normal_class])
             ])
             transform = transforms.Compose([
+                transforms.Resize((224,224)),   # 🔧
                 transforms.ToPILImage(),
                 transforms.RandomChoice([
                     transforms.ColorJitter(0.04, 0.04, 0.04, 0.04),
@@ -221,15 +231,15 @@ class ADImageDatasetGTM(TorchvisionDataset):
             ])
         elif preproc in ['lcnaug1']:
             img_gtm_transform = MultiCompose([
-                transforms.RandomChoice(
-                    [transforms.RandomCrop(self.shape[-1], padding=0), transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST)]
-                ),
+                transforms.Resize((224,224), interpolation=Image.NEAREST),   # 🔧 forza resize
                 transforms.ToTensor(),
             ])
-            img_gtm_test_transform = MultiCompose(
-                [transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST), transforms.ToTensor()]
-            )
+            img_gtm_test_transform = MultiCompose([
+                transforms.Resize((224,224), interpolation=Image.NEAREST),   # 🔧 forza resize
+                transforms.ToTensor()
+            ])
             test_transform = transforms.Compose([
+                transforms.Resize((224,224)),   # 🔧 forza resize
                 transforms.Lambda(lambda x: local_contrast_normalization(x, scale='l1')),
                 transforms.Normalize(
                     min_max_l1[normal_class][0],
@@ -237,6 +247,7 @@ class ADImageDatasetGTM(TorchvisionDataset):
                 )
             ])
             transform = transforms.Compose([
+                transforms.Resize((224,224)),   # 🔧 forza resize
                 transforms.ToPILImage(),
                 transforms.RandomChoice([
                     transforms.ColorJitter(0.04, 0.04, 0.04, 0.04),
@@ -252,6 +263,7 @@ class ADImageDatasetGTM(TorchvisionDataset):
                     [ma - mi for ma, mi in zip(min_max_l1[normal_class][1], min_max_l1[normal_class][0])]
                 )
             ])
+
         else:
             raise ValueError('Preprocessing pipeline {} is not known.'.format(preproc))
 
