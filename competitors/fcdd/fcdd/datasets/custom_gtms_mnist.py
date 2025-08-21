@@ -126,6 +126,10 @@ class ADImageDatasetGTM(TorchvisionDataset):
 
         # ----------------------------- Aggiunte ora --------------------------------
         self.train_images = np.load(os.path.join(root, 'X_train.npy'))
+        
+        if self.train_images.shape[1] == 1:
+            self.train_images = np.repeat(self.train_images, 3, axis=1) # Se il dataset è in scala di grigi (1 canale), replico il canale 3 volte per avere RGB
+        
         self.train_labels = np.load(os.path.join(root, 'Y_train.npy'))
         #img_shape = self.train_images.shape
         #self.train_gt = np.full((img_shape[0], 1, img_shape[2], img_shape[3]), fill_value=-1)
@@ -135,6 +139,10 @@ class ADImageDatasetGTM(TorchvisionDataset):
         self.train_gt = np.load(os.path.join(root, 'GT_train.npy'))[anom_ids]
 
         self.test_images = np.load(os.path.join(root, 'X_test.npy'))
+        
+        if self.test_images.shape[1] == 1:
+            self.test_images = np.repeat(self.test_images, 3, axis=1)
+        
         self.test_labels = np.load(os.path.join(root, 'Y_test.npy'))
         #img_shape = self.test_images.shape
         #self.test_gt = np.full((img_shape[0], 1, img_shape[2], img_shape[3]), fill_value=-1)
