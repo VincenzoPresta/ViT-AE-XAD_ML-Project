@@ -391,7 +391,10 @@ class ImageFolderDatasetGTM(GTMapADDataset):
 
         # TODO vedere come caricare la gt
         if target == 1:
-            gt = torch.from_numpy(self.gts[self.ids_anom[index]]).mul(255).mul(255).byte()
+            gt = self.gts[self.ids_anom[index]]
+            if gt.ndim == 2: # MNIST masks are (H,W)
+                gt = np.expand_dims(gt, axis=0) # diventa (1,H,W)
+            gt = torch.from_numpy(gt).mul(255).byte()
             gt = to_pil_image(gt)
         else:
            gt = to_pil_image(np.zeros((224, 224, 3), dtype=np.uint8))
