@@ -433,11 +433,15 @@ class ImageFolderDatasetGTM(GTMapADDataset):
         else:
             #path, _ = self.samples[index]
             #gt_path, _ = self.gtm_samples[index]
-            #img = self.loader(path)
-            img = torch.from_numpy(self.images[index]).mul(255).byte()
+            img = torch.from_numpy(self.images[index])
+
+            # 🔧 fix: se è (H,W) o (H,1,W), normalizza a (1,H,W)
+            if img.ndim == 2:
+                img = img.unsqueeze(0)                # (H,W) → (1,H,W)
+            elif img.ndim == 3 and img.shape[1] == 1: 
+                img = img.permute(1,0,2)              # (H,1,W) → (1,H,W)
+
             img = to_pil_image(img)
-            #if gt_path is not None:
-            #    gt = self.loader(gt_path)
 
         if gt is None:
             # gt is assumed to be 1 for anoms always (regardless of the anom_label), since the supervisors work that way
