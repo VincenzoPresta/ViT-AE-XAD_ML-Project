@@ -573,7 +573,7 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
                 GT_train.append(mask)
 
         # Test
-        for file in outlier_file[idxs[n_anom_per_cls:]]:
+        for i in idxs[: n_anom_per_cls]: #for file in outlier_file[idxs[: n_anom_per_cls]]:
             if file.lower().endswith(("png","jpg","npy")):
                 img_path = os.path.join(root, 'test', cl_a, file)
                 image = Image.open(img_path).convert("RGB").resize((224,224))
