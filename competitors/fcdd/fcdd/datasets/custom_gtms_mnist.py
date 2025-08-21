@@ -157,10 +157,10 @@ class ADImageDatasetGTM(TorchvisionDataset):
         self.shape = shape
 
         if self.raw_shape[0] != self.shape[0]:
-            img_shape = self.train_images.shape
-            self.train_images = np.repeat(self.train_images, self.shape[0], axis=1)
-            img_shape = self.test_images.shape
-            self.test_images  = np.repeat(self.test_images,  self.shape[0], axis=1)
+        # Se è grayscale, forza a 3 canali
+            if self.raw_shape[0] == 1 and self.shape[0] == 3:
+                self.train_images = np.repeat(self.train_images, 3, axis=1)
+                self.test_images  = np.repeat(self.test_images, 3, axis=1)
 
         # precomputed mean and std of your training data
         if len(self.train_labels[self.train_labels==normal_class]) > 0:
