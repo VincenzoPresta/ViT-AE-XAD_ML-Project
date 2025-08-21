@@ -388,16 +388,22 @@ class ImageFolderDatasetGTM(GTMapADDataset):
 
     def __getitem__(self, index: int) -> Tuple[Tensor, int, Tensor]:
         target = self.anomaly_labels[index]
-
         # TODO vedere come caricare la gt
+        
+        # Normalizza GT a singolo canale prima della conversione a PIL
         if target == 1:
-            gt = self.gts[self.ids_anom[index]]
-            if gt.ndim == 2: # MNIST masks are (H,W)
+            if gt.ndim == 2:  # (H,W) → (1,H,W)
                 gt = torch.from_numpy(gt).unsqueeze(0).byte() * 255
-            elif gt.ndim == 3 and gt.shape[0] == 1:
-                gt = torch.from_numpy(gt).byte() * 255
+            elif gt.ndim == 3:
+                if gt.shape[0] == 1:        # (1,H,W)
+                    gt = torch.from_numpy(gt).byte() * 255
+                elif gt.shape[1] == 1:      # (H,1,W) → (1,H,W)
+                    gt = torch.from_numpy(gt).permute(1, 0, 2).byte() * 255
+                else:
+                    raise ValueError(f"Unexpected 3D GT shape: {gt.shape}")
             else:
                 raise ValueError(f"Unexpected GT shape: {gt.shape}")
+
             gt = to_pil_image(gt)
         else:
             # maschera vuota 1 canale per MNIST
