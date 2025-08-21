@@ -560,13 +560,21 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
         for file in outlier_file[idxs[: n_anom_per_cls]]:
             if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
                 X_train.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
-                GT_train.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
+                # Train mask
+                mask = Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert("L")   # grayscale
+                mask = np.array(mask, dtype=np.uint8) # (H, W)
+                mask = np.expand_dims(mask, axis=0)  # (1, H, W)
+                GT_train.append(mask)
 
         # Test
         for file in outlier_file[idxs[n_anom_per_cls:]]:
             if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
                 X_test.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
-                GT_test.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
+                # Test mask
+                mask = Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert("L")
+                mask = np.array(mask, dtype=np.uint8)
+                mask = np.expand_dims(mask, axis=0)
+                GT_test.append(mask)
 
 
     X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
@@ -591,6 +599,11 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
     Y_train[len(normal_files_tr): ] = 1
     Y_test = np.zeros(X_test.shape[0])
     Y_test[len(normal_files_te): ] = 1
+    
+    print("DEBUG X_train:", np.array(X_train).shape)
+    print("DEBUG GT_train:", np.array(GT_train).shape)
+    print("DEBUG X_test:", np.array(X_test).shape)
+    print("DEBUG GT_test:", np.array(GT_test).shape)
 
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
