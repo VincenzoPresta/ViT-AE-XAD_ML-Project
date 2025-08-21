@@ -392,6 +392,7 @@ class ImageFolderDatasetGTM(GTMapADDataset):
         
         # Normalizza GT a singolo canale prima della conversione a PIL
         if target == 1:
+            gt = self.gts[self.ids_anom[index]]
             if gt.ndim == 2:  # (H,W) → (1,H,W)
                 gt = torch.from_numpy(gt).unsqueeze(0).byte() * 255
             elif gt.ndim == 3:
