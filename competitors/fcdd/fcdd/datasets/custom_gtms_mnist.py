@@ -393,11 +393,15 @@ class ImageFolderDatasetGTM(GTMapADDataset):
         if target == 1:
             gt = self.gts[self.ids_anom[index]]
             if gt.ndim == 2: # MNIST masks are (H,W)
-                gt = np.expand_dims(gt, axis=0) # diventa (1,H,W)
-            gt = torch.from_numpy(gt).mul(255).byte()
+                gt = torch.from_numpy(gt).unsqueeze(0).byte() * 255
+            elif gt.ndim == 3 and gt.shape[0] == 1:
+                gt = torch.from_numpy(gt).byte() * 255
+            else:
+                raise ValueError(f"Unexpected GT shape: {gt.shape}")
             gt = to_pil_image(gt)
         else:
-           gt = to_pil_image(np.zeros((224, 224, 3), dtype=np.uint8))
+            # maschera vuota 1 canale per MNIST
+            gt = to_pil_image(np.zeros((28,28), dtype=np.uint8))
 
         if self.target_transform is not None:
             pass  # already applied since we use self.anomaly_labels instead of self.targets
