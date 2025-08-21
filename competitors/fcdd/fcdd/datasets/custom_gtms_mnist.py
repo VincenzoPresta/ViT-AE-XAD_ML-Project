@@ -158,9 +158,9 @@ class ADImageDatasetGTM(TorchvisionDataset):
 
         if self.raw_shape[0] != self.shape[0]:
             img_shape = self.train_images.shape
-            self.train_images = np.repeat((img_shape[0], self.shape[0], img_shape[2], img_shape[3]), fill_value=self.train_images)
+            self.train_images = np.repeat(self.train_images, self.shape[0], axis=1)
             img_shape = self.test_images.shape
-            self.test_images = np.repeat((img_shape[0], self.shape[0],  img_shape[2], img_shape[3]), fill_value=self.test_images)
+            self.test_images  = np.repeat(self.test_images,  self.shape[0], axis=1)
 
         # precomputed mean and std of your training data
         if len(self.train_labels[self.train_labels==normal_class]) > 0:
