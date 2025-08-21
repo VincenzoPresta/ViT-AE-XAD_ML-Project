@@ -557,7 +557,8 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
         idxs = np.random.permutation(len(outlier_file))
 
         # Train
-        for file in outlier_file[idxs[: n_anom_per_cls]]:
+        for i in idxs[: n_anom_per_cls]: #for file in outlier_file[idxs[: n_anom_per_cls]]:
+            file = outlier_file[i]
             if file.lower().endswith(("png","jpg","npy")):
                 img_path = os.path.join(root, 'test', cl_a, file)
                 image = Image.open(img_path).convert("RGB").resize((224,224))
