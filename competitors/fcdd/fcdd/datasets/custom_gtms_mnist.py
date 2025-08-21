@@ -439,11 +439,20 @@ class ImageFolderDatasetGTM(GTMapADDataset):
                     img = img.convert("RGB")
         else:
             img = torch.from_numpy(self.images[index]).mul(255).byte()
-            img = to_pil_image(img)
 
-            # 🔧 Fix: forza 3 canali
-            if img.mode != "RGB":
-                img = img.convert("RGB")
+            # Normalizza la shape a (C,H,W)
+            if img.ndim == 2:              # (H,W)
+                img = img.unsqueeze(0)     # → (1,H,W)
+                img = img.repeat(3,1,1)    # → (3,H,W)
+            elif img.ndim == 3:
+                if img.shape[0] == 1:      # (1,H,W)
+                    img = img.repeat(3,1,1)
+                elif img.shape[1] == 1:    # (H,1,W)
+                    img = img.permute(1,0,2).repeat(3,1,1)
+                elif img.shape[0] != 3:
+                    raise ValueError(f"Unexpected image shape: {img.shape}")
+
+            img = to_pil_image(img)
 
         if gt is None:
             gtinitlbl = target if self.anomalous_label == 1 else (1 - target)
