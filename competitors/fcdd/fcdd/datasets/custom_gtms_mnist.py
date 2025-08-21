@@ -385,7 +385,7 @@ class ImageFolderDatasetGTM(GTMapADDataset):
 
     def __len__(self):
         return len(self.images)
-
+    
     def __getitem__(self, index: int) -> Tuple[Tensor, int, Tensor]:
         target = self.anomaly_labels[index]
         # TODO vedere come caricare la gt
@@ -423,29 +423,29 @@ class ImageFolderDatasetGTM(GTMapADDataset):
                     img = to_tensor(img).mul(255).byte()
                     img, gt, target = self.all_transform(img, None, target, replace=replace)
                 img = to_pil_image(img)
+
+                # 🔧 Fix: forza 3 canali
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+
                 gt = gt.mul(255).byte() if gt is not None and gt.dtype != torch.uint8 else gt
                 gt = to_pil_image(gt) if gt is not None else None
             else:
-                #path, _ = self.samples[index]
-                #gt_path, _ = self.gtm_samples[index]
                 img = torch.from_numpy(self.images[index])
                 img = to_pil_image(img)
+
+                # 🔧 Fix: forza 3 canali
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
         else:
-            #path, _ = self.samples[index]
-            #gt_path, _ = self.gtm_samples[index]
-            img = torch.from_numpy(self.images[index])
-
-            # 🔧 fix: se è (H,W) o (H,1,W), normalizza a (1,H,W)
-            if img.ndim == 2:
-                img = img.unsqueeze(0)                # (H,W) → (1,H,W)
-            elif img.ndim == 3 and img.shape[1] == 1: 
-                img = img.permute(1,0,2)              # (H,1,W) → (1,H,W)
-
+            img = torch.from_numpy(self.images[index]).mul(255).byte()
             img = to_pil_image(img)
 
+            # 🔧 Fix: forza 3 canali
+            if img.mode != "RGB":
+                img = img.convert("RGB")
+
         if gt is None:
-            # gt is assumed to be 1 for anoms always (regardless of the anom_label), since the supervisors work that way
-            # later code fixes that (and thus would corrupt it if the correct anom_label is used here in swapped case)
             gtinitlbl = target if self.anomalous_label == 1 else (1 - target)
             gt = (torch.ones(self.raw_shape)[0] * gtinitlbl).mul(255).byte()
             gt = to_pil_image(gt)
@@ -455,14 +455,6 @@ class ImageFolderDatasetGTM(GTMapADDataset):
 
         if self.transform is not None:
             img = self.transform(img)
-
-        #if self.nominal_label != 0:
-        #    gt[gt == 0] = -3  # -3 is chosen arbitrarily here
-        #    gt[gt == 1] = self.anomalous_label
-        #    gt[gt == -3] = self.nominal_label
-
-        #gt = gt[:1]  # cut off redundant channels
-        #print('----', gt.max())
 
         return img, target, gt
 
