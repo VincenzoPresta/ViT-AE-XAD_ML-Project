@@ -29,7 +29,7 @@ class ADImageDatasetGTM(TorchvisionDataset):
 
     def __init__(self, root: str, normal_class: int, preproc: str, nominal_label: int,
                  supervise_mode: str, noise_mode: str, oe_limit: int, online_supervision: bool,
-                 logger: Logger = None, shape: tuple = (3, 224, 224)):
+                 logger: Logger = None, shape: tuple = (3, 28, 28)):
         """
         :param root: root directory where data is found.
         :param normal_class: the class considered normal.
