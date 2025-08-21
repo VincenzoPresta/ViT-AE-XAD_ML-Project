@@ -102,6 +102,8 @@ if __name__ == '__main__':
         data_path = os.path.join('datasets', args.ds, 'files')
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset(f'datasets/{args.ds}', args.na, seed=args.s)
         ret_path = os.path.join('results', args.ds)
+        
+    print("DEBUG: args.ds =", args.ds) #DEBUG
 
     X_train = X_train.swapaxes(2, 3).swapaxes(1, 2)
     X_test = X_test.swapaxes(2, 3).swapaxes(1, 2)
