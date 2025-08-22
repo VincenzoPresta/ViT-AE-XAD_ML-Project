@@ -429,6 +429,16 @@ def square_diff(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensit
         (x_train, y_train), (x_test, y_test) = cifar10.load_data()
         y_train = y_train.reshape(-1)
         y_test = y_test.reshape(-1)
+        
+        # Cast esplicito e normalizzazione come negli altri dataset
+        X_train = x_train.astype(np.uint8)
+        X_test = x_test.astype(np.uint8)
+        GT_train = np.zeros_like(X_train, dtype=np.uint8)  # nessuna maschera per cifar
+        GT_test = np.zeros_like(X_test, dtype=np.uint8)
+
+        # (N, 32, 32, 3) → (N, 3, 32, 32)
+        X_train = X_train.swapaxes(3, 1).swapaxes(2, 3)
+        X_test  = X_test.swapaxes(3, 1).swapaxes(2, 3)
 
     x_train = x_train.astype('float32') / 255.
     x_test = x_test.astype('float32') / 255.
