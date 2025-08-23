@@ -312,7 +312,7 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     normal_files_tr = os.listdir(f_path)
     for file in normal_files_tr:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB'))
+            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize(224,224))
             X_train.append(img)
             GT_train.append(np.zeros_like(img, dtype=np.uint8))
 
@@ -321,7 +321,7 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     normal_files_te = os.listdir(f_path)
     for file in normal_files_te:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB'))
+            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize(224,224))
             X_test.append(img)
             GT_test.append(np.zeros_like(img, dtype=np.uint8))
 
@@ -330,19 +330,20 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     anomal_files = os.listdir(f_path)
     idxs = np.random.permutation(len(anomal_files))
 
-    # Train anomalies
+    # --- Train anomalies ---
     for file in np.array(anomal_files)[idxs[:n_anom_per_cls]]:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            X_train.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB')))
+            X_train.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))))
             mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
-            GT_train.append(np.array(Image.open(mask_path).convert("L")))
-
-    # Test anomalies
+            mask = Image.open(mask_path).convert("L").resize((224,224))
+            GT_train.append(np.array(mask, dtype=np.uint8))
+    # --- Test anomalies ---
     for file in np.array(anomal_files)[idxs[n_anom_per_cls:]]:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            X_test.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB')))
+            X_test.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))))
             mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
-            GT_test.append(np.array(Image.open(mask_path).convert("L")))
+            mask = Image.open(mask_path).convert("L").resize((224,224))
+            GT_test.append(np.array(mask, dtype=np.uint8))
 
     # --- Convert to arrays ---
     X_train = np.array(X_train).astype(np.uint8)
