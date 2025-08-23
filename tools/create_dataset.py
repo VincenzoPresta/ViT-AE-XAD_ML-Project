@@ -312,7 +312,7 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     normal_files_tr = os.listdir(f_path)
     for file in normal_files_tr:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize(224,224))
+            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
             X_train.append(img)
             GT_train.append(np.zeros_like(img, dtype=np.uint8))
 
@@ -321,7 +321,7 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     normal_files_te = os.listdir(f_path)
     for file in normal_files_te:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize(224,224))
+            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224)))
             X_test.append(img)
             GT_test.append(np.zeros_like(img, dtype=np.uint8))
 
