@@ -46,6 +46,7 @@ if __name__ == '__main__':
                    intensity=args.i, DATASET=args.ds, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
+        
     elif args.ds == 'mnist_diff':
         dataset = 'mnist'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
@@ -53,10 +54,12 @@ if __name__ == '__main__':
                    intensity=args.i, DATASET=dataset, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
+        
     elif args.ds == 'mvtec':
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec(args.c, 'datasets/mvtec', args.na, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
+        
         print(ret_path)
     elif args.ds == 'mvtec_o_a':
         dataset = 'mvtec'
@@ -65,6 +68,7 @@ if __name__ == '__main__':
                                                                              seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
+        
     elif args.ds == 'mvtec_o_a_aug':
         dataset = 'mvtec'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_only_one_augmented(args.c, 'datasets/mvtec', args.na,
@@ -72,6 +76,7 @@ if __name__ == '__main__':
                                                                              seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
+        
     elif args.ds == 'mvtec_our':
         dataset = 'mvtec'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test, _, _, files_train, files_test = mvtec_personalized(args.c, 'datasets/mvtec',
@@ -92,6 +97,7 @@ if __name__ == '__main__':
             os.makedirs(ret_path)
         np.save(open(os.path.join(ret_path, 'files_train_comp.npy'), 'wb'), files_train)
         np.save(open(os.path.join(ret_path, 'files_test_comp.npy'), 'wb'), files_test)
+        
     elif args.ds == 'hazelnut':
         # Hazelnut è una classe di MVTec
         hazelnut_id = 5  # indice della classe "hazelnut"
@@ -99,19 +105,23 @@ if __name__ == '__main__':
         data_path = os.path.join('datasets', 'mvtec', str(hazelnut_id), str(args.s))
         ret_path = os.path.join('results', 'mvtec', str(hazelnut_id), str(args.s), str(args.na))
 
+    elif args.ds == 'btad':
+        # Dataset BTAD (01, 02, 03) gestito dal loader custom in tools/create_dataset.py
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset_btad(
+            base_path='datasets/btad',
+            n_anom_per_cls=args.na,
+            seed=args.s,
+            class_id=args.c
+        )
+        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
+        ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
+    
+
     elif args.ds == 'road_inspection':
         dataset = args.ds
         data_path = os.path.join('datasets', args.ds, 'files')
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = load_dataset(f'datasets/{args.ds}')
-        ret_path = os.path.join('results', args.ds)
-    elif args.ds == 'btad':
-        dataset = args.ds
-        data_path = os.path.join('datasets', args.ds)  # senza "files"
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset_btad(
-            f'datasets/{args.ds}', args.na, seed=args.s, class_id=args.c
-        )
-        ret_path = os.path.join('results', args.ds, str(args.c))
-            
+        ret_path = os.path.join('results', args.ds)            
     
         
     print("DEBUG: args.ds =", args.ds) #DEBUG    

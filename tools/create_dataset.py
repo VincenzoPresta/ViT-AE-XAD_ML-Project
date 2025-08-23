@@ -376,6 +376,7 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
 
     print(f"BTAD-{cls} | Train shape: {X_train.shape}, Test shape: {X_test.shape}")
     print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")
+    print(f"[DEBUG] BTAD loader attivato: class_id={class_id}, train={len(X_train)}, test={len(X_test)}")
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
