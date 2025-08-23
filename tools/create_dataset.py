@@ -312,18 +312,20 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     normal_files_tr = os.listdir(f_path)
     for file in normal_files_tr:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224)))
+            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+            img = np.array(img, dtype=np.uint8)
             X_train.append(img)
-            GT_train.append(np.zeros_like(img, dtype=np.uint8))
+            GT_train.append(np.zeros((1,224,224), dtype=np.uint8))  # maschere vuote
 
     # --- Normal test ---
     f_path = os.path.join(path, 'test', 'ok')
     normal_files_te = os.listdir(f_path)
     for file in normal_files_te:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224)))
+            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+            img = np.array(img, dtype=np.uint8)
             X_test.append(img)
-            GT_test.append(np.zeros_like(img, dtype=np.uint8))
+            GT_test.append(np.zeros((1,224,224), dtype=np.uint8))
 
     # --- Anomalies (ko) ---
     f_path = os.path.join(path, 'test', 'ko')
@@ -333,17 +335,32 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     # --- Train anomalies ---
     for file in np.array(anomal_files)[idxs[:n_anom_per_cls]]:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            X_train.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))))
+            # Immagine
+            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+            img = np.array(img, dtype=np.uint8)
+            X_train.append(img)
+
+            # Maschera
             mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
             mask = Image.open(mask_path).convert("L").resize((224,224))
-            GT_train.append(np.array(mask, dtype=np.uint8))
+            mask = np.array(mask, dtype=np.uint8)
+            mask = np.expand_dims(mask, axis=0)   # (1,224,224)
+            GT_train.append(mask)
+
     # --- Test anomalies ---
     for file in np.array(anomal_files)[idxs[n_anom_per_cls:]]:
         if file.lower().endswith(("png","jpg","npy","bmp")):
-            X_test.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))))
+            # Immagine
+            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+            img = np.array(img, dtype=np.uint8)
+            X_test.append(img)
+
+            # Maschera
             mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
             mask = Image.open(mask_path).convert("L").resize((224,224))
-            GT_test.append(np.array(mask, dtype=np.uint8))
+            mask = np.array(mask, dtype=np.uint8)
+            mask = np.expand_dims(mask, axis=0)
+            GT_test.append(mask)
 
     # --- Convert to arrays ---
     X_train = np.array(X_train).astype(np.uint8)
@@ -361,6 +378,7 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
+
 
 
 
