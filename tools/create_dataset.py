@@ -381,8 +381,6 @@ def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
 
-
-
 def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = 'rand',DATASET = 'mnist', seed=None):
     '''
     :param dig: Selected dataset class

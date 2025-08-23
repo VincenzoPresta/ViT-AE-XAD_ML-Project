@@ -153,7 +153,7 @@ if __name__ == '__main__':
     tracker = EmissionsTracker()
     tracker.start()
 
-    htmaps, scores, gtmaps, labels, tot_time = launch_fcdd(data_path, epochs=200, batch_size=16)  # 400
+    htmaps, scores, gtmaps, labels, tot_time = launch_fcdd(data_path, epochs=3, batch_size=8)  # 400
     np.save(open(os.path.join(ret_path, 'fcdd_gt.npy'), 'wb'), gtmaps)
     np.save(open(os.path.join(ret_path, 'fcdd_labels.npy'), 'wb'), labels)
     np.save(open(os.path.join(ret_path, 'fcdd_htmaps.npy'), 'wb'), htmaps)
