@@ -92,7 +92,14 @@ if __name__ == '__main__':
             os.makedirs(ret_path)
         np.save(open(os.path.join(ret_path, 'files_train_comp.npy'), 'wb'), files_train)
         np.save(open(os.path.join(ret_path, 'files_test_comp.npy'), 'wb'), files_test)
-    elif args.ds == 'hazelnut' or args.ds == 'road_inspection':
+    elif args.ds == 'hazelnut':
+        # Hazelnut è una classe di MVTec
+        hazelnut_id = 5  # indice della classe "hazelnut"
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec(hazelnut_id, 'datasets/mvtec', args.na, seed=args.s)
+        data_path = os.path.join('datasets', 'mvtec', str(hazelnut_id), str(args.s))
+        ret_path = os.path.join('results', 'mvtec', str(hazelnut_id), str(args.s), str(args.na))
+
+    elif args.ds == 'road_inspection':
         dataset = args.ds
         data_path = os.path.join('datasets', args.ds, 'files')
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = load_dataset(f'datasets/{args.ds}')
