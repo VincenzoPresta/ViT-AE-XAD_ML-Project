@@ -210,8 +210,6 @@ def load_dataset(path):
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
-
-
 def extract_dataset(path, n_anom_per_cls, seed=None):
     '''
     Method to arrange the data. Train and test images are supposed to be stored in two different folders.
@@ -291,6 +289,80 @@ def extract_dataset(path, n_anom_per_cls, seed=None):
     print(f'Test anomalies: {Y_test.sum()}')
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
+
+
+def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
+    """
+    Loader specifico per BTAD: gestisce le sottocartelle 01, 02, 03
+    con struttura:
+      train/ok, test/ok, test/ko, ground_truth/ko
+    """
+    np.random.seed(seed)
+
+    # Mappa classi 0,1,2 -> "01","02","03"
+    class_map = {0: "01", 1: "02", 2: "03"}
+    cls = class_map[class_id]
+
+    path = os.path.join(base_path, cls)
+
+    X_train, X_test, GT_train, GT_test = [], [], [], []
+
+    # --- Normal train ---
+    f_path = os.path.join(path, 'train', 'ok')
+    normal_files_tr = os.listdir(f_path)
+    for file in normal_files_tr:
+        if file.lower().endswith(("png","jpg","npy","bmp")):
+            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB'))
+            X_train.append(img)
+            GT_train.append(np.zeros_like(img, dtype=np.uint8))
+
+    # --- Normal test ---
+    f_path = os.path.join(path, 'test', 'ok')
+    normal_files_te = os.listdir(f_path)
+    for file in normal_files_te:
+        if file.lower().endswith(("png","jpg","npy","bmp")):
+            img = np.array(Image.open(os.path.join(f_path, file)).convert('RGB'))
+            X_test.append(img)
+            GT_test.append(np.zeros_like(img, dtype=np.uint8))
+
+    # --- Anomalies (ko) ---
+    f_path = os.path.join(path, 'test', 'ko')
+    anomal_files = os.listdir(f_path)
+    idxs = np.random.permutation(len(anomal_files))
+
+    # Train anomalies
+    for file in np.array(anomal_files)[idxs[:n_anom_per_cls]]:
+        if file.lower().endswith(("png","jpg","npy","bmp")):
+            X_train.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB')))
+            mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
+            GT_train.append(np.array(Image.open(mask_path).convert("L")))
+
+    # Test anomalies
+    for file in np.array(anomal_files)[idxs[n_anom_per_cls:]]:
+        if file.lower().endswith(("png","jpg","npy","bmp")):
+            X_test.append(np.array(Image.open(os.path.join(f_path, file)).convert('RGB')))
+            mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
+            GT_test.append(np.array(Image.open(mask_path).convert("L")))
+
+    # --- Convert to arrays ---
+    X_train = np.array(X_train).astype(np.uint8)
+    X_test  = np.array(X_test).astype(np.uint8)
+    GT_train = np.array(GT_train)
+    GT_test  = np.array(GT_test)
+
+    # --- Labels ---
+    Y_train = np.zeros(X_train.shape[0])
+    Y_train[len(normal_files_tr):] = 1
+    Y_test = np.zeros(X_test.shape[0])
+    Y_test[len(normal_files_te):] = 1
+
+    print(f"BTAD-{cls} | Train shape: {X_train.shape}, Test shape: {X_test.shape}")
+    print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")
+
+    return X_train, Y_train, X_test, Y_test, GT_train, GT_test
+
+
+
 def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = 'rand',DATASET = 'mnist', seed=None):
     '''
     :param dig: Selected dataset class

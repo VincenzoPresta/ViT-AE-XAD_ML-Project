@@ -9,7 +9,7 @@ from codecarbon import EmissionsTracker
 
 
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
-    mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes
+    mvtec_personalized, load_dataset, extract_dataset_btad, mvtec_all_classes
 
 #from run_fcdd import launch as launch_fcdd 
 #from run_deviation import launch as launch_dev 
@@ -104,12 +104,14 @@ if __name__ == '__main__':
         data_path = os.path.join('datasets', args.ds, 'files')
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = load_dataset(f'datasets/{args.ds}')
         ret_path = os.path.join('results', args.ds)
-    elif 'btad' in args.ds:
+    elif args.ds == 'btad':
         dataset = args.ds
-        data_path = os.path.join('datasets', args.ds, 'files')
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset(f'datasets/{args.ds}', args.na, seed=args.s)
-        ret_path = os.path.join('results', args.ds)
-        
+        data_path = os.path.join('datasets', args.ds)  # senza "files"
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset_btad(
+            f'datasets/{args.ds}', args.na, seed=args.s, class_id=args.c
+        )
+        ret_path = os.path.join('results', args.ds, str(args.c))
+            
     
         
     print("DEBUG: args.ds =", args.ds) #DEBUG    
