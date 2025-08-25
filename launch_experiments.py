@@ -51,6 +51,8 @@ if __name__ == '__main__':
         X_test = resize(torch.tensor(X_test)).numpy()
         GT_train = resize(torch.tensor(GT_train)).numpy()
         GT_test = resize(torch.tensor(GT_test)).numpy()   
+        
+        print("[DEBUG]"+ X_train.shape, X_test.shape)
 
             
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
