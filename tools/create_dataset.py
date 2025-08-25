@@ -1349,6 +1349,94 @@ def mvtec_only_one_augmented(cl, path, n_anom_per_cls, a_cls, seed=None, return_
     else:
         return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
+def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
+    
+    np.random.seed(seed=seed)
+
+    labels = (
+        'bottle', 'cable', 'capsule', 'carpet', 'grid', 'hazelnut', 'leather',
+        'metal_nut', 'pill', 'screw', 'tile', 'toothbrush', 'transistor',
+        'wood', 'zipper'
+    )
+
+    class_o = labels[cl]
+
+    root = os.path.join(path, class_o)
+
+    X_train = []
+    X_test = []
+    GT_train = []
+    GT_test = []
+
+    # Add normal data to train set
+    f_path = os.path.join(root, 'train', 'good')
+    normal_files_tr = os.listdir(f_path)
+    normal_files_tr.sort()
+    for file in normal_files_tr:
+        if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+            image = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224)))
+            X_train.append(image)
+            GT_train.append(np.zeros_like(image, dtype=np.uint8))
+
+    # Add normal data to test set
+    f_path = os.path.join(root, 'test', 'good')
+    normal_files_te = os.listdir(f_path)
+    normal_files_te.sort()
+    for file in normal_files_te:
+        if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+            image = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224)))
+            X_test.append(image)
+            GT_test.append(np.zeros_like(image, dtype=np.uint8))
+
+    outlier_data_dir = os.path.join(root, 'test')
+    outlier_classes = os.listdir(outlier_data_dir)
+    outlier_classes.sort()
+    for cl_a in outlier_classes:
+        if cl_a == 'good':
+            continue
+
+        outlier_file = np.array(os.listdir(os.path.join(outlier_data_dir, cl_a)))
+        outlier_file.sort()
+        idxs = np.random.permutation(len(outlier_file))
+
+        # Train
+        for file in outlier_file[idxs[: n_anom_per_cls]]:
+            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+                X_train.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')).resize((224,224)))
+                GT_train.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
+
+        # Test
+        for file in outlier_file[idxs[n_anom_per_cls:]]:
+            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+                X_test.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')).resize((224,224)))
+                GT_test.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
+
+
+    X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
+    #X_train = np.swapaxes(X_train, 2, 3)
+    #X_train = np.swapaxes(X_train, 1, 2)
+
+    X_test = np.array(X_test).astype(np.uint8)
+    #X_test = np.swapaxes(X_test, 2, 3)
+    #X_test = np.swapaxes(X_test, 1, 2)
+
+
+    GT_train = np.array(GT_train)#.astype(np.uint8)
+    #GT_train = np.swapaxes(GT_train, 2, 3)
+    #GT_train = np.swapaxes(GT_train, 1, 2)
+
+    GT_test = np.array(GT_test)#.astype(np.uint8)
+    #GT_test = np.swapaxes(GT_test, 2, 3)
+    #GT_test = np.swapaxes(GT_test, 1, 2)
+
+
+    Y_train = np.zeros(X_train.shape[0])
+    Y_train[len(normal_files_tr): ] = 1
+    Y_test = np.zeros(X_test.shape[0])
+    Y_test[len(normal_files_te): ] = 1
+
+
+    return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
 def aebad_s(cl, sg, path, n_anom_per_cls, seed=None):
     np.random.seed(seed=seed)

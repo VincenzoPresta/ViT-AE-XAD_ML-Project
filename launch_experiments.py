@@ -64,17 +64,9 @@ if __name__ == '__main__':
                    intensity=args.i, DATASET=dataset, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
+        
     elif args.ds == 'mvtec':
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec(args.c, 'datasets/mvtec', args.na, seed=args.s)
-        print("ok")
-        # Patch per ViT: ridimensiona immagini e GT a 224x224
-        resize = Resize((224, 224))
-        X_train = resize(torch.tensor(X_train)).numpy()
-        X_test  = resize(torch.tensor(X_test)).numpy()
-        GT_train = resize(torch.tensor(GT_train)).numpy()
-        GT_test  = resize(torch.tensor(GT_test)).numpy()
-        print("[DEBUG resize mvtec]", X_train.shape, X_test.shape, GT_train.shape, GT_test.shape)
-        
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
         print(ret_path)
