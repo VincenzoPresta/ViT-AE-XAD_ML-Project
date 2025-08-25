@@ -1403,6 +1403,8 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
         f_path = os.path.join(root, 'test', cl_a, 'same')
         outlier_files = np.array(os.listdir(f_path))
         idxs = np.random.permutation(len(outlier_files))
+        
+        print("Files trovati in", f_path, ":", outlier_files)
 
         # Train
         for i in idxs[:n_anom_per_cls]:
