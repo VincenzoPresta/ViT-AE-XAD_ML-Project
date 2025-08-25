@@ -105,7 +105,8 @@ class Trainer:
         elif AE_type == 'pca':
             self.model = PCA_Autoencoder(np.prod(self.train_loader.dataset.dim), np.prod(self.train_loader.dataset.dim),
                                          latent_dim)
-            
+        
+        #Nuovo: ViT    
         elif AE_type == 'vit':
             self.model = ViT_CNN_Attn(self.train_loader.dataset.dim)
 
