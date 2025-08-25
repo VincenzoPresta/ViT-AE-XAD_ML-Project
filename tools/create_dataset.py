@@ -551,19 +551,24 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
     for cl_a in outlier_classes:
         if cl_a == 'good':
             continue
+        
+        outlier_files = [
+            f for f in os.listdir(os.path.join(outlier_data_dir, cl_a))
+            if f.lower().endswith(('.png','.jpg','.npy'))
+        ]
+        outlier_files.sort()
 
-        outlier_file = np.array(os.listdir(os.path.join(outlier_data_dir, cl_a)))
-        outlier_file.sort()
-        idxs = np.random.permutation(len(outlier_file))
+        outlier_files.sort()
+        idxs = np.random.permutation(len(outlier_files))
 
         # Train
-        for file in outlier_file[idxs[: n_anom_per_cls]]:
+        for file in outlier_files[idxs[: n_anom_per_cls]]:
             if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
                 X_train.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
                 GT_train.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
 
         # Test
-        for file in outlier_file[idxs[n_anom_per_cls:]]:
+        for file in outlier_files[idxs[n_anom_per_cls:]]:
             if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
                 X_test.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
                 GT_test.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
@@ -1395,15 +1400,13 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
         if cl_a == 'good':
             continue
 
-        outlier_files = [
-            f for f in os.listdir(os.path.join(outlier_data_dir, cl_a))
-            if f.lower().endswith(('.png','.jpg','.npy'))
-        ]
-        outlier_files.sort()
+        f_path = os.path.join(root, 'test', cl_a, 'same')
+        outlier_files = np.array(os.listdir(f_path))
         idxs = np.random.permutation(len(outlier_files))
 
         # Train
-        for file in outlier_files[idxs[: n_anom_per_cls]]:
+        for i in idxs[:n_anom_per_cls]:
+            file = outlier_files[i]
             if file.lower().endswith(('png','jpg','npy')):
                 img_path = os.path.join(root, 'test', cl_a, file)
                 mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')
@@ -1422,7 +1425,8 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
                 GT_train.append(mask)
 
         # Test
-        for file in outlier_files[idxs[n_anom_per_cls:]]:
+        for i in idxs[:n_anom_per_cls]:
+            file = outlier_files[i]
             if file.lower().endswith(('png','jpg','npy')):
                 img_path = os.path.join(root, 'test', cl_a, file)
                 mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')
@@ -1512,49 +1516,32 @@ def aebad_s(cl, sg, path, n_anom_per_cls, seed=None):
             continue
 
         f_path = os.path.join(root, 'test', cl_a, 'same')
-        outlier_files = np.array(os.listdir(f_path))
-        idxs = np.random.permutation(len(outlier_files))
-        
-        print("Files trovati in", f_path, ":", outlier_files)
-        
-        break
+        outlier_file = np.array(os.listdir(f_path))
+        idxs = np.random.permutation(len(outlier_file))
 
         # Train
-        for i in idxs[:n_anom_per_cls]:
-            file = outlier_files[i]
-            if (not file.startswith('._')) and file.lower().endswith(('.png','.jpg','.npy')):
-                img_path = os.path.join(f_path, file)
-                gt_path  = os.path.join(root, 'ground_truth', cl_a, 'same', file.replace('.png','_mask.png'))
-
-                # immagine
-                image = Image.open(img_path).convert('RGB').resize((448,448))
-                X_train.append(np.array(image, dtype=np.uint8))
-
-                # maschera
-                if os.path.exists(gt_path):
-                    mask = Image.open(gt_path).convert('L').resize((448,448), Image.NEAREST)
-                    GT_train.append(np.array(mask, dtype=np.uint8)[...,None])  # (448,448,1)
-                else:
-                    GT_train.append(np.zeros((448,448,1), dtype=np.uint8))
+        for file in outlier_file[idxs[: n_anom_per_cls]]:
+            if not file.split('/')[-1].startswith('._') and 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+                image = Image.open(os.path.join(f_path, file)).convert('RGB')
+                image = image.resize((448, 448))
+                image = np.array(image)
+                X_train.append(np.array(image))
+                image = Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/same/' + file)).convert('RGB')
+                image = image.resize((448, 448))
+                image = np.array(image)
+                GT_train.append(np.array(image))
 
         # Test
-        for i in idxs[n_anom_per_cls:]:
-            file = outlier_files[i]
-            if (not file.startswith('._')) and file.lower().endswith(('.png','.jpg','.npy')):
-                img_path = os.path.join(f_path, file)
-                gt_path  = os.path.join(root, 'ground_truth', cl_a, 'same', file.replace('.png','_mask.png'))
-
-                # immagine
-                image = Image.open(img_path).convert('RGB').resize((448,448))
-                X_test.append(np.array(image, dtype=np.uint8))
-
-                # maschera
-                if os.path.exists(gt_path):
-                    mask = Image.open(gt_path).convert('L').resize((448,448), Image.NEAREST)
-                    GT_test.append(np.array(mask, dtype=np.uint8)[...,None])
-                else:
-                    GT_test.append(np.zeros((448,448,1), dtype=np.uint8))
-
+        for file in outlier_file[idxs[n_anom_per_cls:]]:
+            if not file.split('/')[-1].startswith('._') and 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+                image = Image.open(os.path.join(f_path, file)).convert('RGB')
+                image = image.resize((448, 448))
+                image = np.array(image)
+                X_test.append(image)
+                image = Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/same/' + file)).convert('RGB')
+                image = image.resize((448, 448))
+                image = np.array(image)
+                GT_test.append(image)
 
     print('GT ', len(GT_train))
     X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
