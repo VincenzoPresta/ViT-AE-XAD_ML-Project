@@ -9,8 +9,11 @@ from codecarbon import EmissionsTracker
 
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
     mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes
-from run_fcdd import launch as launch_fcdd
-from run_deviation import launch as launch_dev
+    
+#per ora commento, non mi interessa usare i competitor    
+'''from run_fcdd import launch as launch_fcdd
+from run_deviation import launch as launch_dev'''
+
 from aexad_script import launch as launch_aexad
 
 import warnings
