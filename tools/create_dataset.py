@@ -551,22 +551,51 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
     for cl_a in outlier_classes:
         if cl_a == 'good':
             continue
-
-        outlier_file = np.array(os.listdir(os.path.join(outlier_data_dir, cl_a)))
-        outlier_file.sort()
-        idxs = np.random.permutation(len(outlier_file))
+        
+        outlier_files = [
+            f for f in os.listdir(os.path.join(outlier_data_dir, cl_a))
+            if f.lower().endswith(('.png','.jpg','.npy'))
+        ]
+        outlier_files.sort()
+        idxs = np.random.permutation(len(outlier_files))
 
         # Train
-        for file in outlier_file[idxs[: n_anom_per_cls]]:
-            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
-                X_train.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
-                GT_train.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
+        for file in outlier_files[idxs[: n_anom_per_cls]]:
+            if file.lower().endswith(('png','jpg','npy')):
+                img_path = os.path.join(root, 'test', cl_a, file)
+                mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')
+
+                if not os.path.exists(img_path):
+                    print("Mancante:", img_path)
+                    continue
+                if not os.path.exists(mask_path):
+                    print("Maschera mancante:", mask_path)
+                    mask = np.zeros((224,224,1), dtype=np.uint8)
+                else:
+                    mask = np.array(Image.open(mask_path).convert('L').resize((224,224), Image.NEAREST))[...,None]
+
+                img = np.array(Image.open(img_path).convert('RGB').resize((224,224)))
+                X_train.append(img)
+                GT_train.append(mask)
 
         # Test
-        for file in outlier_file[idxs[n_anom_per_cls:]]:
-            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
-                X_test.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
-                GT_test.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
+        for file in outlier_files[idxs[n_anom_per_cls:]]:
+            if file.lower().endswith(('png','jpg','npy')):
+                img_path = os.path.join(root, 'test', cl_a, file)
+                mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')
+
+                if not os.path.exists(img_path):
+                    print("Mancante:", img_path)
+                    continue
+                if not os.path.exists(mask_path):
+                    print("Maschera mancante:", mask_path)
+                    mask = np.zeros((224,224,1), dtype=np.uint8)
+                else:
+                    mask = np.array(Image.open(mask_path).convert('L').resize((224,224), Image.NEAREST))[...,None]
+
+                img = np.array(Image.open(img_path).convert('RGB').resize((224,224)))
+                X_test.append(img)
+                GT_test.append(mask)
 
 
     X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
