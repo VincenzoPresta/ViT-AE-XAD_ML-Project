@@ -108,7 +108,13 @@ class Trainer:
         
         #Nuovo: ViT    
         elif AE_type == 'vit':
-            self.model = ViT_CNN_Attn(self.train_loader.dataset.dim)
+             # Nota importante:
+            # A differenza degli altri modelli, ViT usa come backbone vit_b_16 pre-addestrato su ImageNet.
+            # Questo backbone accetta SOLO input RGB (3 canali, 224x224).
+            # Non possiamo affidarci a self.train_loader.dataset.dim perché può contenere shape "storte"
+            # (es. (224,1,224)), dovute a permute/repeat nel preprocessing.
+            # Per questo motivo forziamo manualmente la shape a (3,224,224).
+            self.model = ViT_CNN_Attn((3, 224, 224))
 
                         
         else:
