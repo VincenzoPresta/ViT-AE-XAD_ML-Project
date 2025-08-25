@@ -124,7 +124,8 @@ if __name__ == '__main__':
     tracker = EmissionsTracker()
     tracker.start()
 
-    htmaps, scores, gtmaps, labels, tot_time = launch_fcdd(data_path, epochs=200, batch_size=16)  # 400
+    #FCDD
+    '''htmaps, scores, gtmaps, labels, tot_time = launch_fcdd(data_path, epochs=200, batch_size=16)  # 400
     np.save(open(os.path.join(ret_path, 'fcdd_gt.npy'), 'wb'), gtmaps)
     np.save(open(os.path.join(ret_path, 'fcdd_labels.npy'), 'wb'), labels)
     np.save(open(os.path.join(ret_path, 'fcdd_htmaps.npy'), 'wb'), htmaps)
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     pickle.dump(emissions, open(os.path.join(ret_path, 'emissions_fcdd.pkl'), 'wb'))
 
     del htmaps, scores
-    torch.cuda.empty_cache()
+    torch.cuda.empty_cache()'''
 
     #htmaps, scores, gtmaps, labels, tot_time = launch_dev(dataset_root=data_path, epochs=50)  # 50
     #np.save(open(os.path.join(ret_path, 'deviation_htmaps.npy'), 'wb'), htmaps)
@@ -148,23 +149,49 @@ if __name__ == '__main__':
     #torch.cuda.empty_cache()
 
 
-    #def f(x):
-    #    return 1-x
+    def f(x):
+       return 1-x
+   
+   
+    #SHALLOW
+    '''heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'shallow',
+                                                   save_intermediate=True, save_path=ret_path)
+    np.save(open(os.path.join(ret_path, 'aexad_htmaps.npy'), 'wb'), heatmaps)
+    np.save(open(os.path.join(ret_path, 'aexad_scores.npy'), 'wb'), scores)'''
 
-    #heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'shallow',
-    #                                                save_intermediate=True, save_path=ret_path)
-    #np.save(open(os.path.join(ret_path, 'aexad_htmaps.npy'), 'wb'), heatmaps)
-    #np.save(open(os.path.join(ret_path, 'aexad_scores.npy'), 'wb'), scores)
+    #CONV
+    '''heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'conv',
+                                                   save_intermediate=True, save_path=ret_path)
+    np.save(open(os.path.join(ret_path, 'aexad_htmaps_conv.npy'), 'wb'), heatmaps)
+    np.save(open(os.path.join(ret_path, 'aexad_scores_conv.npy'), 'wb'), scores)
 
-    #heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'conv',
-    #                                                save_intermediate=True, save_path=ret_path)
-    #np.save(open(os.path.join(ret_path, 'aexad_htmaps_conv.npy'), 'wb'), heatmaps)
-    #np.save(open(os.path.join(ret_path, 'aexad_scores_conv.npy'), 'wb'), scores)
+    times.append(tot_time)
+    times = np.array(times)
+    np.save(open(os.path.join(ret_path, 'times_competitors.npy'), 'wb'), np.array(times))
+    print(times)'''
+    
+    # ViT
+    heatmaps, scores, _, _, tot_time = launch_aexad(
+        data_path, 
+        1000,          # numero epoche
+        16,            # batch size
+        32,            # latent dim
+        (28*28) / 25,  # radius -> forse questo lo devo adattare
+        None, 
+        f, 
+        'vit',         
+        save_intermediate=True, 
+        save_path=ret_path
+    )
 
-    #times.append(tot_time)
-    #times = np.array(times)
-    #np.save(open(os.path.join(ret_path, 'times_competitors.npy'), 'wb'), np.array(times))
-    #print(times)
+    np.save(open(os.path.join(ret_path, 'aexad_htmaps_vit.npy'), 'wb'), heatmaps)
+    np.save(open(os.path.join(ret_path, 'aexad_scores_vit.npy'), 'wb'), scores)
+
+    times.append(tot_time)
+    times = np.array(times)
+    np.save(open(os.path.join(ret_path, 'times_competitors.npy'), 'wb'), np.array(times))
+    print(times)
+
 
     shutil.rmtree(data_path)
 

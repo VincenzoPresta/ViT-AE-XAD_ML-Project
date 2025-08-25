@@ -105,6 +105,11 @@ class Trainer:
         elif AE_type == 'pca':
             self.model = PCA_Autoencoder(np.prod(self.train_loader.dataset.dim), np.prod(self.train_loader.dataset.dim),
                                          latent_dim)
+            
+        elif AE_type == 'vit':
+            self.model = ViT_CNN_Attn(self.train_loader.dataset.dim)
+
+                        
         else:
             raise Exception('Model not yet implemented')
 
@@ -116,8 +121,9 @@ class Trainer:
         #                                  {'params': self.model.decoder_final.parameters()},
         #                                  {'params': self.model.encoder_pre.parameters(), 'lr': 1e-5}
         #                                  ], lr=1e-3, weight_decay=1e-4)
+        
         # ResNet
-        self.optimizer = torch.optim.Adam([{'params': self.model.encoder.parameters()},
+        '''self.optimizer = torch.optim.Adam([{'params': self.model.encoder.parameters()},
                                            {'params': self.model.dec1.parameters()},
                                            {'params': self.model.dec2.parameters()},
                                            {'params': self.model.dec3.parameters()},
@@ -128,16 +134,16 @@ class Trainer:
                                            {'params': self.model.maxpool1.parameters(), 'lr': 1e-5},
                                            {'params': self.model.layer1.parameters(), 'lr': 1e-5},
                                            {'params': self.model.layer2.parameters(), 'lr': 1e-5},
-                                           ], lr=1e-3, weight_decay=1e-4)
-        # ViTCNN
-        #self.optimizer = torch.optim.Adam([
-        #                                  {'params': self.model.decoder1.parameters()},
-        #                                  {'params': self.model.decoder2.parameters()},
-        #                                  {'params': self.model.encoder1.parameters()},
-        #                                  {'params': self.model.encoder.parameters(), 'lr': 1e-5}
-        #                                  ], lr=1e-3, weight_decay=1e-4)
+                                           ], lr=1e-3, weight_decay=1e-4)'''
+                                           
+        #ViTCNN
+        self.optimizer = torch.optim.Adam([
+                                         {'params': self.model.decoder1.parameters()},
+                                         {'params': self.model.decoder2.parameters()},
+                                         {'params': self.model.encoder1.parameters()},
+                                         {'params': self.model.encoder.parameters(), 'lr': 1e-5}
+                                         ], lr=1e-3, weight_decay=1e-4) 
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lambda ep: 0.985 ** ep)
-
 
         self.loss = loss
         if loss == 'aexad':
