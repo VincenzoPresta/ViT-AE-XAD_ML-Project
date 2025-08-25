@@ -210,6 +210,8 @@ def load_dataset(path):
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
+
+
 def extract_dataset(path, n_anom_per_cls, seed=None):
     '''
     Method to arrange the data. Train and test images are supposed to be stored in two different folders.
@@ -289,98 +291,6 @@ def extract_dataset(path, n_anom_per_cls, seed=None):
     print(f'Test anomalies: {Y_test.sum()}')
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
-
-
-def extract_dataset_btad(base_path, n_anom_per_cls, seed=None, class_id=0):
-    """
-    Loader specifico per BTAD: gestisce le sottocartelle 01, 02, 03
-    con struttura:
-      train/ok, test/ok, test/ko, ground_truth/ko
-    """
-    np.random.seed(seed)
-
-    # Mappa classi 0,1,2 -> "01","02","03"
-    class_map = {0: "01", 1: "02", 2: "03"}
-    cls = class_map[class_id]
-
-    path = os.path.join(base_path, cls)
-
-    X_train, X_test, GT_train, GT_test = [], [], [], []
-
-    # --- Normal train ---
-    f_path = os.path.join(path, 'train', 'ok')
-    normal_files_tr = os.listdir(f_path)
-    for file in normal_files_tr:
-        if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
-            img = np.array(img, dtype=np.uint8)
-            X_train.append(img)
-            GT_train.append(np.zeros((1,224,224), dtype=np.uint8))  # maschere vuote
-
-    # --- Normal test ---
-    f_path = os.path.join(path, 'test', 'ok')
-    normal_files_te = os.listdir(f_path)
-    for file in normal_files_te:
-        if file.lower().endswith(("png","jpg","npy","bmp")):
-            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
-            img = np.array(img, dtype=np.uint8)
-            X_test.append(img)
-            GT_test.append(np.zeros((1,224,224), dtype=np.uint8))
-
-    # --- Anomalies (ko) ---
-    f_path = os.path.join(path, 'test', 'ko')
-    anomal_files = os.listdir(f_path)
-    idxs = np.random.permutation(len(anomal_files))
-
-    # --- Train anomalies ---
-    for file in np.array(anomal_files)[idxs[:n_anom_per_cls]]:
-        if file.lower().endswith(("png","jpg","npy","bmp")):
-            # Immagine
-            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
-            img = np.array(img, dtype=np.uint8)
-            X_train.append(img)
-
-            # Maschera
-            mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
-            mask = Image.open(mask_path).convert("L").resize((224,224))
-            mask = np.array(mask, dtype=np.uint8)
-            mask = np.expand_dims(mask, axis=0)   # (1,224,224)
-            GT_train.append(mask)
-
-    # --- Test anomalies ---
-    for file in np.array(anomal_files)[idxs[n_anom_per_cls:]]:
-        if file.lower().endswith(("png","jpg","npy","bmp")):
-            # Immagine
-            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
-            img = np.array(img, dtype=np.uint8)
-            X_test.append(img)
-
-            # Maschera
-            mask_path = os.path.join(path, 'ground_truth', 'ko', file).replace(f'.{file.split(".")[-1]}', '.png')
-            mask = Image.open(mask_path).convert("L").resize((224,224))
-            mask = np.array(mask, dtype=np.uint8)
-            mask = np.expand_dims(mask, axis=0)
-            GT_test.append(mask)
-
-    # --- Convert to arrays ---
-    X_train = np.array(X_train).astype(np.uint8)
-    X_test  = np.array(X_test).astype(np.uint8)
-    GT_train = np.array(GT_train)
-    GT_test  = np.array(GT_test)
-
-    # --- Labels ---
-    Y_train = np.zeros(X_train.shape[0])
-    Y_train[len(normal_files_tr):] = 1
-    Y_test = np.zeros(X_test.shape[0])
-    Y_test[len(normal_files_te):] = 1
-
-    print(f"BTAD-{cls} | Train shape: {X_train.shape}, Test shape: {X_test.shape}")
-    print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")
-    print(f"[DEBUG] BTAD loader attivato: class_id={class_id}, train={len(X_train)}, test={len(X_test)}")
-
-    return X_train, Y_train, X_test, Y_test, GT_train, GT_test
-
-
 def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = 'rand',DATASET = 'mnist', seed=None):
     '''
     :param dig: Selected dataset class
@@ -617,66 +527,46 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
 
     # Add normal data to train set
     f_path = os.path.join(root, 'train', 'good')
-    normal_files_tr = sorted(os.listdir(f_path))
+    normal_files_tr = os.listdir(f_path)
+    normal_files_tr.sort()
     for file in normal_files_tr:
-        if file.lower().endswith(("png","jpg","npy")):
-            image = Image.open(os.path.join(f_path, file)).convert("RGB").resize((224,224))
-            image = np.array(image, dtype=np.uint8)
+        if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+            image = np.array(Image.open(os.path.join(f_path, file)).convert('RGB'))
             X_train.append(image)
-            GT_train.append(np.zeros((1,224,224), dtype=np.uint8))  # maschere vuote
+            GT_train.append(np.zeros_like(image, dtype=np.uint8))
 
     # Add normal data to test set
     f_path = os.path.join(root, 'test', 'good')
-    normal_files_te = sorted(os.listdir(f_path))
+    normal_files_te = os.listdir(f_path)
+    normal_files_te.sort()
     for file in normal_files_te:
-        if file.lower().endswith(("png","jpg","npy")):
-            image = Image.open(os.path.join(f_path, file)).convert("RGB").resize((224,224))
-            image = np.array(image, dtype=np.uint8)
+        if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+            image = np.array(Image.open(os.path.join(f_path, file)).convert('RGB'))
             X_test.append(image)
-            GT_test.append(np.zeros((1,224,224), dtype=np.uint8))  # maschere vuote
-            
-    print("DEBUG GT_train shapes:", [gt.shape for gt in GT_train[:5]])
+            GT_test.append(np.zeros_like(image, dtype=np.uint8))
 
     outlier_data_dir = os.path.join(root, 'test')
-    outlier_classes = sorted(os.listdir(outlier_data_dir))
+    outlier_classes = os.listdir(outlier_data_dir)
+    outlier_classes.sort()
     for cl_a in outlier_classes:
         if cl_a == 'good':
             continue
 
-        outlier_file = sorted(os.listdir(os.path.join(outlier_data_dir, cl_a)))
+        outlier_file = np.array(os.listdir(os.path.join(outlier_data_dir, cl_a)))
+        outlier_file.sort()
         idxs = np.random.permutation(len(outlier_file))
 
         # Train
-        for i in idxs[: n_anom_per_cls]: #for file in outlier_file[idxs[: n_anom_per_cls]]:
-            file = outlier_file[i]
-            if file.lower().endswith(("png","jpg","npy")):
-                img_path = os.path.join(root, 'test', cl_a, file)
-                image = Image.open(img_path).convert("RGB").resize((224,224))
-                image = np.array(image, dtype=np.uint8)
-                X_train.append(image)
-
-                # Train mask
-                mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace(".png","_mask.png")
-                mask = Image.open(mask_path).convert("L").resize((224,224))
-                mask = np.array(mask, dtype=np.uint8)
-                mask = np.expand_dims(mask, axis=0)  # (1,224,224)
-                GT_train.append(mask)
+        for file in outlier_file[idxs[: n_anom_per_cls]]:
+            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+                X_train.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
+                GT_train.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
 
         # Test
-        for i in idxs[: n_anom_per_cls]: #for file in outlier_file[idxs[: n_anom_per_cls]]:
-            if file.lower().endswith(("png","jpg","npy")):
-                img_path = os.path.join(root, 'test', cl_a, file)
-                image = Image.open(img_path).convert("RGB").resize((224,224))
-                image = np.array(image, dtype=np.uint8)
-                X_test.append(image)
-
-                # Test mask
-                mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace(".png","_mask.png")
-                mask = Image.open(mask_path).convert("L").resize((224,224))
-                mask = np.array(mask, dtype=np.uint8)
-                mask = np.expand_dims(mask, axis=0)
-                GT_test.append(mask)
-
+        for file in outlier_file[idxs[n_anom_per_cls:]]:
+            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
+                X_test.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')))
+                GT_test.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB')))
 
 
     X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
@@ -701,11 +591,6 @@ def mvtec(cl, path, n_anom_per_cls, seed=None):
     Y_train[len(normal_files_tr): ] = 1
     Y_test = np.zeros(X_test.shape[0])
     Y_test[len(normal_files_te): ] = 1
-    
-    print("DEBUG X_train:", np.array(X_train).shape)
-    print("DEBUG GT_train:", np.array(GT_train).shape)
-    print("DEBUG X_test:", np.array(X_test).shape)
-    print("DEBUG GT_test:", np.array(GT_test).shape)
 
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test

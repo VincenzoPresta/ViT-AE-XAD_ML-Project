@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#from modeling.networks import build_feature_extractor, NET_OUT_DIM
-from competitors.deviation.modeling.networks import build_feature_extractor, NET_OUT_DIM
+from modeling.networks import build_feature_extractor, NET_OUT_DIM
 
 class SemiADNet(nn.Module):
     def __init__(self, args):

@@ -3,17 +3,13 @@ import torch
 from PIL import Image
 from tqdm import tqdm
 
-#from modeling.net import SemiADNet
-from competitors.deviation.modeling.net import SemiADNet
-#from datasets import mvtecad
-from competitors.deviation.datasets import mvtecad
+from modeling.net import SemiADNet
+from datasets import mvtecad
 import cv2
 import os
 import argparse
-#from utils import aucPerformance
-
-from competitors.deviation.modeling.layers import build_criterion
-
+from modeling.layers import build_criterion
+from utils import aucPerformance
 from scipy.ndimage.filters import gaussian_filter
 
 np.seterr(divide='ignore',invalid='ignore')

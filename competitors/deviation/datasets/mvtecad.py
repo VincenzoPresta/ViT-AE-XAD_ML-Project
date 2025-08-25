@@ -1,7 +1,6 @@
 import numpy as np
 import os, sys
-#from datasets.base_dataset import BaseADDataset
-from competitors.deviation.datasets.base_dataset import BaseADDataset
+from datasets.base_dataset import BaseADDataset
 from PIL import Image
 from torchvision import transforms
 

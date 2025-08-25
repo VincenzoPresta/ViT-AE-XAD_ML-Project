@@ -6,8 +6,6 @@ import torchvision
 from fcdd.models.bases import FCDDNet, BaseNet
 from torch.hub import load_state_dict_from_url
 
-from torchvision.models import vgg11_bn, VGG11_BN_Weights
-
 
 class FCDD_CNN224_VGG_NOPT(FCDDNet):
     # VGG_11BN based net with randomly initialized weights (pytorch default).
@@ -65,11 +63,10 @@ class FCDD_CNN224_VGG(FCDDNet):
     def __init__(self, in_shape, **kwargs):
         super().__init__(in_shape, **kwargs)
         assert self.bias, 'VGG net is only supported with bias atm!'
-        '''    state_dict = load_state_dict_from_url(
+        state_dict = load_state_dict_from_url(
             torchvision.models.vgg.model_urls['vgg11_bn'],
             model_dir=pt.join(pt.dirname(__file__), '..', '..', '..', 'data', 'models')
-        )'''
-        state_dict = vgg11_bn(weights=VGG11_BN_Weights.IMAGENET1K_V1).state_dict()
+        )
         features_state_dict = {k[9:]: v for k, v in state_dict.items() if k.startswith('features')}
 
         self.features = nn.Sequential(

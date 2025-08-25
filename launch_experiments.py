@@ -7,16 +7,10 @@ import numpy as np
 import torch
 from codecarbon import EmissionsTracker
 
-
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
-    mvtec_personalized, load_dataset, extract_dataset_btad, mvtec_all_classes
-
-#from run_fcdd import launch as launch_fcdd 
-#from run_deviation import launch as launch_dev 
-
-#from competitors.fcdd.run_fcdd import launch as launch_fcdd
-#from competitors.deviation.run_deviation import launch as launch_dev
-
+    mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes
+from run_fcdd import launch as launch_fcdd
+from run_deviation import launch as launch_dev
 from aexad_script import launch as launch_aexad
 
 import warnings
@@ -40,13 +34,12 @@ if __name__ == '__main__':
     if args.i != 'rand':
         args.i = float(args.i)
 
-    if args.ds in ['mnist', 'fmnist', 'cifar']:
+    if args.ds == 'mnist'  or args.ds == 'fmnist':
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
             square(args.c, perc_anom_train=args.patr, perc_anom_test=args.pate, size=args.size,
                    intensity=args.i, DATASET=args.ds, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
-        
     elif args.ds == 'mnist_diff':
         dataset = 'mnist'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
@@ -54,12 +47,10 @@ if __name__ == '__main__':
                    intensity=args.i, DATASET=dataset, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
-        
     elif args.ds == 'mvtec':
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec(args.c, 'datasets/mvtec', args.na, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
-        
         print(ret_path)
     elif args.ds == 'mvtec_o_a':
         dataset = 'mvtec'
@@ -68,7 +59,6 @@ if __name__ == '__main__':
                                                                              seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
-        
     elif args.ds == 'mvtec_o_a_aug':
         dataset = 'mvtec'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_only_one_augmented(args.c, 'datasets/mvtec', args.na,
@@ -76,7 +66,6 @@ if __name__ == '__main__':
                                                                              seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
-        
     elif args.ds == 'mvtec_our':
         dataset = 'mvtec'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test, _, _, files_train, files_test = mvtec_personalized(args.c, 'datasets/mvtec',
@@ -97,34 +86,16 @@ if __name__ == '__main__':
             os.makedirs(ret_path)
         np.save(open(os.path.join(ret_path, 'files_train_comp.npy'), 'wb'), files_train)
         np.save(open(os.path.join(ret_path, 'files_test_comp.npy'), 'wb'), files_test)
-        
-    elif args.ds == 'hazelnut':
-        # Hazelnut è una classe di MVTec
-        hazelnut_id = 5  # indice della classe "hazelnut"
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec(hazelnut_id, 'datasets/mvtec', args.na, seed=args.s)
-        data_path = os.path.join('datasets', 'mvtec', str(hazelnut_id), str(args.s))
-        ret_path = os.path.join('results', 'mvtec', str(hazelnut_id), str(args.s), str(args.na))
-
-    elif args.ds == 'btad':
-        # Dataset BTAD (01, 02, 03) gestito dal loader custom in tools/create_dataset.py
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset_btad(
-            base_path='datasets/btad',
-            n_anom_per_cls=args.na,
-            seed=args.s,
-            class_id=args.c
-        )
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
-        ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
-    
-
-    elif args.ds == 'road_inspection':
+    elif args.ds == 'hazelnut' or args.ds == 'road_inspection':
         dataset = args.ds
         data_path = os.path.join('datasets', args.ds, 'files')
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = load_dataset(f'datasets/{args.ds}')
-        ret_path = os.path.join('results', args.ds)            
-    
-        
-    print("DEBUG: args.ds =", args.ds) #DEBUG    
+        ret_path = os.path.join('results', args.ds)
+    elif 'btad' in args.ds:
+        dataset = args.ds
+        data_path = os.path.join('datasets', args.ds, 'files')
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset(f'datasets/{args.ds}', args.na, seed=args.s)
+        ret_path = os.path.join('results', args.ds)
 
     X_train = X_train.swapaxes(2, 3).swapaxes(1, 2)
     X_test = X_test.swapaxes(2, 3).swapaxes(1, 2)
@@ -152,10 +123,8 @@ if __name__ == '__main__':
 
     tracker = EmissionsTracker()
     tracker.start()
-    
-    
-    #FCDD
-    '''htmaps, scores, gtmaps, labels, tot_time = launch_fcdd(data_path, epochs=3, batch_size=8)  # 400
+
+    htmaps, scores, gtmaps, labels, tot_time = launch_fcdd(data_path, epochs=200, batch_size=16)  # 400
     np.save(open(os.path.join(ret_path, 'fcdd_gt.npy'), 'wb'), gtmaps)
     np.save(open(os.path.join(ret_path, 'fcdd_labels.npy'), 'wb'), labels)
     np.save(open(os.path.join(ret_path, 'fcdd_htmaps.npy'), 'wb'), htmaps)
@@ -167,40 +136,36 @@ if __name__ == '__main__':
     pickle.dump(emissions, open(os.path.join(ret_path, 'emissions_fcdd.pkl'), 'wb'))
 
     del htmaps, scores
-    torch.cuda.empty_cache()'''
-    
-    
-    #DEV
-    '''htmaps, scores, gtmaps, labels, tot_time = launch_dev(dataset_root=data_path, epochs=50)  # 50
-    np.save(open(os.path.join(ret_path, 'deviation_htmaps.npy'), 'wb'), htmaps)
-    np.save(open(os.path.join(ret_path, 'deviation_scores.npy'), 'wb'), np.array(scores))
-    np.save(open(os.path.join(ret_path, 'deviation_gtmaps.npy'), 'wb'), gtmaps)
-    np.save(open(os.path.join(ret_path, 'deviation_labels.npy'), 'wb'), np.array(labels))
-    times.append(tot_time)
-    del htmaps, scores
     torch.cuda.empty_cache()
-'''
 
-    #AE-XAD
-    def f(x):
-       return 1-x
+    #htmaps, scores, gtmaps, labels, tot_time = launch_dev(dataset_root=data_path, epochs=50)  # 50
+    #np.save(open(os.path.join(ret_path, 'deviation_htmaps.npy'), 'wb'), htmaps)
+    #np.save(open(os.path.join(ret_path, 'deviation_scores.npy'), 'wb'), np.array(scores))
+    #np.save(open(os.path.join(ret_path, 'deviation_gtmaps.npy'), 'wb'), gtmaps)
+    #np.save(open(os.path.join(ret_path, 'deviation_labels.npy'), 'wb'), np.array(labels))
+    #times.append(tot_time)
+    #del htmaps, scores
+    #torch.cuda.empty_cache()
 
-    #CONV
-    heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 3, 16, 32, (28*28) / 25, None, f, 'conv',
-                                                   save_intermediate=True, save_path=ret_path)
-    np.save(open(os.path.join(ret_path, 'aexad_htmaps_conv.npy'), 'wb'), heatmaps)
-    np.save(open(os.path.join(ret_path, 'aexad_scores_conv.npy'), 'wb'), scores)
 
-    times.append(tot_time)
-    times = np.array(times)
-    np.save(open(os.path.join(ret_path, 'times_competitors.npy'), 'wb'), np.array(times))
-    print(times)
+    #def f(x):
+    #    return 1-x
+
+    #heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'shallow',
+    #                                                save_intermediate=True, save_path=ret_path)
+    #np.save(open(os.path.join(ret_path, 'aexad_htmaps.npy'), 'wb'), heatmaps)
+    #np.save(open(os.path.join(ret_path, 'aexad_scores.npy'), 'wb'), scores)
+
+    #heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'conv',
+    #                                                save_intermediate=True, save_path=ret_path)
+    #np.save(open(os.path.join(ret_path, 'aexad_htmaps_conv.npy'), 'wb'), heatmaps)
+    #np.save(open(os.path.join(ret_path, 'aexad_scores_conv.npy'), 'wb'), scores)
+
+    #times.append(tot_time)
+    #times = np.array(times)
+    #np.save(open(os.path.join(ret_path, 'times_competitors.npy'), 'wb'), np.array(times))
+    #print(times)
 
     shutil.rmtree(data_path)
-    
-    #SHALLOW
-    '''heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'shallow',
-                                                   save_intermediate=True, save_path=ret_path)
-    np.save(open(os.path.join(ret_path, 'aexad_htmaps.npy'), 'wb'), heatmaps)
-    np.save(open(os.path.join(ret_path, 'aexad_scores.npy'), 'wb'), scores)'''
+
 

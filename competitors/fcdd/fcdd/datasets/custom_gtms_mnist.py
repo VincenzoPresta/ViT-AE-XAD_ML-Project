@@ -29,7 +29,7 @@ class ADImageDatasetGTM(TorchvisionDataset):
 
     def __init__(self, root: str, normal_class: int, preproc: str, nominal_label: int,
                  supervise_mode: str, noise_mode: str, oe_limit: int, online_supervision: bool,
-                 logger: Logger = None, shape: tuple = (3, 224, 224)):
+                 logger: Logger = None, shape: tuple = (3, 28, 28)):
         """
         :param root: root directory where data is found.
         :param normal_class: the class considered normal.
@@ -46,7 +46,6 @@ class ADImageDatasetGTM(TorchvisionDataset):
         """
         assert online_supervision, 'Artificial anomaly generation for custom datasets needs to be online'
         super().__init__(root, logger=logger)
-        
 
         self.n_classes = 2
         self.normal_classes = tuple([0])
@@ -54,10 +53,6 @@ class ADImageDatasetGTM(TorchvisionDataset):
         assert nominal_label in [0, 1]
         self.nominal_label = nominal_label
         self.anomalous_label = 1 if self.nominal_label == 0 else 0
-        
-        #forzo la shape a quello che il modello si aspetta
-        self.shape = (3, 224, 224)
-
 
         # min max after gcn l1 norm has been applied
         min_max_l1 = [
@@ -131,10 +126,6 @@ class ADImageDatasetGTM(TorchvisionDataset):
 
         # ----------------------------- Aggiunte ora --------------------------------
         self.train_images = np.load(os.path.join(root, 'X_train.npy'))
-        
-        if self.train_images.shape[1] == 1:
-            self.train_images = np.repeat(self.train_images, 3, axis=1) # Se il dataset è in scala di grigi (1 canale), replico il canale 3 volte per avere RGB
-        
         self.train_labels = np.load(os.path.join(root, 'Y_train.npy'))
         #img_shape = self.train_images.shape
         #self.train_gt = np.full((img_shape[0], 1, img_shape[2], img_shape[3]), fill_value=-1)
@@ -144,10 +135,6 @@ class ADImageDatasetGTM(TorchvisionDataset):
         self.train_gt = np.load(os.path.join(root, 'GT_train.npy'))[anom_ids]
 
         self.test_images = np.load(os.path.join(root, 'X_test.npy'))
-        
-        if self.test_images.shape[1] == 1:
-            self.test_images = np.repeat(self.test_images, 3, axis=1)
-        
         self.test_labels = np.load(os.path.join(root, 'Y_test.npy'))
         #img_shape = self.test_images.shape
         #self.test_gt = np.full((img_shape[0], 1, img_shape[2], img_shape[3]), fill_value=-1)
@@ -162,10 +149,10 @@ class ADImageDatasetGTM(TorchvisionDataset):
         self.shape = shape
 
         if self.raw_shape[0] != self.shape[0]:
-        # Se è grayscale, forza a 3 canali
-            if self.raw_shape[0] == 1 and self.shape[0] == 3:
-                self.train_images = np.repeat(self.train_images, 3, axis=1)
-                self.test_images  = np.repeat(self.test_images, 3, axis=1)
+            img_shape = self.train_images.shape
+            self.train_images = np.full((img_shape[0], self.shape[0], img_shape[2], img_shape[3]), fill_value=self.train_images)
+            img_shape = self.test_images.shape
+            self.test_images = np.full((img_shape[0], self.shape[0],  img_shape[2], img_shape[3]), fill_value=self.test_images)
 
         # precomputed mean and std of your training data
         if len(self.train_labels[self.train_labels==normal_class]) > 0:
@@ -182,11 +169,9 @@ class ADImageDatasetGTM(TorchvisionDataset):
         if preproc == 'lcn':
             assert self.raw_shape == self.shape, 'in case of no augmentation, raw shape needs to fit net input shape'
             img_gtm_transform = img_gtm_test_transform = MultiCompose([
-                transforms.Resize((224,224), interpolation=Image.NEAREST),
                 transforms.ToTensor(),
             ])
             test_transform = transform = transforms.Compose([
-                transforms.Resize((224,224)),
                 transforms.Lambda(lambda x: local_contrast_normalization(x, scale='l1')),
                 transforms.Normalize(
                     min_max_l1[normal_class][0],
@@ -196,28 +181,25 @@ class ADImageDatasetGTM(TorchvisionDataset):
         elif preproc in ['', None, 'default', 'none']:
             assert self.raw_shape == self.shape, 'in case of no augmentation, raw shape needs to fit net input shape'
             img_gtm_transform = img_gtm_test_transform = MultiCompose([
-                transforms.Resize((224,224), interpolation=Image.NEAREST),
                 transforms.ToTensor(),
             ])
             test_transform = transform = transforms.Compose([
-                transforms.Resize((224,224)),
                 transforms.Normalize(mean[normal_class], std[normal_class])
             ])
         elif preproc in ['aug1']:
             img_gtm_transform = MultiCompose([
-                transforms.Resize((224,224), interpolation=Image.NEAREST),   # 🔧 forza la size
+                transforms.RandomChoice(
+                    [transforms.RandomCrop(self.shape[-1], padding=0), transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST)]
+                ),
                 transforms.ToTensor(),
             ])
-            img_gtm_test_transform = MultiCompose([
-                transforms.Resize((224,224), interpolation=Image.NEAREST),
-                transforms.ToTensor()
-            ])
+            img_gtm_test_transform = MultiCompose(
+                [transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST), transforms.ToTensor()]
+            )
             test_transform = transforms.Compose([
-                transforms.Resize((224,224)),   # 🔧
                 transforms.Normalize(mean[normal_class], std[normal_class])
             ])
             transform = transforms.Compose([
-                transforms.Resize((224,224)),   # 🔧
                 transforms.ToPILImage(),
                 transforms.RandomChoice([
                     transforms.ColorJitter(0.04, 0.04, 0.04, 0.04),
@@ -231,15 +213,15 @@ class ADImageDatasetGTM(TorchvisionDataset):
             ])
         elif preproc in ['lcnaug1']:
             img_gtm_transform = MultiCompose([
-                transforms.Resize((224,224), interpolation=Image.NEAREST),   # 🔧 forza resize
+                transforms.RandomChoice(
+                    [transforms.RandomCrop(self.shape[-1], padding=0), transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST)]
+                ),
                 transforms.ToTensor(),
             ])
-            img_gtm_test_transform = MultiCompose([
-                transforms.Resize((224,224), interpolation=Image.NEAREST),   # 🔧 forza resize
-                transforms.ToTensor()
-            ])
+            img_gtm_test_transform = MultiCompose(
+                [transforms.Resize((self.shape[-2], self.shape[-1]), Image.NEAREST), transforms.ToTensor()]
+            )
             test_transform = transforms.Compose([
-                transforms.Resize((224,224)),   # 🔧 forza resize
                 transforms.Lambda(lambda x: local_contrast_normalization(x, scale='l1')),
                 transforms.Normalize(
                     min_max_l1[normal_class][0],
@@ -247,7 +229,6 @@ class ADImageDatasetGTM(TorchvisionDataset):
                 )
             ])
             transform = transforms.Compose([
-                transforms.Resize((224,224)),   # 🔧 forza resize
                 transforms.ToPILImage(),
                 transforms.RandomChoice([
                     transforms.ColorJitter(0.04, 0.04, 0.04, 0.04),
@@ -263,7 +244,6 @@ class ADImageDatasetGTM(TorchvisionDataset):
                     [ma - mi for ma, mi in zip(min_max_l1[normal_class][1], min_max_l1[normal_class][0])]
                 )
             ])
-
         else:
             raise ValueError('Preprocessing pipeline {} is not known.'.format(preproc))
 
@@ -397,30 +377,16 @@ class ImageFolderDatasetGTM(GTMapADDataset):
 
     def __len__(self):
         return len(self.images)
-    
+
     def __getitem__(self, index: int) -> Tuple[Tensor, int, Tensor]:
         target = self.anomaly_labels[index]
-        # TODO vedere come caricare la gt
-        
-        # Normalizza GT a singolo canale prima della conversione a PIL
-        if target == 1:
-            gt = self.gts[self.ids_anom[index]]
-            if gt.ndim == 2:  # (H,W) → (1,H,W)
-                gt = torch.from_numpy(gt).unsqueeze(0).byte() * 255
-            elif gt.ndim == 3:
-                if gt.shape[0] == 1:        # (1,H,W)
-                    gt = torch.from_numpy(gt).byte() * 255
-                elif gt.shape[1] == 1:      # (H,1,W) → (1,H,W)
-                    gt = torch.from_numpy(gt).permute(1, 0, 2).byte() * 255
-                else:
-                    raise ValueError(f"Unexpected 3D GT shape: {gt.shape}")
-            else:
-                raise ValueError(f"Unexpected GT shape: {gt.shape}")
 
+        # TODO vedere come caricare la gt
+        if target == 1:
+            gt = torch.from_numpy(self.gts[self.ids_anom[index]]).mul(255).mul(255).byte()
             gt = to_pil_image(gt)
         else:
-            # maschera vuota 1 canale per MNIST
-            gt = to_pil_image(np.zeros((28,28), dtype=np.uint8))
+           gt = to_pil_image(np.zeros((224, 224, 3), dtype=np.uint8))
 
         if self.target_transform is not None:
             pass  # already applied since we use self.anomaly_labels instead of self.targets
@@ -435,38 +401,25 @@ class ImageFolderDatasetGTM(GTMapADDataset):
                     img = to_tensor(img).mul(255).byte()
                     img, gt, target = self.all_transform(img, None, target, replace=replace)
                 img = to_pil_image(img)
-
-                # 🔧 Fix: forza 3 canali
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-
                 gt = gt.mul(255).byte() if gt is not None and gt.dtype != torch.uint8 else gt
                 gt = to_pil_image(gt) if gt is not None else None
             else:
+                #path, _ = self.samples[index]
+                #gt_path, _ = self.gtm_samples[index]
                 img = torch.from_numpy(self.images[index])
                 img = to_pil_image(img)
-
-                # 🔧 Fix: forza 3 canali
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
         else:
+            #path, _ = self.samples[index]
+            #gt_path, _ = self.gtm_samples[index]
+            #img = self.loader(path)
             img = torch.from_numpy(self.images[index]).mul(255).byte()
-
-            # Normalizza la shape a (C,H,W)
-            if img.ndim == 2:              # (H,W)
-                img = img.unsqueeze(0)     # → (1,H,W)
-                img = img.repeat(3,1,1)    # → (3,H,W)
-            elif img.ndim == 3:
-                if img.shape[0] == 1:      # (1,H,W)
-                    img = img.repeat(3,1,1)
-                elif img.shape[1] == 1:    # (H,1,W)
-                    img = img.permute(1,0,2).repeat(3,1,1)
-                elif img.shape[0] != 3:
-                    raise ValueError(f"Unexpected image shape: {img.shape}")
-
             img = to_pil_image(img)
+            #if gt_path is not None:
+            #    gt = self.loader(gt_path)
 
         if gt is None:
+            # gt is assumed to be 1 for anoms always (regardless of the anom_label), since the supervisors work that way
+            # later code fixes that (and thus would corrupt it if the correct anom_label is used here in swapped case)
             gtinitlbl = target if self.anomalous_label == 1 else (1 - target)
             gt = (torch.ones(self.raw_shape)[0] * gtinitlbl).mul(255).byte()
             gt = to_pil_image(gt)
@@ -476,6 +429,14 @@ class ImageFolderDatasetGTM(GTMapADDataset):
 
         if self.transform is not None:
             img = self.transform(img)
+
+        #if self.nominal_label != 0:
+        #    gt[gt == 0] = -3  # -3 is chosen arbitrarily here
+        #    gt[gt == 1] = self.anomalous_label
+        #    gt[gt == -3] = self.nominal_label
+
+        #gt = gt[:1]  # cut off redundant channels
+        #print('----', gt.max())
 
         return img, target, gt
 

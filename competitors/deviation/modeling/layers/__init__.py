@@ -1,9 +1,6 @@
 import torch
-#from modeling.layers.deviation_loss import DeviationLoss
-#from modeling.layers.binary_focal_loss import BinaryFocalLoss
-
-from competitors.deviation.modeling.layers.deviation_loss import DeviationLoss
-from competitors.deviation.modeling.layers.binary_focal_loss import BinaryFocalLoss
+from modeling.layers.deviation_loss import DeviationLoss
+from modeling.layers.binary_focal_loss import BinaryFocalLoss
 
 def build_criterion(criterion):
     if criterion == "deviation":

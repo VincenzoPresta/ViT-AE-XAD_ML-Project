@@ -1,7 +1,6 @@
 import numpy as np
 from torch.utils.data import Sampler
-
-from competitors.deviation.datasets.base_dataset import BaseADDataset
+from datasets.base_dataset import BaseADDataset
 
 
 def worker_init_fn_seed(worker_id):
