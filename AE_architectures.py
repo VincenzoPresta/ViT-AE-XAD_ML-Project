@@ -810,9 +810,7 @@ class ViT_CNN_Attn(nn.Module):
 
         decoded = self.decoder1(decoded1)  # unsqueeze
         decoded = self.decoder2(decoded*encoded_square)
-        
-        decoded = decoded.permute(0, 3, 1, 2).contiguous()  # (N,H,W,C) → (N,C,H,W)
-        
+                
         print("[DEBUG forward return]", decoded.shape)
 
         return decoded
