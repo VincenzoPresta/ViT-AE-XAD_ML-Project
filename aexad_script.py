@@ -263,6 +263,8 @@ class Trainer:
             name = 'model_conv_deep_v2'
         elif isinstance(self.model, ResNet_CNN_Attn):
             name = 'model_vgg_cnn'
+            
+        print("DEBUG:", name)
 
         fe_untrain = False
         self.model.train()
