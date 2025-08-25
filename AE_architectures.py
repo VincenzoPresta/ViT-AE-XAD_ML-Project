@@ -757,9 +757,6 @@ class ViT_CNN_Attn(nn.Module):
     def _process_input(self, x: torch.Tensor) -> torch.Tensor:
         n, c, h, w = x.shape
         p = self.patch_size
-        
-        print("[DEBUG] batch:", n, "channels:", c, "height:", h, "width:", w)
-        print("[DEBUG] expected image_size:", self.image_size)
 
         
         torch._assert(h == self.image_size, "Wrong image height!")
@@ -811,7 +808,6 @@ class ViT_CNN_Attn(nn.Module):
         decoded = self.decoder1(decoded1)  # unsqueeze
         decoded = self.decoder2(decoded*encoded_square)
                 
-        print("[DEBUG forward return]", decoded.shape)
 
         return decoded
 

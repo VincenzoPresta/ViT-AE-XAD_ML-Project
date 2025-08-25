@@ -92,13 +92,7 @@ class AEXAD_loss_norm(nn.Module):
             gt = gt.repeat(1, 3, 1, 1)
         
         max_diff = (self.f(target) - target) ** 2
-        
-        print("[DEBUG loss] rec_img:", rec_img.shape)
-        print("[DEBUG loss] target:", target.shape)
-        print("[DEBUG loss] gt:", gt.shape)
-        print("[DEBUG loss] y:", y.shape)
-        
-        
+
         rec_n = (rec_img - target) ** 2 / max_diff
         rec_o = (self.f(target) - rec_img) ** 2 / max_diff
 

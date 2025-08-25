@@ -51,10 +51,7 @@ if __name__ == '__main__':
         X_test = resize(torch.tensor(X_test)).numpy()
         GT_train = resize(torch.tensor(GT_train)).numpy()
         GT_test = resize(torch.tensor(GT_test)).numpy()   
-        
-        print("[DEBUG]", X_train.shape, X_test.shape)
 
-            
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
         
@@ -192,10 +189,10 @@ if __name__ == '__main__':
     # ViT
     heatmaps, scores, _, _, tot_time = launch_aexad(
         data_path, 
-        2,              # epoche (debug)
-        4,              # batch size ridotto
+        50,              # epoche 
+        16,              # batch size
         32,             # latent dim
-        (224*224) / 25, # radius adattato al 224x224
+        (224*224) / 25, # radius adattato al 224x224, come da paper
         None, 
         f, 
         'vit',         

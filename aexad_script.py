@@ -211,7 +211,7 @@ class Trainer:
             for i, sample in enumerate(tbar):
                 image, label, gtmap = sample['image'], sample['label'], sample['gt_label']
                 
-                # 🔧 Allinea shape come in train()
+                # Allinea shape come in train()
                 if image.ndim == 4:
                     # Caso ideale: già (N,1,224,224) o (N,3,224,224)
                     if not (image.shape[1] in [1, 3] and image.shape[2] == 224 and image.shape[3] == 224):
@@ -222,7 +222,7 @@ class Trainer:
                         elif image.shape[2] in [1,3]:
                             image = image.permute(0, 2, 1, 3)
 
-                # Se ViT e grayscale → duplica a 3 canali
+                # Se ViT è grayscale → duplica a 3 canali
                 if isinstance(self.model, ViT_CNN_Attn) and image.shape[1] == 1:
                     image = image.repeat(1, 3, 1, 1)
         
@@ -244,20 +244,29 @@ class Trainer:
                 labels.extend(label.detach().numpy())
                 
             #PLOT
-                plt.figure()
+                plt.figure(figsize=(10,4))
+
+                # Input
                 plt.subplot(1, 3, 1)
                 plt.imshow(image[0].swapaxes(0, 1).swapaxes(1, 2))
                 plt.title("Input")
-                
+                plt.axis("off")
+
+                # Ricostruzione
                 plt.subplot(1, 3, 2)
                 plt.imshow(output[0].swapaxes(0, 1).swapaxes(1, 2))
-                plt.subplot(1, 3, 3)
                 plt.title("Ricostruzione")
-                
-                plt.imshow(gtmap[0].numpy().swapaxes(0, 1).swapaxes(1, 2))
-                plt.savefig(f'test_{i}_{self.loss}.jpg')
-                plt.close('all')
+                plt.axis("off")
+
+                # GT mask
+                plt.subplot(1, 3, 3)
+                plt.imshow(gtmap[0].numpy().squeeze(), cmap="gray")  # squeeze per rimuovere il canale extra
                 plt.title("GT mask")
+                plt.axis("off")
+
+                plt.tight_layout()
+                plt.savefig(f"test_{i}_{self.loss}.jpg")
+                plt.close("all")
 
             scores = np.array(scores)
             heatmaps = np.array(heatmaps)
@@ -296,10 +305,8 @@ class Trainer:
         
         #nuovo: ViT
         elif isinstance(self.model, ViT_CNN_Attn):
-            print("[DEBUG dataset dim]", self.train_loader.dataset.dim)
             name = 'model_vit_cnn'
                     
-        print("DEBUG:", name)
 
         fe_untrain = False
         self.model.train()
@@ -330,17 +337,13 @@ class Trainer:
                 if isinstance(self.model, ViT_CNN_Attn) and image.ndim == 4 and image.shape[1] == 1:
                     image = image.repeat(1, 3, 1, 1)           
 
-                print("[DEBUG after permute]", image.shape)
-
                 if self.cuda:
                     image = image.cuda()
                     gt_label = gt_label.cuda()
                     label = label.cuda()
                     
                 output = self.model(image)
-                
-                print("[DEBUG before loss] output:", output.shape, "image:", image.shape)
-                
+                                
                 if self.loss == 'mse':
                     loss = self.criterion(output, image)
                 else:
