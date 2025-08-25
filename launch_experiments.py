@@ -7,6 +7,8 @@ import numpy as np
 import torch
 from codecarbon import EmissionsTracker
 
+from torchvision.transforms import Resize
+
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
     mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes
     
@@ -41,6 +43,16 @@ if __name__ == '__main__':
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
             square(args.c, perc_anom_train=args.patr, perc_anom_test=args.pate, size=args.size,
                    intensity=args.i, DATASET=args.ds, seed=args.s)
+            
+        #sto usando ViT quindi per ora metto questa patch    
+        resize = Resize((224, 224))
+
+        X_train = resize(torch.tensor(X_train)).numpy()
+        X_test = resize(torch.tensor(X_test)).numpy()
+        GT_train = resize(torch.tensor(GT_train)).numpy()
+        GT_test = resize(torch.tensor(GT_test)).numpy()   
+
+            
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
     elif args.ds == 'mnist_diff':
