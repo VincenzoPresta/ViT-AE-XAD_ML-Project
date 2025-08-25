@@ -263,7 +263,11 @@ class Trainer:
             name = 'model_conv_deep_v2'
         elif isinstance(self.model, ResNet_CNN_Attn):
             name = 'model_vgg_cnn'
-            
+        
+        #nuovo: ViT
+        elif isinstance(self.model, ViT_CNN_Attn):
+            name = 'model_vit_cnn'
+                    
         print("DEBUG:", name)
 
         fe_untrain = False
@@ -278,6 +282,10 @@ class Trainer:
             tbar = tqdm(self.train_loader, disable=self.silent)
             for i, sample in enumerate(tbar):
                 image, label, gt_label = sample['image'], sample['label'], sample['gt_label']
+                   # Forza shape (N, C, H, W) prima del modello
+                if image.ndim == 4 and image.shape[1] not in [1, 3]:
+                    # Caso tipico: (N, H, W, C) -> (N, C, H, W)
+                    image = image.permute(0, 3, 1, 2)
 
                 if self.cuda:
                     image = image.cuda()
