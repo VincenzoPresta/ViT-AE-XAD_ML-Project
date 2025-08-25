@@ -243,12 +243,29 @@ class Trainer:
                 gtmaps.extend(gtmap.detach().numpy())
                 labels.extend(label.detach().numpy())
                 plt.figure()
+                
+                #immagine input
                 plt.subplot(1, 3, 1)
                 plt.imshow(image[0].swapaxes(0, 1).swapaxes(1, 2))
+                
+                #immagine ricostruita
                 plt.subplot(1, 3, 2)
                 plt.imshow(output[0].swapaxes(0, 1).swapaxes(1, 2))
+                
+                #gt mask
                 plt.subplot(1, 3, 3)
-                plt.imshow(gtmap[0].numpy().swapaxes(0, 1).swapaxes(1, 2))
+                gt = gtmap[0].detach().cpu().numpy()
+                if gt.shape[0] == 1:
+                    # caso grayscale: (1,H,W) → (H,W)
+                    gt = gt.squeeze(0)
+                    plt.imshow(gt, cmap="gray")
+                elif gt.shape[0] == 3:
+                    # caso RGB: (3,H,W) → (H,W,3)
+                    gt = np.transpose(gt, (1, 2, 0))
+                    plt.imshow(gt)
+                else:
+                    # fallback per sicurezza
+                    plt.imshow(gt[0], cmap="gray")
                 plt.savefig(f'test_{i}_{self.loss}.jpg')
                 plt.close('all')
             scores = np.array(scores)
