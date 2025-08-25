@@ -68,6 +68,7 @@ if __name__ == '__main__':
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
         print(ret_path)
+        
     elif args.ds == 'mvtec_o_a':
         dataset = 'mvtec'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_only_one(args.c, 'datasets/mvtec', args.na,
@@ -187,7 +188,7 @@ if __name__ == '__main__':
     print(times)'''
     
     # ViT
-    heatmaps, scores, _, _, tot_time = launch_aexad(
+    heatmaps, scores, gtmaps, labels, tot_time = launch_aexad(
         data_path, 
         1000,              # epoche 
         16,              # batch size
@@ -201,6 +202,8 @@ if __name__ == '__main__':
     )
     np.save(open(os.path.join(ret_path, 'aexad_htmaps_vit.npy'), 'wb'), heatmaps)
     np.save(open(os.path.join(ret_path, 'aexad_scores_vit.npy'), 'wb'), scores)
+    np.save(os.path.join(ret_path, "aexad_labels.npy"), labels)
+    np.save(os.path.join(ret_path, "aexad_gt.npy"), gtmaps)
 
     times.append(tot_time)
     times = np.array(times)
