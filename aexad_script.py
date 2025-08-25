@@ -244,6 +244,12 @@ class Trainer:
                 labels.extend(label.detach().numpy())
                 
             #PLOT
+            
+                # Converti sempre in numpy prima del plot
+                img = image[0] if isinstance(image, np.ndarray) else image[0].detach().cpu().numpy()
+                out = output[0] if isinstance(output, np.ndarray) else output[0].detach().cpu().numpy()
+                gt  = gtmap[0] if isinstance(gtmap, np.ndarray) else gtmap[0].detach().cpu().numpy()
+                
                 plt.figure(figsize=(10, 4))
 
                 # 🔎 Debug shapes
