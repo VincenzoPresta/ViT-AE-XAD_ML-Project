@@ -55,6 +55,7 @@ class Trainer:
                 self.test_loader = DataLoader(CustomAD(path, train=False), batch_size=batch_size, shuffle=False)
         elif dataset == 'mvtec':
             print(dataset)
+            print("[DEBUG]: ciaooooo")
             ds = MvtecAD(path, train=True)
             #weights = np.where(ds.labels == 1, 0.6, 0.4)
             #sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, num_samples=len(ds.labels))
