@@ -1398,19 +1398,25 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
         outlier_file = np.array(os.listdir(os.path.join(outlier_data_dir, cl_a)))
         outlier_file.sort()
         idxs = np.random.permutation(len(outlier_file))
-
+    
+    #Anomalies---
         # Train
         for file in outlier_file[idxs[: n_anom_per_cls]]:
-            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
-                X_train.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB').resize((224,224))))
-                GT_train.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB').resize((224,224))))
+            if file.lower().endswith(('png','jpg','npy')):
+                img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
+                mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
+                            .convert('L').resize((224,224), Image.NEAREST)
+                X_train.append(np.array(img))
+                GT_train.append(np.array(mask)[...,None])  # (224,224,1)
 
         # Test
         for file in outlier_file[idxs[n_anom_per_cls:]]:
-            if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
-                X_test.append(np.array(Image.open(os.path.join(root, 'test/' + cl_a + '/' + file)).convert('RGB')).resize((224,224)))
-                GT_test.append(np.array(Image.open(os.path.join(root, 'ground_truth/' + cl_a + '/' + file).replace('.png', '_mask.png')).convert('RGB').resize((224,224))))
-
+            if file.lower().endswith(('png','jpg','npy')):
+                img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
+                mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
+                            .convert('L').resize((224,224), Image.NEAREST)
+                X_test.append(np.array(img))
+                GT_test.append(np.array(mask)[...,None])
 
     X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
     #X_train = np.swapaxes(X_train, 2, 3)
@@ -1434,6 +1440,11 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
     Y_train[len(normal_files_tr): ] = 1
     Y_test = np.zeros(X_test.shape[0])
     Y_test[len(normal_files_te): ] = 1
+    
+    print("Train images:", np.array(X_train).shape)   # (N,224,224,3)
+    print("Train masks:", np.array(GT_train).shape)   # (N,224,224,1)
+    print("Test images:", np.array(X_test).shape)     # (M,224,224,3)
+    print("Test masks:", np.array(GT_test).shape)     # (M,224,224,1)
 
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
