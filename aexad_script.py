@@ -154,13 +154,6 @@ class Trainer:
 
         self.loss = loss
         if loss == 'aexad':
-            # Convertiamo lambda_p e lambda_s in torch.Tensor per evitare errori .cuda() sui float
-            lambda_p_t = torch.tensor(lambda_p, dtype=torch.float32)
-            lambda_s_t = torch.tensor(lambda_s, dtype=torch.float32)
-            if self.cuda:
-                lambda_p_t = lambda_p_t.cuda()
-                lambda_s_t = lambda_s_t.cuda()
-                
             if isinstance(self.train_loader.dataset, CustomVGGAD):
                 self.criterion = AEXAD_loss_norm_vgg(self.train_loader.dataset.mean,
                                  self.train_loader.dataset.std, lambda_p, lambda_s, f, self.cuda)

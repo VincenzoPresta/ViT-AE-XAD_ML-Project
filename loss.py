@@ -64,6 +64,14 @@ class AEXAD_loss_norm(nn.Module):
         self.lambda_s = lambda_s
         self.f = f
         self.use_cuda = cuda
+        
+        #fix: float' object has no attribute 'cuda'
+        if lambda_p is not None:
+            self.lambda_p = torch.tensor(lambda_p, dtype=torch.float32)
+            if cuda:
+                self.lambda_p = self.lambda_p.cuda()
+        else:
+            self.lambda_p = None
 
     def forward(self, rec_img, target, gt, y):
         '''
