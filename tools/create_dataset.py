@@ -1399,42 +1399,38 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
         outlier_file.sort()
         idxs = np.random.permutation(len(outlier_file))
     
-    #Anomalies---
-        # Train
-        for file in outlier_file[idxs[: n_anom_per_cls]]:
-            if file.lower().endswith(('png','jpg','npy')):
-                img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
-                mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
-                            .convert('L').resize((224,224), Image.NEAREST)
-                X_train.append(np.array(img))
-                GT_train.append(np.array(mask)[...,None])  # (224,224,1)
+        # Train anomaly
+        img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
+        mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
+                    .convert('L').resize((224,224), Image.NEAREST)
+        mask = np.array(mask, dtype=np.uint8)
+        if mask.ndim == 2:
+            mask = mask[..., None]   # forza (224,224,1)
 
-        # Test
-        for file in outlier_file[idxs[n_anom_per_cls:]]:
-            if file.lower().endswith(('png','jpg','npy')):
-                img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
-                mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
-                            .convert('L').resize((224,224), Image.NEAREST)
-                X_test.append(np.array(img))
-                GT_test.append(np.array(mask)[...,None])
+        X_train.append(np.array(img, dtype=np.uint8))
+        GT_train.append(mask)
+
+        # Test anomaly
+        img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
+        mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
+                    .convert('L').resize((224,224), Image.NEAREST)
+        mask = np.array(mask, dtype=np.uint8)
+        if mask.ndim == 2:
+            mask = mask[..., None]
+
+        X_test.append(np.array(img, dtype=np.uint8))
+        GT_test.append(mask)
 
     X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
-    #X_train = np.swapaxes(X_train, 2, 3)
-    #X_train = np.swapaxes(X_train, 1, 2)
 
     X_test = np.array(X_test).astype(np.uint8)
-    #X_test = np.swapaxes(X_test, 2, 3)
-    #X_test = np.swapaxes(X_test, 1, 2)
-
+    
+    shapes = [m.shape for m in GT_train]
+    print(set(shapes))
 
     GT_train = np.array(GT_train)#.astype(np.uint8)
-    #GT_train = np.swapaxes(GT_train, 2, 3)
-    #GT_train = np.swapaxes(GT_train, 1, 2)
 
     GT_test = np.array(GT_test)#.astype(np.uint8)
-    #GT_test = np.swapaxes(GT_test, 2, 3)
-    #GT_test = np.swapaxes(GT_test, 1, 2)
-
 
     Y_train = np.zeros(X_train.shape[0])
     Y_train[len(normal_files_tr): ] = 1
