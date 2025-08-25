@@ -301,10 +301,14 @@ class Trainer:
                     gt_label = gt_label.cuda()
                     label = label.cuda()
                     
+                #Check per ViT: caso MNIST/FMNIST (grayscale → RGB)
                 if isinstance(self.model, ViT_CNN_Attn) and image.ndim == 4 and image.shape[1] == 1:
-                    image = image.repeat(1, 3, 1, 1)
+                    image = image.repeat(1, 3, 1, 1)           
                     
                 output = self.model(image)
+                
+                print("[DEBUG before loss] output:", output.shape, "image:", image.shape)
+                
                 if self.loss == 'mse':
                     loss = self.criterion(output, image)
                 else:
