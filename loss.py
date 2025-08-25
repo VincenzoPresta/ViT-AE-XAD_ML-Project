@@ -81,7 +81,7 @@ class AEXAD_loss_norm(nn.Module):
         :param y: tensor, labels
         '''
         
-         # Fix per ground truth mask (gt)
+        # Fix per ground truth mask (gt)
         # Alcuni dataset (es. MNIST riscalato per ViT) generano gt con shape "storta"
         # come (N,224,1,224) invece di (N,1,224,224). Questo causa mismatch con rec_img.
         if gt.ndim == 4 and gt.shape[1] == 224 and gt.shape[2] == 1 and gt.shape[3] == 224:
