@@ -80,14 +80,8 @@ class AEXAD_loss_norm(nn.Module):
         :param gt: tensor, ground truth image
         :param y: tensor, labels
         '''
-        max_diff = (self.f(target) - target) ** 2
         
-        print("[DEBUG loss] rec_img:", rec_img.shape)
-        print("[DEBUG loss] target:", target.shape)
-        print("[DEBUG loss] gt:", gt.shape)
-        print("[DEBUG loss] y:", y.shape)
-        
-        # Fix per ground truth mask (gt)
+         # Fix per ground truth mask (gt)
         # Alcuni dataset (es. MNIST riscalato per ViT) generano gt con shape "storta"
         # come (N,224,1,224) invece di (N,1,224,224). Questo causa mismatch con rec_img.
         if gt.ndim == 4 and gt.shape[1] == 224 and gt.shape[2] == 1 and gt.shape[3] == 224:
@@ -96,6 +90,13 @@ class AEXAD_loss_norm(nn.Module):
         # Se rec_img è RGB (3 canali) e gt è 1 canale, duplica gt su 3 canali
         if gt.shape[1] == 1 and rec_img.shape[1] == 3:
             gt = gt.repeat(1, 3, 1, 1)
+        
+        max_diff = (self.f(target) - target) ** 2
+        
+        print("[DEBUG loss] rec_img:", rec_img.shape)
+        print("[DEBUG loss] target:", target.shape)
+        print("[DEBUG loss] gt:", gt.shape)
+        print("[DEBUG loss] y:", y.shape)
         
         
         rec_n = (rec_img - target) ** 2 / max_diff
