@@ -758,7 +758,9 @@ class ViT_CNN_Attn(nn.Module):
         n, c, h, w = x.shape
         p = self.patch_size
         
-        print ("[DEBUG]", self.image_size)
+        print("[DEBUG] batch:", n, "channels:", c, "height:", h, "width:", w)
+        print("[DEBUG] expected image_size:", self.image_size)
+
         
         torch._assert(h == self.image_size, "Wrong image height!")
         torch._assert(w == self.image_size, "Wrong image width!")
