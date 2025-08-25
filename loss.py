@@ -87,9 +87,16 @@ class AEXAD_loss_norm(nn.Module):
         print("[DEBUG loss] gt:", gt.shape)
         print("[DEBUG loss] y:", y.shape)
         
-        '''# Allinea la maschera GT ai canali dell'immagine (per ViT RGB)
-        if gt.shape[1] == 1 and rec_img.shape[1] == 3: #maschera grayscale, immagine rgb
-            gt = gt.repeat(1, 3, 1, 1)'''
+        # Fix per ground truth mask (gt)
+        # Alcuni dataset (es. MNIST riscalato per ViT) generano gt con shape "storta"
+        # come (N,224,1,224) invece di (N,1,224,224). Questo causa mismatch con rec_img.
+        if gt.ndim == 4 and gt.shape[1] == 224 and gt.shape[2] == 1 and gt.shape[3] == 224:
+            gt = gt.permute(0, 2, 1, 3)  # (N,224,1,224) → (N,1,224,224)
+
+        # Se rec_img è RGB (3 canali) e gt è 1 canale, duplica gt su 3 canali
+        if gt.shape[1] == 1 and rec_img.shape[1] == 3:
+            gt = gt.repeat(1, 3, 1, 1)
+        
         
         rec_n = (rec_img - target) ** 2 / max_diff
         rec_o = (self.f(target) - rec_img) ** 2 / max_diff
