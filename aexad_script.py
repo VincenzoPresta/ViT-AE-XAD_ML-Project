@@ -242,36 +242,56 @@ class Trainer:
                 scores.extend(score)
                 gtmaps.extend(gtmap.detach().numpy())
                 labels.extend(label.detach().numpy())
-                plt.figure()
                 
+            #PLOT
+                plt.figure(figsize=(10, 4))
+
+                # 🔎 Debug shapes
                 print("[DEBUG plot] image:", image[0].shape, 
                     "output:", output[0].shape, 
                     "gtmap:", gtmap[0].shape)
-                
-                #immagine input
+
+                # ---- Input ----
                 plt.subplot(1, 3, 1)
-                plt.imshow(image[0].swapaxes(0, 1).swapaxes(1, 2))
-                
-                #immagine ricostruita
+                img = image[0].detach().cpu().numpy()
+                if img.shape[0] == 1:  # (1,H,W) → (H,W)
+                    img = img.squeeze(0)
+                    plt.imshow(img, cmap="gray", vmin=0, vmax=1)
+                else:                  # (3,H,W) → (H,W,3)
+                    plt.imshow(np.transpose(img, (1, 2, 0)), vmin=0, vmax=1)
+                plt.title("Input")
+
+                # ---- Ricostruzione ----
                 plt.subplot(1, 3, 2)
-                plt.imshow(output[0].swapaxes(0, 1).swapaxes(1, 2))
-                
-                #gt mask
+                out = output[0].detach().cpu().numpy()
+                if out.shape[0] == 1:
+                    out = out.squeeze(0)
+                    plt.imshow(out, cmap="gray", vmin=0, vmax=1)
+                else:
+                    plt.imshow(np.transpose(out, (1, 2, 0)), vmin=0, vmax=1)
+                plt.title("Ricostruzione")
+
+                # ---- GT mask ----
                 plt.subplot(1, 3, 3)
                 gt = gtmap[0].detach().cpu().numpy()
-                if gt.shape[0] == 1:
-                    # caso grayscale: (1,H,W) → (H,W)
-                    gt = gt.squeeze(0)
-                    plt.imshow(gt, cmap="gray")
-                elif gt.shape[0] == 3:
-                    # caso RGB: (3,H,W) → (H,W,3)
-                    gt = np.transpose(gt, (1, 2, 0))
-                    plt.imshow(gt)
-                else:
-                    # fallback per sicurezza
+
+                # Fix speciale: (224,1,224) → (1,224,224)
+                if gt.shape == (224, 1, 224):
+                    gt = np.transpose(gt, (1, 0, 2))
+
+                # Casi regolari
+                if gt.shape[0] == 1:   # (1,H,W)
+                    plt.imshow(gt.squeeze(0), cmap="gray")
+                elif gt.shape[0] == 3: # (3,H,W)
+                    plt.imshow(np.transpose(gt, (1, 2, 0)))
+                else:                  # fallback: prendi primo canale
                     plt.imshow(gt[0], cmap="gray")
+                plt.title("GT mask")
+
+                plt.tight_layout()
                 plt.savefig(f'test_{i}_{self.loss}.jpg')
                 plt.close('all')
+
             scores = np.array(scores)
             heatmaps = np.array(heatmaps)
             gtmaps = np.array(gtmaps)
