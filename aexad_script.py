@@ -266,6 +266,7 @@ class Trainer:
         
         #nuovo: ViT
         elif isinstance(self.model, ViT_CNN_Attn):
+            print("[DEBUG dataset dim]", self.train_loader.dataset.dim)
             name = 'model_vit_cnn'
                     
         print("DEBUG:", name)
@@ -301,9 +302,9 @@ class Trainer:
                     gt_label = gt_label.cuda()
                     label = label.cuda()
                     
-                '''#Check per ViT: caso MNIST/FMNIST (grayscale → RGB)
+                #Check per ViT: caso MNIST/FMNIST (grayscale → RGB)
                 if isinstance(self.model, ViT_CNN_Attn) and image.ndim == 4 and image.shape[1] == 1:
-                    image = image.repeat(1, 3, 1, 1)         '''  
+                    image = image.repeat(1, 3, 1, 1)           
                     
                 output = self.model(image)
                 
