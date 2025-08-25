@@ -282,10 +282,19 @@ class Trainer:
             tbar = tqdm(self.train_loader, disable=self.silent)
             for i, sample in enumerate(tbar):
                 image, label, gt_label = sample['image'], sample['label'], sample['gt_label']
-                   # Forza shape (N, C, H, W) prima del modello
-                if image.ndim == 4 and image.shape[1] not in [1, 3]:
-                    # Caso tipico: (N, H, W, C) -> (N, C, H, W)
-                    image = image.permute(0, 3, 1, 2)
+                # Forza sempre (N, C, H, W)
+                if image.ndim == 4:
+                    # Caso ideale: già (N,1,224,224) o (N,3,224,224)
+                    if image.shape[1] in [1, 3] and image.shape[2] == 224 and image.shape[3] == 224:
+                        pass  # già a posto
+                    # Caso sbagliato: (N,224,224,1) -> (N,1,224,224)
+                    elif image.shape[-1] in [1, 3]:
+                        image = image.permute(0, 3, 1, 2)
+                    # Caso sbagliato: (N,224,1,224) -> (N,1,224,224)
+                    elif image.shape[2] in [1, 3]:
+                        image = image.permute(0, 2, 1, 3)
+
+                print("[DEBUG after permute]", image.shape)
 
                 if self.cuda:
                     image = image.cuda()
