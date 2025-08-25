@@ -199,17 +199,16 @@ if __name__ == '__main__':
     # ViT
     heatmaps, scores, _, _, tot_time = launch_aexad(
         data_path, 
-        2,          # numero epoche
-        16,            # batch size
-        32,            # latent dim
-        (28*28) / 25,  # radius -> forse questo lo devo adattare
+        2,              # epoche (debug)
+        4,              # batch size ridotto
+        32,             # latent dim
+        (224*224) / 25, # radius adattato al 224x224
         None, 
         f, 
         'vit',         
         save_intermediate=True, 
         save_path=ret_path
     )
-
     np.save(open(os.path.join(ret_path, 'aexad_htmaps_vit.npy'), 'wb'), heatmaps)
     np.save(open(os.path.join(ret_path, 'aexad_scores_vit.npy'), 'wb'), scores)
 
