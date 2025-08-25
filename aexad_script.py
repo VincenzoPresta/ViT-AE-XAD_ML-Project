@@ -244,6 +244,10 @@ class Trainer:
                 labels.extend(label.detach().numpy())
                 plt.figure()
                 
+                print("[DEBUG plot] image:", image[0].shape, 
+                    "output:", output[0].shape, 
+                    "gtmap:", gtmap[0].shape)
+                
                 #immagine input
                 plt.subplot(1, 3, 1)
                 plt.imshow(image[0].swapaxes(0, 1).swapaxes(1, 2))
