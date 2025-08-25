@@ -300,6 +300,10 @@ class Trainer:
                     image = image.cuda()
                     gt_label = gt_label.cuda()
                     label = label.cuda()
+                    
+                if isinstance(self.model, ViT_CNN_Attn) and image.ndim == 4 and image.shape[1] == 1:
+                    image = image.repeat(1, 3, 1, 1)
+                    
                 output = self.model(image)
                 if self.loss == 'mse':
                     loss = self.criterion(output, image)
