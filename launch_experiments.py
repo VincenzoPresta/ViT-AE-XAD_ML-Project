@@ -10,7 +10,7 @@ from codecarbon import EmissionsTracker
 from torchvision.transforms import Resize
 
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
-    mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes
+    mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes, mvtec_ViT
     
 #per ora commento, non mi interessa usare i competitor    
 '''from run_fcdd import launch as launch_fcdd
@@ -57,6 +57,7 @@ if __name__ == '__main__':
             
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
+        
     elif args.ds == 'mnist_diff':
         dataset = 'mnist'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
@@ -66,7 +67,7 @@ if __name__ == '__main__':
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
         
     elif args.ds == 'mvtec':
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec(args.c, 'datasets/mvtec', args.na, seed=args.s)
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_ViT(args.c, 'datasets/mvtec', args.na, seed=args.s)
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
         print(ret_path)
