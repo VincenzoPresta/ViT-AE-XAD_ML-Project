@@ -14,8 +14,8 @@ from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvt
 #from run_fcdd import launch as launch_fcdd 
 #from run_deviation import launch as launch_dev 
 
-from competitors.fcdd.run_fcdd import launch as launch_fcdd
-from competitors.deviation.run_deviation import launch as launch_dev
+#from competitors.fcdd.run_fcdd import launch as launch_fcdd
+#from competitors.deviation.run_deviation import launch as launch_dev
 
 from aexad_script import launch as launch_aexad
 
