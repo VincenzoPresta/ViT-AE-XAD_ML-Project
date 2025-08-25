@@ -210,6 +210,22 @@ class Trainer:
         with torch.no_grad():
             for i, sample in enumerate(tbar):
                 image, label, gtmap = sample['image'], sample['label'], sample['gt_label']
+                
+                # 🔧 Allinea shape come in train()
+                if image.ndim == 4:
+                    # Caso ideale: già (N,1,224,224) o (N,3,224,224)
+                    if not (image.shape[1] in [1, 3] and image.shape[2] == 224 and image.shape[3] == 224):
+                        # (N,H,W,C) → (N,C,H,W)
+                        if image.shape[-1] in [1,3]:
+                            image = image.permute(0, 3, 1, 2)
+                        # (N,H,C,W) → (N,C,H,W)
+                        elif image.shape[2] in [1,3]:
+                            image = image.permute(0, 2, 1, 3)
+
+                # Se ViT e grayscale → duplica a 3 canali
+                if isinstance(self.model, ViT_CNN_Attn) and image.shape[1] == 1:
+                    image = image.repeat(1, 3, 1, 1)
+        
                 if self.cuda:
                     image = image.cuda()
                     output = self.model(image).detach().cpu().numpy()
@@ -289,6 +305,7 @@ class Trainer:
             tbar = tqdm(self.train_loader, disable=self.silent)
             for i, sample in enumerate(tbar):
                 image, label, gt_label = sample['image'], sample['label'], sample['gt_label']
+                
                 # Forza sempre (N, C, H, W)
                 if image.ndim == 4:
                     # Caso ideale: già (N,1,224,224) o (N,3,224,224)
@@ -300,6 +317,10 @@ class Trainer:
                     # Caso sbagliato: (N,224,1,224) -> (N,1,224,224)
                     elif image.shape[2] in [1, 3]:
                         image = image.permute(0, 2, 1, 3)
+                
+                #Check per ViT: caso MNIST/FMNIST (grayscale → RGB)
+                if isinstance(self.model, ViT_CNN_Attn) and image.ndim == 4 and image.shape[1] == 1:
+                    image = image.repeat(1, 3, 1, 1)           
 
                 print("[DEBUG after permute]", image.shape)
 
@@ -307,10 +328,6 @@ class Trainer:
                     image = image.cuda()
                     gt_label = gt_label.cuda()
                     label = label.cuda()
-                    
-                #Check per ViT: caso MNIST/FMNIST (grayscale → RGB)
-                if isinstance(self.model, ViT_CNN_Attn) and image.ndim == 4 and image.shape[1] == 1:
-                    image = image.repeat(1, 3, 1, 1)           
                     
                 output = self.model(image)
                 
