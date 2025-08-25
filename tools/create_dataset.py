@@ -1365,111 +1365,74 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
     )
 
     class_o = labels[cl]
-
     root = os.path.join(path, class_o)
 
-    X_train = []
-    X_test = []
-    GT_train = []
-    GT_test = []
+    X_train, X_test, GT_train, GT_test = [], [], [], []
 
-    # Add normal data to train set
+    # Normal train
     f_path = os.path.join(root, 'train', 'good')
-    normal_files_tr = os.listdir(f_path)
-    normal_files_tr.sort()
+    normal_files_tr = sorted(os.listdir(f_path))
     for file in normal_files_tr:
-        if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
-            image = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224)))
-            X_train.append(image)
-            GT_train.append(np.zeros_like(image, dtype=np.uint8))
+        if file.lower().endswith(('png','jpg','npy')):
+            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+            X_train.append(np.array(img, dtype=np.uint8))
+            GT_train.append(np.zeros((224,224,1), dtype=np.uint8))  # dummy mask
 
-    # Add normal data to test set
+    # Normal test
     f_path = os.path.join(root, 'test', 'good')
-    normal_files_te = os.listdir(f_path)
-    normal_files_te.sort()
+    normal_files_te = sorted(os.listdir(f_path))
     for file in normal_files_te:
-        if 'png' in file[-3:] or 'PNG' in file[-3:] or 'jpg' in file[-3:] or 'npy' in file[-3:]:
-            image = np.array(Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224)))
-            X_test.append(image)
-            GT_test.append(np.zeros_like(image, dtype=np.uint8))
+        if file.lower().endswith(('png','jpg','npy')):
+            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+            X_test.append(np.array(img, dtype=np.uint8))
+            GT_test.append(np.zeros((224,224,1), dtype=np.uint8))
 
+    # Anomalies
     outlier_data_dir = os.path.join(root, 'test')
-    outlier_classes = os.listdir(outlier_data_dir)
-    outlier_classes.sort()
+    outlier_classes = sorted(os.listdir(outlier_data_dir))
     for cl_a in outlier_classes:
         if cl_a == 'good':
             continue
 
-        f_path = os.path.join(root, 'test', cl_a, 'same')
-        outlier_files = np.array(os.listdir(f_path))
+        outlier_files = [
+            f for f in os.listdir(os.path.join(outlier_data_dir, cl_a))
+            if f.lower().endswith(('png','jpg','npy'))
+        ]
+        outlier_files.sort()
         idxs = np.random.permutation(len(outlier_files))
-        
-        print("Files trovati in", f_path, ":", outlier_files)
 
-        # Train
-        for i in idxs[:n_anom_per_cls]:
-            file = outlier_files[i]
-            if file.lower().endswith(('png','jpg','npy')):
-                img_path = os.path.join(root, 'test', cl_a, file)
-                mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')
+        # Train anomalies
+        for file in [outlier_files[i] for i in idxs[:n_anom_per_cls]]:
+            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
+            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
+                         .convert('L').resize((224,224), Image.NEAREST)
+            X_train.append(np.array(img, dtype=np.uint8))
+            GT_train.append(np.array(mask, dtype=np.uint8)[...,None])
 
-                if not os.path.exists(img_path):
-                    print("Mancante:", img_path)
-                    continue
-                if not os.path.exists(mask_path):
-                    print("Maschera mancante:", mask_path)
-                    mask = np.zeros((224,224,1), dtype=np.uint8)
-                else:
-                    mask = np.array(Image.open(mask_path).convert('L').resize((224,224), Image.NEAREST))[...,None]
+        # Test anomalies
+        for file in [outlier_files[i] for i in idxs[n_anom_per_cls:]]:
+            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
+            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
+                         .convert('L').resize((224,224), Image.NEAREST)
+            X_test.append(np.array(img, dtype=np.uint8))
+            GT_test.append(np.array(mask, dtype=np.uint8)[...,None])
 
-                img = np.array(Image.open(img_path).convert('RGB').resize((224,224)))
-                X_train.append(img)
-                GT_train.append(mask)
+    # Convert to arrays
+    X_train = np.array(X_train, dtype=np.uint8)
+    X_test  = np.array(X_test, dtype=np.uint8)
+    GT_train = np.array(GT_train, dtype=np.uint8)
+    GT_test  = np.array(GT_test, dtype=np.uint8)
 
-        # Test
-        for i in idxs[:n_anom_per_cls]:
-            file = outlier_files[i]
-            if file.lower().endswith(('png','jpg','npy')):
-                img_path = os.path.join(root, 'test', cl_a, file)
-                mask_path = os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')
+    # Labels
+    Y_train = np.zeros(X_train.shape[0]); Y_train[len(normal_files_tr):] = 1
+    Y_test  = np.zeros(X_test.shape[0]);  Y_test[len(normal_files_te):] = 1
 
-                if not os.path.exists(img_path):
-                    print("⚠️ Mancante:", img_path)
-                    continue
-                if not os.path.exists(mask_path):
-                    print("⚠️ Maschera mancante:", mask_path)
-                    mask = np.zeros((224,224,1), dtype=np.uint8)
-                else:
-                    mask = np.array(Image.open(mask_path).convert('L').resize((224,224), Image.NEAREST))[...,None]
-
-                img = np.array(Image.open(img_path).convert('RGB').resize((224,224)))
-                X_test.append(img)
-                GT_test.append(mask)
-
-
-    X_train = np.array(X_train).astype(np.uint8)# / 255.0).astype(np.float32)
-
-    X_test = np.array(X_test).astype(np.uint8)
-    
-    shapes = [m.shape for m in GT_train]
-    print(set(shapes))
-
-    GT_train = np.array(GT_train)#.astype(np.uint8)
-
-    GT_test = np.array(GT_test)#.astype(np.uint8)
-
-    Y_train = np.zeros(X_train.shape[0])
-    Y_train[len(normal_files_tr): ] = 1
-    Y_test = np.zeros(X_test.shape[0])
-    Y_test[len(normal_files_te): ] = 1
-    
-    print("Train images:", np.array(X_train).shape)   # (N,224,224,3)
-    print("Train masks:", np.array(GT_train).shape)   # (N,224,224,1)
-    print("Test images:", np.array(X_test).shape)     # (M,224,224,3)
-    print("Test masks:", np.array(GT_test).shape)     # (M,224,224,1)
-
+    print(f"X_train {X_train.shape}, X_test {X_test.shape}")
+    print(f"GT_train {GT_train.shape}, GT_test {GT_test.shape}")
+    print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
+
 
 def aebad_s(cl, sg, path, n_anom_per_cls, seed=None):
     np.random.seed(seed=seed)
