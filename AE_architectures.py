@@ -757,6 +757,9 @@ class ViT_CNN_Attn(nn.Module):
     def _process_input(self, x: torch.Tensor) -> torch.Tensor:
         n, c, h, w = x.shape
         p = self.patch_size
+        
+        print ("[DEBUG]", self.image_size)
+        
         torch._assert(h == self.image_size, "Wrong image height!")
         torch._assert(w == self.image_size, "Wrong image width!")
         n_h = h // p
