@@ -186,7 +186,7 @@ if __name__ == '__main__':
        return 1-x
 
     #CONV
-    heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'conv',
+    heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 3, 16, 32, (28*28) / 25, None, f, 'conv',
                                                    save_intermediate=True, save_path=ret_path)
     np.save(open(os.path.join(ret_path, 'aexad_htmaps_conv.npy'), 'wb'), heatmaps)
     np.save(open(os.path.join(ret_path, 'aexad_scores_conv.npy'), 'wb'), scores)
