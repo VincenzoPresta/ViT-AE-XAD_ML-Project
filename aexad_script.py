@@ -207,9 +207,10 @@ class Trainer:
 
         self.model.eval()
         
+        os.makedirs(self.ret_path, exist_ok=True)
         results_dir = os.path.join(self.ret_path, "test_images")
         os.makedirs(results_dir, exist_ok=True)
-        
+                
         with torch.no_grad():
             for i, sample in enumerate(tbar):
                 image, label, gtmap = sample['image'], sample['label'], sample['gt_label']
