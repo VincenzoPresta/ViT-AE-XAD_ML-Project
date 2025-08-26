@@ -5,6 +5,7 @@ import pickle
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from codecarbon import EmissionsTracker
 
 from torchvision.transforms import Resize
@@ -45,12 +46,26 @@ if __name__ == '__main__':
                    intensity=args.i, DATASET=args.ds, seed=args.s)
             
         #sto usando ViT quindi per ora metto questa patch    
-        resize = Resize((224, 224))
+        
+        # converti in tensori float
+        X_train = torch.tensor(X_train, dtype=torch.float32)
+        X_test  = torch.tensor(X_test, dtype=torch.float32)
+        GT_train = torch.tensor(GT_train, dtype=torch.float32)
+        GT_test  = torch.tensor(GT_test, dtype=torch.float32)
+        
+        # se manca il canale, aggiungilo
+        if X_train.ndim == 3:
+            X_train = X_train.unsqueeze(1)
+            X_test  = X_test.unsqueeze(1)
+            
+        # Immagini -> bilinear
+        X_train = F.interpolate(X_train, size=(224,224), mode="bilinear").numpy()
+        X_test  = F.interpolate(X_test,  size=(224,224), mode="bilinear").numpy()
 
-        X_train = resize(torch.tensor(X_train)).numpy()
-        X_test = resize(torch.tensor(X_test)).numpy()
-        GT_train = resize(torch.tensor(GT_train)).numpy()
-        GT_test = resize(torch.tensor(GT_test)).numpy()   
+        # Maschere -> nearest (per mantenere binarie)
+        GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest").numpy()
+        GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest").numpy()
+
 
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
@@ -83,7 +98,6 @@ if __name__ == '__main__':
 
         print(f"Dataset salvato in {data_path}")
         print("[DEBUG] File exists after save?", os.path.exists(save_path))
-        exit()
         
     elif args.ds == 'mnist_diff':
         dataset = 'mnist'
