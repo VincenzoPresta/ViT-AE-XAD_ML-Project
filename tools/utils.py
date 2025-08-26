@@ -550,3 +550,13 @@ def plots_hts_ids(ids_anomalies, x, gt, hs1, hs2, hs3, hs4, c_ids, an_type):
     name = f'PLOT/{an_type}/fig_anoms.jpg'
     plt.savefig(name)
     plt.close()
+    
+    
+def rescale_per_image(x):
+    # x: torch.Tensor shape (N,C,H,W)
+    b, c, h, w = x.shape
+    x = x.view(b, -1)  # flatten per immagine
+    min_vals = x.min(dim=1, keepdim=True)[0]
+    max_vals = x.max(dim=1, keepdim=True)[0]
+    x = (x - min_vals) / (max_vals - min_vals + 1e-8)
+    return x.view(b, c, h, w)

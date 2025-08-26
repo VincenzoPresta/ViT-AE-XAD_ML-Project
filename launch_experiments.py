@@ -13,6 +13,8 @@ from torchvision.transforms import Resize
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
     mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes, mvtec_ViT
     
+from tools.utils import rescale_per_image
+    
 #per ora commento, non mi interessa usare i competitor    
 '''from run_fcdd import launch as launch_fcdd
 from run_deviation import launch as launch_dev'''
@@ -40,38 +42,48 @@ if __name__ == '__main__':
     if args.i != 'rand':
         args.i = float(args.i)
 
-    if args.ds == 'mnist'  or args.ds == 'fmnist':
+    if args.ds == 'mnist' or args.ds == 'fmnist':
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
             square(args.c, perc_anom_train=args.patr, perc_anom_test=args.pate, size=args.size,
-                   intensity=args.i, DATASET=args.ds, seed=args.s)
-            
-        #sto usando ViT quindi per ora metto questa patch    
+                intensity=args.i, DATASET=args.ds, seed=args.s)
         
         # converti in tensori float
         X_train = torch.tensor(X_train, dtype=torch.float32)
         X_test  = torch.tensor(X_test, dtype=torch.float32)
         GT_train = torch.tensor(GT_train, dtype=torch.float32)
         GT_test  = torch.tensor(GT_test, dtype=torch.float32)
-        
+
         # se manca il canale, aggiungilo
         if X_train.ndim == 3:
             X_train = X_train.unsqueeze(1)
             X_test  = X_test.unsqueeze(1)
-            
+
         # Immagini -> bilinear
         X_train = F.interpolate(X_train, size=(224,224), mode="bilinear")
         X_test  = F.interpolate(X_test,  size=(224,224), mode="bilinear")
 
         # Maschere -> nearest (per mantenere binarie)
-        GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest").numpy()
-        GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest").numpy()
-        
-        # riscalamento a [0,1]
-        X_train = (X_train - X_train.min()) / (X_train.max() - X_train.min())
-        X_test  = (X_test - X_test.min()) / (X_test.max() - X_test.min())
+        GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest")
+        GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest")
 
+        # Funzione di riscalamento per immagine
+        def rescale_per_image(x):
+            b, c, h, w = x.shape
+            x = x.view(b, -1)
+            min_vals = x.min(dim=1, keepdim=True)[0]
+            max_vals = x.max(dim=1, keepdim=True)[0]
+            x = (x - min_vals) / (max_vals - min_vals + 1e-8)
+            return x.view(b, c, h, w)
+
+        # Riscalamento a [0,1] per immagine
+        X_train = rescale_per_image(X_train)
+        X_test  = rescale_per_image(X_test)
+
+        # Conversione finale a numpy
         X_train = X_train.numpy()
         X_test  = X_test.numpy()
+        GT_train = GT_train.numpy()
+        GT_test  = GT_test.numpy()
 
 
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
@@ -263,5 +275,6 @@ if __name__ == '__main__':
 
 
     shutil.rmtree(data_path)
+
 
 
