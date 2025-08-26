@@ -65,7 +65,7 @@ class CustomVGGAD(Dataset):
             # A.Transpose(),
             A.OpticalDistortion(p=1.0, distort_limit=1.0),
             A.OneOf([
-                A.IAAAdditiveGaussianNoise(),
+                #A.IAAAdditiveGaussianNoise(), #RIMUOVERE COMMENTO POI
                 A.GaussNoise(),
             ], p=0.2),
             A.OneOf([
