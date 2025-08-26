@@ -414,8 +414,6 @@ def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = '
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
 
-
-
 def square_diff(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = 0.2,DATASET = 'mnist', seed=None):
     '''
     :param dig: Selected dataset class
@@ -1362,7 +1360,7 @@ def mvtec_only_one_augmented(cl, path, n_anom_per_cls, a_cls, seed=None, return_
     else:
         return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
-def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
+def mvtec_ViT(cl, path, n_anom_per_cls, seed=None): #Nuova per ViT
     
     np.random.seed(seed=seed)
 

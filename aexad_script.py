@@ -238,17 +238,21 @@ class Trainer:
                 gtmaps.extend(gtmap.detach().numpy())
                 labels.extend(label.detach().numpy())
 
-                # Plot di esempio
-                plt.figure(figsize=(10,4))
-                plt.subplot(1, 3, 1)
+                plt.figure(figsize=(14,4))
+
+                plt.subplot(1, 4, 1)
                 plt.imshow(image[0].swapaxes(0, 1).swapaxes(1, 2))
                 plt.title("Input"); plt.axis("off")
 
-                plt.subplot(1, 3, 2)
+                plt.subplot(1, 4, 2)
                 plt.imshow(output[0].swapaxes(0, 1).swapaxes(1, 2))
                 plt.title("Ricostruzione"); plt.axis("off")
 
-                plt.subplot(1, 3, 3)
+                plt.subplot(1, 4, 3)
+                plt.imshow(heatmap[0].sum(axis=0), cmap="hot")   # somma canali per avere 2D
+                plt.title("Heatmap"); plt.axis("off")
+
+                plt.subplot(1, 4, 4)
                 plt.imshow(gtmap[0].cpu().numpy().squeeze(), cmap="gray")
                 plt.title("GT mask"); plt.axis("off")
 
