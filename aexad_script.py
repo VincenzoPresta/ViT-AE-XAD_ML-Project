@@ -211,6 +211,10 @@ class Trainer:
             for i, sample in enumerate(tbar):
                 image, label, gtmap = sample['image'], sample['label'], sample['gt_label']
                 
+                print("[DEBUG test] image:", image.shape,
+                    "label:", label.shape,
+                    "gtmap:", gtmap.shape)
+                
                 # Allinea shape come in train()
                 if image.ndim == 4:
                     # Caso ideale: già (N,1,224,224) o (N,3,224,224)
@@ -225,6 +229,10 @@ class Trainer:
                 # Se ViT è grayscale → duplica a 3 canali
                 if isinstance(self.model, ViT_CNN_Attn) and image.shape[1] == 1:
                     image = image.repeat(1, 3, 1, 1)
+                    
+                    
+                print("[DEBUG test FIXED] image:", image.shape,
+                    "gtmap:", gtmap.shape)
         
                 if self.cuda:
                     image = image.cuda()
@@ -319,6 +327,10 @@ class Trainer:
             tbar = tqdm(self.train_loader, disable=self.silent)
             for i, sample in enumerate(tbar):
                 image, label, gt_label = sample['image'], sample['label'], sample['gt_label']
+                
+                print("[DEBUG train] image:", image.shape,
+                    "label:", label.shape,
+                    "gt_label:", gt_label.shape)
                 
                 # Forza sempre (N, C, H, W)
                 if image.ndim == 4:
