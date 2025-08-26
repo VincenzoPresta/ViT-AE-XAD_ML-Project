@@ -11,7 +11,7 @@ from codecarbon import EmissionsTracker
 from torchvision.transforms import Resize
 
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
-    mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes, mvtec_ViT
+    mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes, mvtec_ViT, btad
 
     
 #per ora commento, non mi interessa usare i competitor    
@@ -126,11 +126,18 @@ if __name__ == '__main__':
         data_path = os.path.join('datasets', args.ds, 'files')
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = load_dataset(f'datasets/{args.ds}')
         ret_path = os.path.join('results', args.ds)
-    elif 'btad' in args.ds:
-        dataset = args.ds
-        data_path = os.path.join('datasets', args.ds, 'files')
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = extract_dataset(f'datasets/{args.ds}', args.na, seed=args.s)
-        ret_path = os.path.join('results', args.ds)
+        
+    elif args.ds == 'btad':
+        # Dataset BTAD (01, 02, 03) gestito dal loader custom in tools/create_dataset.py
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = btad(
+            base_path='datasets/btad',
+            n_anom_per_cls=args.na,
+            seed=args.s,
+            class_id=args.c
+        )
+        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
+        ret_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
+
 
     X_train = X_train.swapaxes(2, 3).swapaxes(1, 2)
     X_test = X_test.swapaxes(2, 3).swapaxes(1, 2)
