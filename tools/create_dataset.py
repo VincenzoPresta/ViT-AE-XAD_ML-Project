@@ -409,6 +409,7 @@ def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = '
     print("[DEBUG] Train labels:", np.unique(Y_train, return_counts=True))
     print("[DEBUG] Test labels:", np.unique(Y_test, return_counts=True))
     print("[DEBUG after square] X_train:", X_train.min(), X_train.max(), X_train.mean())
+    
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 

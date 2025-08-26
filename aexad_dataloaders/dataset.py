@@ -13,9 +13,9 @@ class CustomAD(Dataset):
         else:
             split = 'test'
 
-        x = (np.load((os.path.join(path, f'X_{split}.npy'))) / 255.0).astype(np.float32)#[:,:,:,0]
+        x = (np.load((os.path.join(path, f'X_{split}.npy')))).astype(np.float32)#[:,:,:,0]
         y = np.load(os.path.join(path, f'Y_{split}.npy'))
-        gt = (np.load((os.path.join(path, f'GT_{split}.npy'))) / 255.0).astype(np.float32)
+        gt = (np.load((os.path.join(path, f'GT_{split}.npy')))).astype(np.float32)
 
         #normal_data = x[y == 0]
         #outlier_data = x[y == 1]
