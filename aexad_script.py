@@ -205,13 +205,11 @@ class Trainer:
         tbar = tqdm(self.test_loader, disable=self.silent)
         heatmaps, scores, gtmaps, labels = [], [], [], []
 
-        print(f"[DEBUG] save_path = {self.save_path}")
         self.model.eval()
         
         os.makedirs(self.save_path, exist_ok=True)
         results_dir = os.path.join(self.save_path, "test_images")
         os.makedirs(results_dir, exist_ok=True)
-        print(f"[DEBUG] Saving test images to: {results_dir}")
                 
         with torch.no_grad():
             for i, sample in enumerate(tbar):
@@ -226,12 +224,6 @@ class Trainer:
                 # Se ViT è grayscale → duplica canali
                 if isinstance(self.model, ViT_CNN_Attn) and image.shape[1] == 1:
                     image = image.repeat(1, 3, 1, 1)
-
-                print("[DEBUG test FIXED] image:", image.shape, "gtmap:", gtmap.shape)
-                
-                print("[DEBUG values] image min:", image.min().item(),
-                    "max:", image.max().item(),
-                    "mean:", image.mean().item())
 
                 if self.cuda:
                     image = image.cuda()
@@ -265,9 +257,7 @@ class Trainer:
                 plt.title("GT mask"); plt.axis("off")
 
                 plt.tight_layout()
-                plt.savefig(os.path.join(results_dir, f"test_{i}_{self.loss}.jpg"))
-                print(f"[DEBUG] Saved {results_dir}")
-                
+                plt.savefig(os.path.join(results_dir, f"test_{i}_{self.loss}.jpg"))                
                 plt.close("all")
 
             return np.array(heatmaps), np.array(scores), np.array(gtmaps), np.array(labels)
