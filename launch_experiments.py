@@ -67,10 +67,6 @@ if __name__ == '__main__':
         GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest")
 
 
-        # Riscalamento a [0,1] per immagine
-        X_train = rescale_per_image(X_train)
-        X_test  = rescale_per_image(X_test)
-
         # Conversione finale a numpy
         X_train = X_train.numpy()
         X_test  = X_test.numpy()
