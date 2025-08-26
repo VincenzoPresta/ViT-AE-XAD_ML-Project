@@ -55,21 +55,31 @@ if __name__ == '__main__':
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
         
+        #-----DEBUG
         # Salva dataset generato, così non sparisce a fine run -> questo attualmente mi serve per debug
         os.makedirs(data_path, exist_ok=True)
+        
         
         print("[DEBUG] Shapes:", X_train.shape, Y_train.shape, X_test.shape, Y_test.shape)
         save_path = os.path.join(data_path, f"ad{args.ds}_{X_train.shape[2]}x{X_train.shape[3]}.pt")
         print("[DEBUG] Absolute save path:", os.path.abspath(save_path))
 
+        anom_idx_train = np.where(Y_train == 1)[0][:50]
+        norm_idx_train = np.where(Y_train == 0)[0][:50]
+        sel_idx_train = np.concatenate([anom_idx_train, norm_idx_train])
+
+        anom_idx_test = np.where(Y_test == 1)[0][:50]
+        norm_idx_test = np.where(Y_test == 0)[0][:50]
+        sel_idx_test = np.concatenate([anom_idx_test, norm_idx_test])
+
         torch.save({
-            "X_train": X_train[:100],
-            "Y_train": Y_train[:100],
-            "X_test": X_test[:100],
-            "Y_test": Y_test[:100],
-            "GT_train": GT_train[:100],
-            "GT_test": GT_test[:100],
-        },save_path)
+            "X_train": X_train[sel_idx_train],
+            "Y_train": Y_train[sel_idx_train],
+            "X_test": X_test[sel_idx_test],
+            "Y_test": Y_test[sel_idx_test],
+            "GT_train": GT_train[sel_idx_train],
+            "GT_test": GT_test[sel_idx_test],
+        }, save_path)
 
         print(f"Dataset salvato in {data_path}")
         print("[DEBUG] File exists after save?", os.path.exists(save_path))
