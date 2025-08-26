@@ -246,7 +246,7 @@ if __name__ == '__main__':
         (224*224) / 25, # radius adattato al 224x224, come da paper
         None, 
         f, 
-        'vgg_cnn',         
+        'conv',         
         save_intermediate=True, 
         save_path=ret_path
     )
