@@ -73,6 +73,7 @@ if __name__ == '__main__':
 
         print(f"Dataset salvato in {data_path}")
         print("[DEBUG] File exists after save?", os.path.exists(save_path))
+        exit()
         
     elif args.ds == 'mnist_diff':
         dataset = 'mnist'
