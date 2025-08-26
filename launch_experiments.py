@@ -57,6 +57,8 @@ if __name__ == '__main__':
         
         # Salva dataset generato, così non sparisce a fine run -> questo attualmente mi serve per debug
         os.makedirs(data_path, exist_ok=True)
+        
+        print("Shapes:", X_train.shape, Y_train.shape, X_test.shape, Y_test.shape)
 
         torch.save({
             "X_train": X_train,
