@@ -128,6 +128,91 @@ class AEXAD_loss_norm(nn.Module):
         # weighted_loss = torch.sum(loss * lambda_vec) / torch.sum(lambda_vec)
         weighted_loss = torch.mean(loss)
         return weighted_loss, loss_n, loss_a  # / torch.sum(lambda_vec)
+    
+    
+class AEXAD_loss_ViT(nn.Module):
+    def __init__(self, lambda_p=None, lambda_s=None,
+                 f=lambda x: torch.where(x >= 0.5, 0.0, 1.0),
+                 cuda=True):
+        """
+        Variante di AEXAD_loss_norm con clamp e debug print
+        pensata per encoder diversi (es. ViT) dove le instabilità
+        numeriche sono più probabili.
+        """
+        super().__init__()
+        self.lambda_p = lambda_p
+        self.lambda_s = lambda_s
+        self.f = f
+        self.use_cuda = cuda
+
+        if lambda_p is not None:
+            self.lambda_p = torch.tensor(lambda_p, dtype=torch.float32)
+            if cuda:
+                self.lambda_p = self.lambda_p.cuda()
+        else:
+            self.lambda_p = None
+
+    def forward(self, rec_img, target, gt, y):
+        print("[DEBUG forward] rec_img:", rec_img.shape,
+              "target:", target.shape,
+              "gt:", gt.shape,
+              "y:", y.shape)
+
+        # Fix shape ground truth
+        if gt.ndim == 4 and gt.shape[1] == 224 and gt.shape[2] == 1 and gt.shape[3] == 224:
+            print("[DEBUG] permuting GT shape (N,224,1,224) -> (N,1,224,224)")
+            gt = gt.permute(0, 2, 1, 3)
+
+        if gt.shape[1] == 1 and rec_img.shape[1] == 3:
+            print("[DEBUG] duplicating GT channels to match RGB")
+            gt = gt.repeat(1, 3, 1, 1)
+
+        # --- max_diff ---
+        max_diff = (self.f(target) - target) ** 2
+        if torch.any(max_diff == 0):
+            print("[DEBUG] max_diff contains zeros -> applying clamp")
+        max_diff = torch.clamp(max_diff, min=1e-6)
+
+        # --- reconstruction losses ---
+        rec_n = (rec_img - target) ** 2 / max_diff
+        rec_o = (self.f(target) - rec_img) ** 2 / max_diff
+
+        # --- lambda_p ---
+        if self.lambda_p is None:
+            denom = torch.sum(gt, dim=(1, 2, 3))
+            if torch.any(denom == 0):
+                print("[DEBUG] denom contains zero (batch with no anomalies) -> applying clamp")
+            denom = torch.clamp(denom, min=1.0)
+
+            lambda_p = torch.reshape(
+                np.prod(gt.shape[1:]) / denom, (-1, 1)
+            )
+            ones_v = torch.ones((gt.shape[0], np.prod(gt.shape[1:])))
+            if self.use_cuda:
+                lambda_p = lambda_p.cuda()
+                ones_v = ones_v.cuda()
+            lambda_p = ones_v * lambda_p
+            lambda_p = torch.reshape(lambda_p, gt.shape)
+            lambda_p = torch.where(gt == 1, lambda_p, 1 - gt)
+        else:
+            lambda_p = self.lambda_p
+            if self.use_cuda:
+                lambda_p = lambda_p.cuda()
+
+        # --- final loss ---
+        loss_vec = (1 - gt) * rec_n + lambda_p * gt * rec_o
+
+        loss = torch.sum(loss_vec, dim=(1, 2, 3))
+        loss_n = torch.sum((1 - gt) * rec_n) / torch.sum((1 - gt))
+        loss_a = torch.sum(lambda_p * gt * rec_o) / torch.sum(lambda_p * gt)
+
+        weighted_loss = torch.mean(loss)
+
+        if torch.isnan(weighted_loss).any() or torch.isinf(weighted_loss).any():
+            print("[DEBUG] weighted_loss is NaN/Inf!")
+
+        return weighted_loss, loss_n, loss_a
+
 
 class AEXAD_loss_weighted(nn.Module):
 

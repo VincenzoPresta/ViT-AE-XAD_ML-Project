@@ -319,8 +319,8 @@ def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = '
         y_train = y_train.reshape(-1)
         y_test = y_test.reshape(-1)
 
-    x_train = x_train.astype('float32') / 255.
-    x_test = x_test.astype('float32') / 255.
+    x_train = x_train.astype('float32') 
+    x_test = x_test.astype('float32') 
 
 
     width,height = x_train.shape[1:3]

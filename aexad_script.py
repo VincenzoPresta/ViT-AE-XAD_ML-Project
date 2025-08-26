@@ -15,7 +15,7 @@ from aexad_dataloaders.dataset import CustomAD
 from aexad_dataloaders.mvtec_dataset import MvtecAD
 from aexad_dataloaders.custom_VGG import CustomVGGAD
 from augmented import AugmentedAD
-from loss import AEXAD_loss, AEXAD_loss_weighted, AEXAD_loss_norm, AEXAD_loss_norm_vgg, MSE_loss_vgg
+from loss import AEXAD_loss, AEXAD_loss_weighted, AEXAD_loss_norm, AEXAD_loss_norm_vgg, MSE_loss_vgg, AEXAD_loss_ViT
 
 
 class Trainer:
@@ -158,7 +158,10 @@ class Trainer:
                 self.criterion = AEXAD_loss_norm_vgg(self.train_loader.dataset.mean,
                                  self.train_loader.dataset.std, lambda_p, lambda_s, f, self.cuda)
             else:
-                self.criterion = AEXAD_loss_norm(lambda_p, lambda_s, f, self.cuda)
+                if isinstance(self.model, ViT_CNN_Attn):
+                    self.criterion = AEXAD_loss_ViT(lambda_p, lambda_s, f, self.cuda)
+                else:    
+                    self.criterion = AEXAD_loss_norm(lambda_p, lambda_s, f, self.cuda)
             #self.criterion = AEXAD_loss(lambda_p, lambda_s, f, self.cuda)
         elif loss == 'aexad_norm':
             self.criterion = AEXAD_loss_weighted(lambda_p, lambda_s, f, self.cuda)
