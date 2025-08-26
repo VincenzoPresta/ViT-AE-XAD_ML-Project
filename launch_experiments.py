@@ -6,7 +6,7 @@ import pickle
 import numpy as np
 import torch
 import torch.nn.functional as F
-#from codecarbon import EmissionsTracker
+from codecarbon import EmissionsTracker
 
 from torchvision.transforms import Resize
 
