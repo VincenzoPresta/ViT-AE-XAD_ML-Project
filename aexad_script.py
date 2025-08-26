@@ -217,6 +217,10 @@ class Trainer:
                     image = image.repeat(1, 3, 1, 1)
 
                 print("[DEBUG test FIXED] image:", image.shape, "gtmap:", gtmap.shape)
+                
+                print("[DEBUG values] image min:", image.min().item(),
+                    "max:", image.max().item(),
+                    "mean:", image.mean().item())
 
                 if self.cuda:
                     image = image.cuda()
@@ -317,6 +321,10 @@ class Trainer:
 
                 print("[DEBUG train FIXED] image:", image.shape,
                     "gt_label:", gt_label.shape)
+                
+                print("[DEBUG values] image min:", image.min().item(),
+                    "max:", image.max().item(),
+                    "mean:", image.mean().item())
 
 
                 if self.cuda:
