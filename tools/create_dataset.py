@@ -1,4 +1,5 @@
 import os
+import torch
 
 import PIL.Image as Image
 from tensorflow.keras.datasets import mnist, fashion_mnist, cifar10
@@ -291,6 +292,7 @@ def extract_dataset(path, n_anom_per_cls, seed=None):
     print(f'Test anomalies: {Y_test.sum()}')
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
+
 def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = 'rand',DATASET = 'mnist', seed=None):
     '''
     :param dig: Selected dataset class

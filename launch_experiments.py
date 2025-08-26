@@ -55,6 +55,20 @@ if __name__ == '__main__':
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
         ret_path = os.path.join('results', args.ds, str(args.c), str(args.s))
         
+        # Salva dataset generato, così non sparisce a fine run -> questo attualmente mi serve per debug
+        os.makedirs(data_path, exist_ok=True)
+
+        torch.save({
+            "X_train": X_train,
+            "Y_train": Y_train,
+            "X_test": X_test,
+            "Y_test": Y_test,
+            "GT_train": GT_train,
+            "GT_test": GT_test,
+        }, os.path.join(data_path, f"ad{args.ds}_{X_train.shape[2]}x{X_train.shape[3]}.pt"))
+
+        print(f"Dataset salvato in {data_path}")
+        
     elif args.ds == 'mnist_diff':
         dataset = 'mnist'
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
@@ -190,7 +204,7 @@ if __name__ == '__main__':
     # ViT
     heatmaps, scores, gtmaps, labels, tot_time = launch_aexad(
         data_path, 
-        200,              # epoche 
+        2,              # epoche 
         16,              # batch size
         32,             # latent dim
         (224*224) / 25, # radius adattato al 224x224, come da paper
