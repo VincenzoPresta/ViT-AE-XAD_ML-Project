@@ -12,8 +12,7 @@ from torchvision.transforms import Resize
 
 from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
     mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes, mvtec_ViT
-    
-from tools.utils import rescale_per_image
+
     
 #per ora commento, non mi interessa usare i competitor    
 '''from run_fcdd import launch as launch_fcdd
