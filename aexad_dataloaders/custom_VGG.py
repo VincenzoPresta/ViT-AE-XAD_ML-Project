@@ -125,6 +125,8 @@ class CustomVGGAD(Dataset):
         #else:
         #    image_label = np.zeros_like(self.images[index])
         image_label = self.gt[index]
+        
+        print(f"[DEBUG] index {index}, image shape: {image.shape}, label shape: {image_label.shape}")
 
         #if self.train:
         #    aug = self.randAugmenter()
