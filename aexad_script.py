@@ -205,6 +205,10 @@ class Trainer:
         heatmaps, scores, gtmaps, labels = [], [], [], []
 
         self.model.eval()
+        
+        results_dir = os.path.join(self.ret_path, "test_images")
+        os.makedirs(results_dir, exist_ok=True)
+        
         with torch.no_grad():
             for i, sample in enumerate(tbar):
                 image, label, gtmap = sample['image'], sample['label'], sample['gt_label']
@@ -257,7 +261,7 @@ class Trainer:
                 plt.title("GT mask"); plt.axis("off")
 
                 plt.tight_layout()
-                plt.savefig(f"test_{i}_{self.loss}.jpg")
+                plt.savefig(os.path.join(results_dir, f"test_{i}_{self.loss}.jpg"))
                 plt.close("all")
 
             return np.array(heatmaps), np.array(scores), np.array(gtmaps), np.array(labels)
