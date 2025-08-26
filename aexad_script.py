@@ -199,88 +199,58 @@ class Trainer:
         Test the model on the test set provided by the test data loader
         '''
         tbar = tqdm(self.test_loader, disable=self.silent)
-        shape = [0]
-        shape.extend(self.test_loader.dataset.images.shape[1:])
-        heatmaps = []
-        scores = []
-        gtmaps = []
-        labels = []
+        heatmaps, scores, gtmaps, labels = [], [], [], []
 
         self.model.eval()
         with torch.no_grad():
             for i, sample in enumerate(tbar):
                 image, label, gtmap = sample['image'], sample['label'], sample['gt_label']
-                
-                print("[DEBUG test] image:", image.shape,
-                    "label:", label.shape,
-                    "gtmap:", gtmap.shape)
-                
-                # Allinea shape come in train()
-                if image.ndim == 4:
-                    # Caso ideale: già (N,1,224,224) o (N,3,224,224)
-                    if not (image.shape[1] in [1, 3] and image.shape[2] == 224 and image.shape[3] == 224):
-                        # (N,H,W,C) → (N,C,H,W)
-                        if image.shape[-1] in [1,3]:
-                            image = image.permute(0, 3, 1, 2)
-                        # (N,H,C,W) → (N,C,H,W)
-                        elif image.shape[2] in [1,3]:
-                            image = image.permute(0, 2, 1, 3)
 
-                # Se ViT è grayscale → duplica a 3 canali
+                # PATCH: correggi shape se sono storte (N,H,C,W) → (N,C,H,W)
+                if image.ndim == 4 and image.shape[2] in [1,3] and image.shape[1] not in [1,3]:
+                    image = image.permute(0, 2, 1, 3)
+                if gtmap.ndim == 4 and gtmap.shape[2] == 1 and gtmap.shape[1] != 1:
+                    gtmap = gtmap.permute(0, 2, 1, 3)
+
+                # Se ViT è grayscale → duplica canali
                 if isinstance(self.model, ViT_CNN_Attn) and image.shape[1] == 1:
                     image = image.repeat(1, 3, 1, 1)
-                    
-                    
-                print("[DEBUG test FIXED] image:", image.shape,
-                    "gtmap:", gtmap.shape)
-        
+
+                print("[DEBUG test FIXED] image:", image.shape, "gtmap:", gtmap.shape)
+
                 if self.cuda:
                     image = image.cuda()
                     output = self.model(image).detach().cpu().numpy()
                 image = image.cpu().numpy()
-                if isinstance(self.train_loader.dataset, CustomVGGAD):
-                    print('Testing on vgg')
-                    mean = self.test_loader.dataset.mean[np.newaxis, :, np.newaxis, np.newaxis]
-                    std = self.test_loader.dataset.std[np.newaxis, :, np.newaxis, np.newaxis]
-                    #image = (image.reshape((image.shape[0], image.shape[1], -1)) * std + mean).reshape(image.shape)
-                    image = image * std + mean
-                heatmap = ((image-output) ** 2)#.numpy() np.abs(image-output)
+
+                heatmap = ((image - output) ** 2)
                 score = heatmap.reshape((image.shape[0], -1)).mean(axis=-1)
+
                 heatmaps.extend(heatmap)
                 scores.extend(score)
                 gtmaps.extend(gtmap.detach().numpy())
                 labels.extend(label.detach().numpy())
-                
-            #PLOT
-                plt.figure(figsize=(10,4))
 
-                # Input
+                # Plot di esempio
+                plt.figure(figsize=(10,4))
                 plt.subplot(1, 3, 1)
                 plt.imshow(image[0].swapaxes(0, 1).swapaxes(1, 2))
-                plt.title("Input")
-                plt.axis("off")
+                plt.title("Input"); plt.axis("off")
 
-                # Ricostruzione
                 plt.subplot(1, 3, 2)
                 plt.imshow(output[0].swapaxes(0, 1).swapaxes(1, 2))
-                plt.title("Ricostruzione")
-                plt.axis("off")
+                plt.title("Ricostruzione"); plt.axis("off")
 
-                # GT mask
                 plt.subplot(1, 3, 3)
-                plt.imshow(gtmap[0].numpy().squeeze(), cmap="gray")  # squeeze per rimuovere il canale extra
-                plt.title("GT mask")
-                plt.axis("off")
+                plt.imshow(gtmap[0].cpu().numpy().squeeze(), cmap="gray")
+                plt.title("GT mask"); plt.axis("off")
 
                 plt.tight_layout()
                 plt.savefig(f"test_{i}_{self.loss}.jpg")
                 plt.close("all")
 
-            scores = np.array(scores)
-            heatmaps = np.array(heatmaps)
-            gtmaps = np.array(gtmaps)
-            labels = np.array(labels)
-        return heatmaps, scores, gtmaps, labels
+            return np.array(heatmaps), np.array(scores), np.array(gtmaps), np.array(labels)
+
 
 
     def stop_fe_training(self):
@@ -332,21 +302,22 @@ class Trainer:
                     "label:", label.shape,
                     "gt_label:", gt_label.shape)
                 
-                # Forza sempre (N, C, H, W)
-                if image.ndim == 4:
-                    # Caso ideale: già (N,1,224,224) o (N,3,224,224)
-                    if image.shape[1] in [1, 3] and image.shape[2] == 224 and image.shape[3] == 224:
-                        pass  # già a posto
-                    # Caso sbagliato: (N,224,224,1) -> (N,1,224,224)
-                    elif image.shape[-1] in [1, 3]:
-                        image = image.permute(0, 3, 1, 2)
-                    # Caso sbagliato: (N,224,1,224) -> (N,1,224,224)
-                    elif image.shape[2] in [1, 3]:
-                        image = image.permute(0, 2, 1, 3)
-                
-                #Check per ViT: caso MNIST/FMNIST (grayscale → RGB)
+                # PATCH: forza sempre (N,C,H,W)
+                if image.ndim == 4 and image.shape[2] in [1,3] and image.shape[1] not in [1,3]:
+                    # Caso (N,H,C,W) -> (N,C,H,W)
+                    image = image.permute(0, 2, 1, 3)
+
+                if gt_label.ndim == 4 and gt_label.shape[2] == 1 and gt_label.shape[1] != 1:
+                    # Caso (N,H,C,W) -> (N,C,H,W)
+                    gt_label = gt_label.permute(0, 2, 1, 3)
+
+                # Se ViT è grayscale → duplica a 3 canali
                 if isinstance(self.model, ViT_CNN_Attn) and image.ndim == 4 and image.shape[1] == 1:
-                    image = image.repeat(1, 3, 1, 1)           
+                    image = image.repeat(1, 3, 1, 1)
+
+                print("[DEBUG train FIXED] image:", image.shape,
+                    "gt_label:", gt_label.shape)
+
 
                 if self.cuda:
                     image = image.cuda()
