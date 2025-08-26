@@ -18,7 +18,8 @@ class CustomVGGAD(Dataset):
         else:
             split = 'test'
 
-        x = np.load(os.path.join(path, f'X_{split}.npy')).swapaxes(1, 2).swapaxes(2, 3).astype(np.uint8)#[:,:,:,0]
+        #x = np.load(os.path.join(path, f'X_{split}.npy')).swapaxes(1, 2).swapaxes(2, 3).astype(np.uint8)#[:,:,:,0]
+        x = np.load(os.path.join(path, f'X_{split}.npy')).astype(np.uint8)
         y = np.load(os.path.join(path, f'Y_{split}.npy'))
         gt = np.load((os.path.join(path, f'GT_{split}.npy'))) #/ 255.0).astype(np.float32)
 
