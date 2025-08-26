@@ -406,8 +406,12 @@ def square(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = '
     GT_train = GT_train.reshape(GT_train.shape[0], 1, GT_train.shape[1], GT_train.shape[2])
     GT_test = GT_test.reshape(GT_test.shape[0], 1, GT_test.shape[1], GT_test.shape[2])
 
+    print("Train labels:", np.unique(Y_train, return_counts=True))
+    print("Test labels:", np.unique(Y_test, return_counts=True))
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
+
+
 
 
 def square_diff(dig,perc_anom_train = 0.2,perc_anom_test = 0.2,size = 5,intensity = 0.2,DATASET = 'mnist', seed=None):
