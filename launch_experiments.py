@@ -41,7 +41,7 @@ if __name__ == '__main__':
     if args.i != 'rand':
         args.i = float(args.i)
 
-    if args.ds == 'mnist' or args.ds == 'fmnist':
+    if args.ds in ['mnist', 'fmnist', 'cifar']:
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
             square(args.c, perc_anom_train=args.patr, perc_anom_test=args.pate,
                 size=args.size, intensity=args.i, DATASET=args.ds, seed=args.s)
