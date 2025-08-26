@@ -63,12 +63,12 @@ if __name__ == '__main__':
         print("[DEBUG] Absolute save path:", os.path.abspath(save_path))
 
         torch.save({
-            "X_train": X_train,
-            "Y_train": Y_train,
-            "X_test": X_test,
-            "Y_test": Y_test,
-            "GT_train": GT_train,
-            "GT_test": GT_test,
+            "X_train": X_train[:100],
+            "Y_train": Y_train[:100],
+            "X_test": X_test[:100],
+            "Y_test": Y_test[:100],
+            "GT_train": GT_train[:100],
+            "GT_test": GT_test[:100],
         },save_path)
 
         print(f"Dataset salvato in {data_path}")
