@@ -552,3 +552,11 @@ def plots_hts_ids(ids_anomalies, x, gt, hs1, hs2, hs3, hs4, c_ids, an_type):
     plt.close()
     
     
+# Funzione di riscalamento per immagine
+def rescale_per_image(x):
+    b, c, h, w = x.shape
+    x = x.view(b, -1)
+    min_vals = x.min(dim=1, keepdim=True)[0]
+    max_vals = x.max(dim=1, keepdim=True)[0]
+    x = (x - min_vals) / (max_vals - min_vals + 1e-8)
+    return x.view(b, c, h, w)

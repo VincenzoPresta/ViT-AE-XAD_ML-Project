@@ -66,14 +66,6 @@ if __name__ == '__main__':
         GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest")
         GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest")
 
-        # Funzione di riscalamento per immagine
-        def rescale_per_image(x):
-            b, c, h, w = x.shape
-            x = x.view(b, -1)
-            min_vals = x.min(dim=1, keepdim=True)[0]
-            max_vals = x.max(dim=1, keepdim=True)[0]
-            x = (x - min_vals) / (max_vals - min_vals + 1e-8)
-            return x.view(b, c, h, w)
 
         # Riscalamento a [0,1] per immagine
         X_train = rescale_per_image(X_train)
