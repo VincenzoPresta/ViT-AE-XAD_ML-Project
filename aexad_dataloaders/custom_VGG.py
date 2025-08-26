@@ -77,12 +77,15 @@ class CustomVGGAD(Dataset):
             A.OneOf([
                 A.OpticalDistortion(p=0.3),
                 A.GridDistortion(p=.1),
-                A.IAAPiecewiseAffine(p=0.3),
+                #A.IAAPiecewiseAffine(p=0.3),
+                A.PiecewiseAffine(p=0.3),
             ], p=0.2),
             A.OneOf([
                 A.CLAHE(clip_limit=2),
-                A.IAASharpen(),
-                A.IAAEmboss(),
+                #A.IAASharpen(),
+                #A.IAAEmboss(),
+                A.Sharpen(),
+                A.Emboss(),
                 A.RandomBrightnessContrast(),
             ], p=0.3),
             A.HueSaturationValue(p=0.3)]
