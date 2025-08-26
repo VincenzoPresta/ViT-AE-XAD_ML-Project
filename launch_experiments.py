@@ -59,6 +59,8 @@ if __name__ == '__main__':
         os.makedirs(data_path, exist_ok=True)
         
         print("[DEBUG] Shapes:", X_train.shape, Y_train.shape, X_test.shape, Y_test.shape)
+        save_path = os.path.join(data_path, f"ad{args.ds}_{X_train.shape[2]}x{X_train.shape[3]}.pt")
+        print("[DEBUG] Absolute save path:", os.path.abspath(save_path))
 
         torch.save({
             "X_train": X_train,
@@ -67,9 +69,10 @@ if __name__ == '__main__':
             "Y_test": Y_test,
             "GT_train": GT_train,
             "GT_test": GT_test,
-        }, os.path.join(data_path, f"ad{args.ds}_{X_train.shape[2]}x{X_train.shape[3]}.pt"))
+        },save_path)
 
         print(f"Dataset salvato in {data_path}")
+        print("[DEBUG] File exists after save?", os.path.exists(save_path))
         
     elif args.ds == 'mnist_diff':
         dataset = 'mnist'
