@@ -263,6 +263,12 @@ class Trainer:
                 plt.tight_layout()
                 plt.savefig(os.path.join(results_dir, f"test_{i}_{self.loss}.jpg"))
                 plt.close("all")
+            
+            print("[DEBUG RETURN]", 
+            f"heatmaps: {len(heatmaps)}", 
+            f"scores: {len(scores)}", 
+            f"gtmaps: {len(gtmaps)}", 
+            f"labels: {len(labels)}")    
 
             return np.array(heatmaps), np.array(scores), np.array(gtmaps), np.array(labels)
 
