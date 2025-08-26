@@ -129,21 +129,34 @@ class CustomVGGAD(Dataset):
         
         #IMPORTANTE-----------devo fare questa cosa per fare funzionare vgg_cnn, poi se sono da togliere le toglierò
         
-        print(f"[DEBUG] index {index}, image shape: {image.shape}, label shape: {image_label.shape}")
-        #  image 
-        if image.ndim == 3 and image.shape[1] == 1:  # (H,1,W)
-            image = np.transpose(image, (0,2,1))     # -> (224,224,1)
+        # --- image ---
+        if image.ndim == 2:  # grayscale (H,W)
+            image = np.stack([image] * 3, axis=-1)  # -> (H,W,3)
 
-        if image.ndim == 3 and image.shape[0] in [1,3]:  # (C,H,W)
-            image = np.transpose(image, (1,2,0))         # -> (H,W,C)
+        elif image.ndim == 3 and image.shape[0] in [1, 3]:  # (C,H,W)
+            image = np.transpose(image, (1, 2, 0))          # -> (H,W,C)
+            if image.shape[2] == 1:                         # se canale singolo
+                image = np.repeat(image, 3, axis=2)         # -> (H,W,3)
 
-        #  gt 
-        if image_label.ndim == 2:       # (H,W) già ok
+        elif image.ndim == 3 and image.shape[1] == 1:       # (H,1,W)
+            image = np.transpose(image, (0, 2, 1))          # -> (H,W,1)
+            image = np.repeat(image, 3, axis=2)             # -> (H,W,3)
+
+        elif image.ndim == 3 and image.shape[2] == 1:       # (H,W,1)
+            image = np.repeat(image, 3, axis=2)             # -> (H,W,3)
+
+        # --- gt mask ---
+        if image_label.ndim == 2:  # (H,W) già ok
             pass
-        elif image_label.ndim == 3:     # es (1,H,W) oppure (H,1,W)
-            image_label = np.squeeze(image_label)
+        elif image_label.ndim == 3:  # (1,H,W) oppure (H,1,W)
+            image_label = np.squeeze(image_label)  # -> (H,W)
         else:
             raise ValueError(f"GT mask con shape non attesa: {image_label.shape}")
+
+        
+        
+        #--------------------------------
+        
 
         #if self.train:
         #    aug = self.randAugmenter()
