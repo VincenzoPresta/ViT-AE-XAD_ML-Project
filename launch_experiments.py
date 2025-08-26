@@ -65,6 +65,13 @@ if __name__ == '__main__':
         # Maschere -> nearest (per mantenere binarie)
         GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest").numpy()
         GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest").numpy()
+        
+        # riscalamento a [0,1]
+        X_train = (X_train - X_train.min()) / (X_train.max() - X_train.min())
+        X_test  = (X_test - X_test.min()) / (X_test.max() - X_test.min())
+
+        X_train = X_train.numpy()
+        X_test  = X_test.numpy()
 
 
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
