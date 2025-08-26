@@ -19,8 +19,8 @@ from loss import AEXAD_loss, AEXAD_loss_weighted, AEXAD_loss_norm, AEXAD_loss_no
 
 
 class Trainer:
-    def __init__(self, latent_dim, lambda_p, lambda_s, f, path, AE_type, batch_size=None, silent=False, use_cuda=True,
-                 loss='aexad', save_intermediate=False, dataset='mnist'):
+    def __init__(self, latent_dim, lambda_p, lambda_s, f, path, AE_type,batch_size=None, silent=False, use_cuda=True,
+                 loss='aexad', save_intermediate=False, dataset='mnist', ret_path="." ):
         '''
         :param latent_dim:
         :param lambda_p: float, anomalous pixel weight, if none the value is inferred from the dataset
@@ -36,6 +36,7 @@ class Trainer:
         :param dataset: str, dataset to use, default to mnist, for custom dataset type the dataset name
         '''
         self.silent = silent
+        self.ret_path = ret_path
 
         if dataset == 'mnist' or dataset == 'fmnist' or dataset == 'tf_ds':
             if AE_type == 'vgg_cnn' or AE_type == 'conv_deep_v2_attn':
@@ -263,12 +264,6 @@ class Trainer:
                 plt.tight_layout()
                 plt.savefig(os.path.join(results_dir, f"test_{i}_{self.loss}.jpg"))
                 plt.close("all")
-            
-            print("[DEBUG RETURN]", 
-            f"heatmaps: {len(heatmaps)}", 
-            f"scores: {len(scores)}", 
-            f"gtmaps: {len(gtmaps)}", 
-            f"labels: {len(labels)}")    
 
             return np.array(heatmaps), np.array(scores), np.array(gtmaps), np.array(labels)
 
