@@ -18,8 +18,7 @@ class CustomVGGAD(Dataset):
         else:
             split = 'test'
 
-        #x = np.load(os.path.join(path, f'X_{split}.npy')).swapaxes(1, 2).swapaxes(2, 3).astype(np.uint8)#[:,:,:,0]
-        x = np.load(os.path.join(path, f'X_{split}.npy')).astype(np.uint8)
+        x = np.load(os.path.join(path, f'X_{split}.npy')).swapaxes(1, 2).swapaxes(2, 3).astype(np.uint8)#[:,:,:,0]
         y = np.load(os.path.join(path, f'Y_{split}.npy'))
         gt = np.load((os.path.join(path, f'GT_{split}.npy'))) #/ 255.0).astype(np.float32)
 
@@ -126,38 +125,6 @@ class CustomVGGAD(Dataset):
         #    image_label = np.zeros_like(self.images[index])
         image_label = self.gt[index]
         
-        
-        #IMPORTANTE-----------devo fare questa cosa per fare funzionare vgg_cnn, poi se sono da togliere le toglierò
-        
-        # --- image ---
-        if image.ndim == 2:  # grayscale (H,W)
-            image = np.stack([image] * 3, axis=-1)  # -> (H,W,3)
-
-        elif image.ndim == 3 and image.shape[0] in [1, 3]:  # (C,H,W)
-            image = np.transpose(image, (1, 2, 0))          # -> (H,W,C)
-            if image.shape[2] == 1:                         # se canale singolo
-                image = np.repeat(image, 3, axis=2)         # -> (H,W,3)
-
-        elif image.ndim == 3 and image.shape[1] == 1:       # (H,1,W)
-            image = np.transpose(image, (0, 2, 1))          # -> (H,W,1)
-            image = np.repeat(image, 3, axis=2)             # -> (H,W,3)
-
-        elif image.ndim == 3 and image.shape[2] == 1:       # (H,W,1)
-            image = np.repeat(image, 3, axis=2)             # -> (H,W,3)
-
-        # --- gt mask ---
-        if image_label.ndim == 2:  # (H,W) già ok
-            pass
-        elif image_label.ndim == 3:  # (1,H,W) oppure (H,1,W)
-            image_label = np.squeeze(image_label)  # -> (H,W)
-        else:
-            raise ValueError(f"GT mask con shape non attesa: {image_label.shape}")
-
-        
-        
-        #--------------------------------
-        
-
         #if self.train:
         #    aug = self.randAugmenter()
         #    augmentated = aug(image=image, mask=image_label)
