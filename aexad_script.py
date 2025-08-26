@@ -20,7 +20,7 @@ from loss import AEXAD_loss, AEXAD_loss_weighted, AEXAD_loss_norm, AEXAD_loss_no
 
 class Trainer:
     def __init__(self, latent_dim, lambda_p, lambda_s, f, path, AE_type,batch_size=None, silent=False, use_cuda=True,
-                 loss='aexad', save_intermediate=False, dataset='mnist', ret_path="." ):
+                 loss='aexad', save_intermediate=False, dataset='mnist', save_path="." ):
         '''
         :param latent_dim:
         :param lambda_p: float, anomalous pixel weight, if none the value is inferred from the dataset
@@ -36,7 +36,7 @@ class Trainer:
         :param dataset: str, dataset to use, default to mnist, for custom dataset type the dataset name
         '''
         self.silent = silent
-        self.ret_path = ret_path
+        self.save_path = save_path
 
         if dataset == 'mnist' or dataset == 'fmnist' or dataset == 'tf_ds':
             if AE_type == 'vgg_cnn' or AE_type == 'conv_deep_v2_attn':
@@ -205,11 +205,13 @@ class Trainer:
         tbar = tqdm(self.test_loader, disable=self.silent)
         heatmaps, scores, gtmaps, labels = [], [], [], []
 
+        print(f"[DEBUG] save_path = {self.save_path}")
         self.model.eval()
         
-        os.makedirs(self.ret_path, exist_ok=True)
-        results_dir = os.path.join(self.ret_path, "test_images")
+        os.makedirs(self.save_path, exist_ok=True)
+        results_dir = os.path.join(self.save_path, "test_images")
         os.makedirs(results_dir, exist_ok=True)
+        print(f"[DEBUG] Saving test images to: {results_dir}")
                 
         with torch.no_grad():
             for i, sample in enumerate(tbar):
@@ -264,6 +266,8 @@ class Trainer:
 
                 plt.tight_layout()
                 plt.savefig(os.path.join(results_dir, f"test_{i}_{self.loss}.jpg"))
+                print(f"[DEBUG] Saved {results_dir}")
+                
                 plt.close("all")
 
             return np.array(heatmaps), np.array(scores), np.array(gtmaps), np.array(labels)
@@ -396,7 +400,7 @@ class Trainer:
 def launch(data_path, epochs, batch_size, latent_dim, lambda_p, lambda_s, f, AE_type, loss='aexad',
            save_intermediate=False, save_path='', use_cuda=True, dataset='mnist'):
     trainer = Trainer(latent_dim, lambda_p, lambda_s, f, data_path, AE_type, batch_size, loss=loss,
-                      save_intermediate=save_intermediate, use_cuda=use_cuda, dataset=dataset)
+                      save_intermediate=save_intermediate, use_cuda=use_cuda, dataset=dataset, save_path=save_path)
 
     #summary(trainer.model, (3, 448, 448))
 
