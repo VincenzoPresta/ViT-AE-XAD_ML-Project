@@ -359,8 +359,10 @@ class Trainer:
                     loss, loss_n, loss_a = self.criterion(output, image, gt_label, label)
                     na += label.sum()
                     nn += image.shape[0] - na
-
+                
+                ns += 1
                 train_loss += loss.item()
+                
                 if not self.loss == 'mse':
                     train_loss_n += loss_n.item()
                     train_loss_a += loss_a.item()
