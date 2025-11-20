@@ -2,71 +2,133 @@ import torch
 import torch.nn as nn
 import numpy as np
 from einops import rearrange
-from torchvision.models import vgg11_bn, resnet50, vit_b_16, ViT_B_16_Weights, inception_v3
+from torchvision.models import vgg11_bn, resnet50, vit_b_16, ViT_B_16_Weights
 import torch.nn.functional as F
+
+from torchvision.models import vit_b_16, ViT_B_16_Weights
+import torch
+import torch.nn as nn
+from einops import rearrange
 
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
-        super().__init__()
+        super(ViT_CNN_Attn, self).__init__()
         self.dim = dim
+        self.dec_emb_dim = 64
 
-        # === CARICA VIT PRETRAINED UFFICIALE ===
+        # ViT PRE-ADDDESTRATO (ENCODER)
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        for param in vit.parameters():
+            param.requires_grad = True   # poi eventualmente congeliamo qualche layer
 
-        self.patch_size  = vit.patch_size         # 16
-        self.hidden_dim  = vit.hidden_dim         # 768
-        self.image_size  = vit.image_size         # 224
+        self.image_size = vit.image_size   # 224
+        self.hidden_dim = vit.hidden_dim   # 768
+        self.patch_size = vit.patch_size   # 16
 
-        self.conv_proj   = vit.conv_proj          # patch embedding
-        self.pos_embed   = vit.encoder.pos_embedding     # (1, 197, 768)
-        self.encoder     = vit.encoder            # Transformer
+        # Patch embedding + encoder ViT (solo encoder, niente decoder ViT)
+        self.conv_proj   = vit.conv_proj
+        self.class_token = vit.class_token
+        self.encoder     = vit.encoder
 
-        # === PROIEZIONE PER DECODER CNN AE-XAD ===
-        self.proj = nn.Sequential(
-            nn.Linear(self.hidden_dim, 512),
-            nn.GELU(),
-            nn.Linear(512, 64 * (self.patch_size ** 2)),  # 64×16×16
-            nn.GELU()
-        )
+        # Proiezione token → feature per patch (come nella versione originale)
+        layers = []
+        layers.append(nn.Linear(self.hidden_dim,
+                                (self.patch_size ** 2) * self.dec_emb_dim))
+        layers.append(nn.LeakyReLU(0.2))
+        layers.append(nn.Unflatten(-1, (self.patch_size ** 2,
+                                        self.dec_emb_dim)))
+        self.encoder1 = nn.Sequential(*layers)
 
-        # === DECODER CNN AE-XAD ===
-        self.decoder = nn.Sequential(
-            nn.Conv2d(64, 32, 3, padding=1),
-            nn.SELU(),
-            nn.Conv2d(32, 32, 3, padding=1),
-            nn.SELU(),
-            nn.Conv2d(32, 16, 3, padding=1),
-            nn.SELU(),
-            nn.Conv2d(16, 8, 3, padding=1),
-            nn.SELU(),
-            nn.Conv2d(8, dim[0], 3, padding=1),
-            nn.Sigmoid()
-        )
+        # CBAM su feature spaziali
+        self.embed_attn     = CBAM(self.dec_emb_dim)
+        self.embed_attn_act = nn.SELU()
+        self.tanh           = nn.ReLU()
+
+        # Decoder CNN (come AE-XAD, niente ViT decoder)
+        layers = []
+        layers.append(nn.Conv2d(self.dec_emb_dim, 32, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(32, 32, (3, 3), stride=1, padding=1))
+        layers.append(nn.SELU())
+
+        layers.append(nn.Conv2d(32, 16, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(16, 16, (3, 3), stride=1, padding=1))
+        layers.append(nn.SELU())
+
+        layers.append(nn.Conv2d(16, 8, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(8, 8, (3, 3), stride=1, padding=1))
+        layers.append(nn.SELU())
+
+        self.decoder1 = nn.Sequential(*layers)
+
+        layers = []
+        layers.append(nn.Conv2d(8, 4, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(4, dim[0], (3, 3), stride=1, padding=1))
+        layers.append(nn.Sigmoid())
+
+        self.decoder2 = nn.Sequential(*layers)
+
+    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, C, H, W)
+        n, c, h, w = x.shape
+        p = self.patch_size
+
+        torch._assert(h == self.image_size, "Wrong image height!")
+        torch._assert(w == self.image_size, "Wrong image width!")
+
+        n_h = h // p
+        n_w = w // p
+
+        # (B, C, H, W) -> (B, hidden_dim, n_h, n_w)
+        x = self.conv_proj(x)
+        # -> (B, hidden_dim, n_h * n_w)
+        x = x.reshape(n, self.hidden_dim, n_h * n_w)
+        # -> (B, n_h * n_w, hidden_dim)
+        x = x.permute(0, 2, 1)
+
+        return x
 
     def forward(self, x):
-        B = x.size(0)
+        # 1) patch embedding
+        x = self._process_input(x)   # (B, 196, 768)
+        n = x.shape[0]
 
-        # ========= PATCH EMBEDDING =========
-        x = self.conv_proj(x)                   # (B, 768, 14, 14)
-        x = x.flatten(2).transpose(1, 2)        # (B, 196, 768)
+        # 2) aggiungi CLS token
+        batch_class_token = self.class_token.expand(n, -1, -1)   # (B,1,768)
+        x = torch.cat([batch_class_token, x], dim=1)             # (B,197,768)
 
-        # ========= POSITIONAL ENCODING (senza CLS) =========
-        pos_no_cls = self.pos_embed[:, 1:, :]   # (1, 196, 768)
-        x = x + pos_no_cls
+        # 3) encoder ViT (usa già pos_embedding interna)
+        encoded = self.encoder(x)[:, 1:]   # (B,196,768) → rimuovi CLS
 
-        # ========= ENCODER VIT =========
-        x = self.encoder(x)                     # (B, 196, 768)
+        # 4) proiezione token → feature per patch (come AE-XAD)
+        p = self.patch_size
+        B, N, _ = encoded.shape
+        dec_emb_dim = self.dec_emb_dim
+        h = w = self.image_size
+        n_h = h // p
+        n_w = w // p
 
-        # ========= PROIEZIONE PER DECODER =========
-        x = self.proj(x)                        # (B,196, 64*256)
+        decoded = self.encoder1(encoded)   # (B, N, p^2, dec_emb_dim)
+        B, N, _, _ = decoded.shape
 
-        x = x.view(B, 196, 64, 16, 16)
-        x = x.permute(0, 2, 1, 3, 4)
-        x = x.reshape(B, 64, 14*16, 14*16)       # (B, 64, 224, 224)
+        decoded1 = decoded.view(B, N, dec_emb_dim, p, p)
+        decoded1 = rearrange(
+            decoded1,
+            'b (nh nw) c ph pw -> b c (nh ph) (nw pw)',
+            nh=n_h, nw=n_w
+        )  # (B, dec_emb_dim, H, W)
 
-        out = self.decoder(x)
+        # 5) CBAM + decoder CNN
+        decoded_attn   = self.embed_attn_act(self.embed_attn(decoded1))
+        encoded_square = decoded_attn.sum(dim=1).unsqueeze(1)
+
+        feat = self.decoder1(decoded1)
+        out  = self.decoder2(feat * encoded_square)
+
         return out
-
 
 #--------------------------------------------------------------------------------#
 
