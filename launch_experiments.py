@@ -56,14 +56,7 @@ if __name__ == '__main__':
         if X_train.ndim == 3:
             X_train = X_train.unsqueeze(1)
             X_test  = X_test.unsqueeze(1)
-            
-        
-    data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
-    save_path  = os.path.join('results', args.ds, str(args.c), str(args.s))
 
-
-    if args.ds not in ['mnist', 'fmnist']: # per quei due si fa un upscale: Attenzione -> serve solo come sanity check della pipeline
-        # Resize immagini e maschere
         X_train = F.interpolate(X_train, size=(224,224), mode="bilinear")
         X_test  = F.interpolate(X_test,  size=(224,224), mode="bilinear")
         GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest")
