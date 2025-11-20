@@ -150,7 +150,7 @@ class Trainer:
             {'params': self.model.conv_proj.parameters()},
             {'params': self.model.encoder.parameters()},
             {'params': self.model.decoder.parameters()},
-        ], lr=1e-3, weight_decay=self.weight_decay)
+        ], lr=1e-3, weight_decay=1e-5)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lambda ep: 0.985 ** ep)
 
         self.loss = loss
