@@ -120,16 +120,10 @@ class Trainer:
                         
         else:
             raise Exception('Model not yet implemented')
-
-        #self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
-        #self.optimizer = torch.optim.Adam([{'params': self.model.encoder.parameters()},
-        #                                  {'params': self.model.dec1.parameters()},
-        #                                  {'params': self.model.dec2.parameters()},
-        #                                  {'params': self.model.dec3.parameters()},
-        #                                  {'params': self.model.decoder_final.parameters()},
-        #                                  {'params': self.model.encoder_pre.parameters(), 'lr': 1e-5}
-        #                                  ], lr=1e-3, weight_decay=1e-4)
         
+        
+#-------OPTIMIZERS------------------------------
+
         # ResNet
         '''self.optimizer = torch.optim.Adam([{'params': self.model.encoder.parameters()},
                                            {'params': self.model.dec1.parameters()},
@@ -144,14 +138,15 @@ class Trainer:
                                            {'params': self.model.layer2.parameters(), 'lr': 1e-5},
                                            ], lr=1e-3, weight_decay=1e-4)'''
                                            
-        #ViTCNN
-        # Ottimizzatore aggiornato per ViT + MAE decoder
+        # ViTCNN: encoder ViT + decoder ResNet AE-XAD
         self.optimizer = torch.optim.Adam([
-            {'params': self.model.conv_proj.parameters()},
-            {'params': self.model.encoder.parameters()},
-            {'params': self.model.decoder.parameters()},
+            {'params': self.model.encoder.parameters()},   # ViT_Encoder: conv_proj, encoder_vit, to_64, up_to_28
+            {'params': self.model.decoder.parameters()},   # dec1, dec2, dec3, decoder_final
         ], lr=1e-3, weight_decay=1e-5)
+
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lambda ep: 0.985 ** ep)
+
+#--------LOSS--------------
 
         self.loss = loss
         if loss == 'aexad':
@@ -175,6 +170,8 @@ class Trainer:
         if self.cuda:
             self.model = self.model.cuda()
             self.criterion = self.criterion.cuda()
+            
+#---------------------------
 
     def reconstruct(self):
         '''
