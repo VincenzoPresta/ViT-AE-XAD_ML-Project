@@ -41,37 +41,38 @@ if __name__ == '__main__':
     if args.i != 'rand':
         args.i = float(args.i)
 
-    if args.ds in ['mnist', 'fmnist', 'cifar']: # (NO RESIZE)
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = square(
-            args.c,
-            perc_anom_train=args.patr,
-            perc_anom_test=args.pate,
-            size=args.size,
-            intensity=args.i,
-            DATASET=args.ds,
-            seed=args.s
-        )
+    if args.ds in ['mnist', 'fmnist', 'cifar']:
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
+            square(args.c, perc_anom_train=args.patr, perc_anom_test=args.pate,
+                size=args.size, intensity=args.i, DATASET=args.ds, seed=args.s)
         
-        # torch
+        # Converti in tensori float
         X_train = torch.tensor(X_train, dtype=torch.float32)
-        X_test  = torch.tensor(X_test,  dtype=torch.float32)
+        X_test  = torch.tensor(X_test, dtype=torch.float32)
         GT_train = torch.tensor(GT_train, dtype=torch.float32)
-        GT_test  = torch.tensor(GT_test,  dtype=torch.float32)
+        GT_test  = torch.tensor(GT_test, dtype=torch.float32)
 
         # Se manca il canale, aggiungilo
         if X_train.ndim == 3:
             X_train = X_train.unsqueeze(1)
             X_test  = X_test.unsqueeze(1)
-            
-        # numpy
+
+
+    if args.ds not in ['mnist', 'fmnist']: # per quei due si fa un upscale: Attenzione -> serve solo come sanity check della pipeline
+        # Resize immagini e maschere
+        X_train = F.interpolate(X_train, size=(224,224), mode="bilinear")
+        X_test  = F.interpolate(X_test,  size=(224,224), mode="bilinear")
+        GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest")
+        GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest")
+
+        # Conversione finale a numpy
         X_train = X_train.numpy()
         X_test  = X_test.numpy()
         GT_train = GT_train.numpy()
         GT_test  = GT_test.numpy()
-        
-        #def paths
+
         data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
-        save_path = os.path.join('results', args.ds, str(args.c), str(args.s))
+        save_path  = os.path.join('results', args.ds, str(args.c), str(args.s))
 
         
     elif args.ds == 'mnist_diff':
