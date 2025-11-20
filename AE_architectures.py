@@ -70,6 +70,11 @@ class ViT_CNN_Attn(nn.Module):
         layers.append(nn.Sigmoid())
 
         self.decoder2 = nn.Sequential(*layers)
+        
+        self.decoder = nn.Sequential(
+            self.decoder1,
+            self.decoder2
+        )
 
     def _process_input(self, x: torch.Tensor) -> torch.Tensor:
         # x: (B, C, H, W)
