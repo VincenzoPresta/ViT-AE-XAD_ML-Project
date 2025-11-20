@@ -30,24 +30,6 @@ class CustomAD(Dataset):
 
         self.dim = self.images.shape[1:]
 
-
-    ## --------- Vedremo se reinserirla -------
-    #def transform_train(self):
-    #    composed_transforms = transforms.Compose([
-    #        transforms.Resize((self.args.img_size,self.args.img_size)),
-    #        transforms.RandomRotation(180),
-    #        transforms.ToTensor(),
-    #        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-    #    return composed_transforms
-#
-    #def transform_test(self):
-    #    composed_transforms = transforms.Compose([
-    #        transforms.Resize((self.args.img_size, self.args.img_size)),
-    #        transforms.ToTensor(),
-    #        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
-    #    return composed_transforms
-    ## -----------------------------------------
-
     def __len__(self):
         return len(self.images)
 
@@ -63,19 +45,6 @@ class CustomAD(Dataset):
         sample = {'image': self.images[index], 'label': self.labels[index], 'gt_label': image_label}
         return sample
 
-    #def getitem(self, index):
-    #    # if index in self.outlier_idx and self.train:
-    #    #     transform = self.transform_anomaly
-    #    # else:
-    #    #     transform = self.transform
-    #    #image = Image.fromarray(self.images[index])
-    #    image = self.images[index]
-    #    if index in self.outlier_idx:
-    #        image_label = self.gt[index-self.out_idx_start]
-    #    else:
-    #        image_label = np.zeros_like(self.images[index])
-    #    sample = {'image': image, 'label': self.labels[index], 'gt_label': image_label}
-    #    return sample
 
 
 class CustomAD_AE(Dataset):

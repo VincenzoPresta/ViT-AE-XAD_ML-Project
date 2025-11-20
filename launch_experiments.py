@@ -218,7 +218,7 @@ if __name__ == '__main__':
         32,             # latent dim
         (224*224) / 25, # radius adattato al 224x224, come da paper
         None, 
-        f, 
+        f,  
         'vit',         
         save_intermediate=True, 
         save_path=save_path

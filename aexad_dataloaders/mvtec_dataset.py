@@ -13,13 +13,14 @@ class MvtecAD(Dataset):
 
         self.train = train
         self.seed = seed
-        self.dim = (3, 448, 448)
-
+        self.dim = (3, 224, 224)
+        
         self.transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize((self.dim[-2], self.dim[-1]), Image.NEAREST),
-            #transforms.ToTensor(),
-            transforms.PILToTensor()
+            transforms.Resize((224, 224), interpolation=Image.BILINEAR),
+            transforms.ToTensor(),  # produce float in [0,1]
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                std=[0.229, 0.224, 0.225])
         ])
 
         if self.train:
@@ -67,6 +68,6 @@ class MvtecAD(Dataset):
 
         print('---', img.max(), gt.max())
 
-        sample = {'image': img / 255.0, 'label': self.labels[index],
+        sample = {'image': img, 'label': self.labels[index],
                   'gt_label': gt / 255.0}
         return sample
