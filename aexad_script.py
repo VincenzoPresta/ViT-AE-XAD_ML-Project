@@ -145,12 +145,12 @@ class Trainer:
                                            ], lr=1e-3, weight_decay=1e-4)'''
                                            
         #ViTCNN
+        # Ottimizzatore aggiornato per ViT + MAE decoder
         self.optimizer = torch.optim.Adam([
-                                         {'params': self.model.decoder1.parameters()},
-                                         {'params': self.model.decoder2.parameters()},
-                                         {'params': self.model.encoder1.parameters()},
-                                         {'params': self.model.encoder.parameters(), 'lr': 1e-5}
-                                         ], lr=1e-3, weight_decay=1e-4) 
+            {'params': self.model.conv_proj.parameters()},
+            {'params': self.model.encoder.parameters()},
+            {'params': self.model.decoder.parameters()},
+        ], lr=self.lr, weight_decay=self.weight_decay)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lambda ep: 0.985 ** ep)
 
         self.loss = loss
