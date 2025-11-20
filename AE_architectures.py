@@ -128,6 +128,32 @@ class ViT_CNN_Attn(nn.Module):
 
         return out
     
+#-------------------------------------------------------------------
+    
+class Shallow_Autoencoder(nn.Module):
+    def __init__(self, dim, flat_dim, latent_dim):
+        super(Shallow_Autoencoder, self).__init__()
+        self.dim = dim
+
+        self.encoder = nn.Sequential(
+            nn.Linear(flat_dim, latent_dim),
+            nn.ReLU()
+        )
+
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, flat_dim),
+            nn.Sigmoid(),
+        )
+
+
+    def forward(self, x):
+        x_f = x.flatten(start_dim=1)
+        encoded = self.encoder(x_f)
+        decoded = self.decoder(encoded)
+        decoded = torch.reshape(decoded, x.shape)
+        return decoded
+    
+
 class Deep_Autoencoder(nn.Module):
     def __init__(self, dim, flat_dim, intermediate_dim, latent_dim):
         super(Deep_Autoencoder, self).__init__()
