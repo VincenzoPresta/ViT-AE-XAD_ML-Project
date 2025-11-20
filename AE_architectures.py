@@ -18,7 +18,7 @@ class ViT_CNN_Attn(nn.Module):
         self.image_size  = vit.image_size         # 224
 
         self.conv_proj   = vit.conv_proj          # patch embedding
-        self.pos_embed   = vit.pos_embedding      # (1, 197, 768)
+        self.pos_embed   = vit.encoder.pos_embedding.pos_embedding     # (1, 197, 768)
         self.encoder     = vit.encoder            # Transformer
 
         # === PROIEZIONE PER DECODER CNN AE-XAD ===
@@ -67,8 +67,6 @@ class ViT_CNN_Attn(nn.Module):
         out = self.decoder(x)
         return out
 
-    
-    
 
 #--------------------------------------------------------------------------------#
 
