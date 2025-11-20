@@ -99,11 +99,9 @@ class ViT_CNN_Attn(nn.Module):
         batch_class_token = self.class_token.expand(n, -1, -1)
         x = torch.cat([batch_class_token, x], dim=1)
 
-        # ---- ESTRAZIONE ATTENTION MAP ----
-        encoder_outputs = self.encoder(x, output_attentions=True)
-        encoded = encoder_outputs.last_hidden_state[:, 1:]  # remove class token
-        attentions = encoder_outputs.attentions
-        # -----------------------------------
+        # ---- ENCODER (senza output_attentions!) ----
+        encoded = self.encoder(x)[:, 1:]  # remove class token
+        # --------------------------------------------
 
         p = self.patch_size
         B, N, _ = encoded.shape
@@ -124,9 +122,7 @@ class ViT_CNN_Attn(nn.Module):
         decoded = self.decoder1(decoded1)
         decoded = self.decoder2(decoded * encoded_square)
 
-        # ritorniamo anche le attention map
-        return decoded, attentions
-
+        return decoded
 
 class Shallow_Autoencoder(nn.Module):
     def __init__(self, dim, flat_dim, latent_dim):
