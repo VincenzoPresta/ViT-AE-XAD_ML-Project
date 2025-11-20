@@ -10,99 +10,65 @@ class ViT_CNN_Attn(nn.Module):
         super().__init__()
         self.dim = dim
 
-        # Carichiamo il ViT base (no pretraining ora)
+        # === CARICA VIT PRETRAINED UFFICIALE ===
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-        
-        for param in vit.parameters():
-            param.requires_grad = False
 
-        self.image_size = vit.image_size    # 224
-        self.hidden_dim = vit.hidden_dim    # 768
-        self.patch_size = vit.patch_size    # 16
+        self.patch_size  = vit.patch_size         # 16
+        self.hidden_dim  = vit.hidden_dim         # 768
+        self.image_size  = vit.image_size         # 224
 
-        self.conv_proj = vit.conv_proj      # patch embedding convoluzione
-        self.class_token = vit.class_token
-        self.encoder = vit.encoder          # Encoder Transformer
+        self.conv_proj   = vit.conv_proj          # patch embedding
+        self.pos_embed   = vit.pos_embedding      # (1, 197, 768)
+        self.encoder     = vit.encoder            # Transformer
 
-        # Il decoder MAE riceve token 768-dim
-        self.decoder = MAEDecoder(
-            patch_dim=self.hidden_dim,
-            dec_dim=256
-        )
-
-    def _process_input(self, x):
-        n, c, h, w = x.shape
-        p = self.patch_size
-        
-        torch._assert(h == self.image_size, "Wrong image height!")
-        torch._assert(w == self.image_size, "Wrong image width!")
-
-        n_h = h // p
-        n_w = w // p
-
-        # Conv patch embedding → (N, 768, 14, 14)
-        x = self.conv_proj(x)
-
-        # Flatten → (N, 768, 196)
-        x = x.reshape(n, self.hidden_dim, n_h * n_w)
-
-        # Transpose in formato ViT → (N, 196, 768)
-        x = x.permute(0, 2, 1)
-
-        return x
-
-    def forward(self, x):
-        x = self._process_input(x)
-        B, S, D = x.shape
-
-        # Aggiungi class token
-        cls = self.class_token.expand(B, -1, -1)
-        x = torch.cat([cls, x], dim=1)
-
-        # Encoder ViT
-        enc = self.encoder(x)
-
-        # Rimuovi class token → (B, 196, 768)
-        enc = enc[:, 1:]
-
-        # Decodifica MAE → immagine ricostruita
-        out = self.decoder(enc)
-        return out
-    
-    
-class MAEDecoder(nn.Module):
-    def __init__(self, patch_dim=768, dec_dim=256):
-        super().__init__()
-
-        # Proiezione dei token ViT nel latent decoder
+        # === PROIEZIONE PER DECODER CNN AE-XAD ===
         self.proj = nn.Sequential(
-            nn.Linear(patch_dim, 512),
+            nn.Linear(self.hidden_dim, 512),
             nn.GELU(),
-            nn.Linear(512, dec_dim)
+            nn.Linear(512, 64 * (self.patch_size ** 2)),  # 64×16×16
+            nn.GELU()
         )
 
-        # Decoder piramidale stile MAE
-        self.deconv = nn.Sequential(
-            nn.ConvTranspose2d(dec_dim, 256, kernel_size=2, stride=2),  # 14 → 28
-            nn.GELU(),
-            nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2),      # 28 → 56
-            nn.GELU(),
-            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),       # 56 → 112
-            nn.GELU(),
-            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2),        # 112 → 224
-            nn.GELU(),
-            nn.Conv2d(32, 3, kernel_size=3, padding=1),
+        # === DECODER CNN AE-XAD ===
+        self.decoder = nn.Sequential(
+            nn.Conv2d(64, 32, 3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(32, 32, 3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(32, 16, 3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(16, 8, 3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(8, dim[0], 3, padding=1),
             nn.Sigmoid()
         )
 
-    def forward(self, tokens):
-        B, N, D = tokens.shape
-        H = W = int(N ** 0.5)  # 196 → 14×14
+    def forward(self, x):
+        B = x.size(0)
 
-        x = self.proj(tokens)                 # (B,196,256)
-        x = x.permute(0,2,1).reshape(B,256,H,W)  # (B,256,14,14)
-        x = self.deconv(x)                    # (B,3,224,224)
-        return x
+        # ========= PATCH EMBEDDING =========
+        x = self.conv_proj(x)                   # (B, 768, 14, 14)
+        x = x.flatten(2).transpose(1, 2)        # (B, 196, 768)
+
+        # ========= POSITIONAL ENCODING (senza CLS) =========
+        pos_no_cls = self.pos_embed[:, 1:, :]   # (1, 196, 768)
+        x = x + pos_no_cls
+
+        # ========= ENCODER VIT =========
+        x = self.encoder(x)                     # (B, 196, 768)
+
+        # ========= PROIEZIONE PER DECODER =========
+        x = self.proj(x)                        # (B,196, 64*256)
+
+        x = x.view(B, 196, 64, 16, 16)
+        x = x.permute(0, 2, 1, 3, 4)
+        x = x.reshape(B, 64, 14*16, 14*16)       # (B, 64, 224, 224)
+
+        out = self.decoder(x)
+        return out
+
+    
+    
 
 #--------------------------------------------------------------------------------#
 
