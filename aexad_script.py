@@ -366,9 +366,13 @@ class Trainer:
                     train_loss_a += loss_a.item()
 
                 if self.loss == 'mse':
+                    # solo AE puro
                     tbar.set_description('Epoch:%d, Train loss: %.3f' % (epoch, train_loss / ns))
                 else:
-                    tbar.set_description('Epoch:%d, Train loss: %.3f, Normal loss: %.3f, Anom loss: %3f' % (epoch, train_loss / ns, loss_n, loss_a))
+                    # AE-XAD supervisionato
+                    tbar.set_description('Epoch:%d, Train loss: %.3f, Normal loss: %.3f, Anom loss: %3f' % 
+                                        (epoch, train_loss / ns, loss_n, loss_a))
+
 
                 #if isinstance(self.model, VGG_CNN_mask) and epoch>0.1*epochs:
                 #    self.stop_fe_training()
