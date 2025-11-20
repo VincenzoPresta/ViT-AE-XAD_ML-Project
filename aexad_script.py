@@ -391,15 +391,16 @@ class Trainer:
         torch.save(self.model.state_dict(), os.path.join(filename)) #args.experiment_dir, filename))
 
 
-def launch(data_path, epochs, batch_size, latent_dim, lambda_p, lambda_s, f, AE_type, loss='aexad',
+def launch(data_path, batch_size, latent_dim, lambda_p, lambda_s, f, AE_type, epochs=200, loss='aexad',
            save_intermediate=False, save_path='', use_cuda=True, dataset='mnist'):
+    
     trainer = Trainer(latent_dim, lambda_p, lambda_s, f, data_path, AE_type, batch_size, loss=loss,
                       save_intermediate=save_intermediate, use_cuda=use_cuda, dataset=dataset, save_path=save_path)
 
     #summary(trainer.model, (3, 448, 448))
 
     start = time()
-    trainer.train(epochs, save_path=save_path)
+    trainer.train(epochs=epochs, save_path=save_path)
     tot_time = time() - start
 
     heatmaps, scores, gtmaps, labels = trainer.test()
