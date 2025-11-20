@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from einops import rearrange
-from torchvision.models import vgg11_bn, resnet50, vit_b_32, vit_b_16, inception_v3
+from torchvision.models import vgg11_bn, resnet50, vit_b_16, ViT_B_16_Weights inception_v3
 import torch.nn.functional as F
 
 class ViT_CNN_Attn(nn.Module):
@@ -11,7 +11,10 @@ class ViT_CNN_Attn(nn.Module):
         self.dim = dim
 
         # Carichiamo il ViT base (no pretraining ora)
-        vit = vit_b_16(weights=None)
+        vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        
+        for param in vit.parameters():
+            param.requires_grad = False
 
         self.image_size = vit.image_size    # 224
         self.hidden_dim = vit.hidden_dim    # 768
