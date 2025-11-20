@@ -9,109 +9,84 @@ class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.dec_emb_dim = 64
 
-        vit = vit_b_16(weights=None)  # o pretrained=True dopo
-        self.image_size = vit.image_size
-        self.hidden_dim = vit.hidden_dim
-        self.patch_size = vit.patch_size
+        # Carichiamo il ViT base (no pretraining ora)
+        vit = vit_b_16(weights=None)
 
-        self.conv_proj = vit.conv_proj
+        self.image_size = vit.image_size    # 224
+        self.hidden_dim = vit.hidden_dim    # 768
+        self.patch_size = vit.patch_size    # 16
+
+        self.conv_proj = vit.conv_proj      # patch embedding convoluzione
         self.class_token = vit.class_token
-        self.encoder = vit.encoder
+        self.encoder = vit.encoder          # Encoder Transformer
 
-        # ---------------- PROIETTORE MIGLIORATO ----------------
-        self.proj = nn.Sequential(
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-            nn.GELU(),
-            nn.Linear(self.hidden_dim, (self.patch_size ** 2) * self.dec_emb_dim),
-            nn.GELU()
+        # Il decoder MAE riceve token 768-dim
+        self.decoder = MAEDecoder(
+            patch_dim=self.hidden_dim,
+            dec_dim=256
         )
-        # --------------------------------------------------------
 
-        # ---------------- DECODER MIGLIORATO --------------------
-        def conv_block(in_c, out_c):
-            return nn.Sequential(
-                nn.Conv2d(in_c, out_c, 3, padding=1),
-                nn.GELU(),
-                nn.BatchNorm2d(out_c),
-            )
-
-        self.decoder = nn.Sequential(
-            conv_block(self.dec_emb_dim, 64),
-            conv_block(64, 64),
-            conv_block(64, 32),
-            conv_block(32, 32),
-            conv_block(32, 16),
-            conv_block(16, 8),
-            nn.Conv2d(8, dim[0], 3, padding=1),
-            nn.Sigmoid()
-        )
-        # --------------------------------------------------------
-        
-    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
+    def _process_input(self, x):
         n, c, h, w = x.shape
         p = self.patch_size
-
+        
         torch._assert(h == self.image_size, "Wrong image height!")
         torch._assert(w == self.image_size, "Wrong image width!")
+
         n_h = h // p
         n_w = w // p
 
-        # (n, c, h, w) -> (n, hidden_dim, n_h, n_w)
+        # Conv patch embedding → (N, 768, 14, 14)
         x = self.conv_proj(x)
-        # (n, hidden_dim, n_h, n_w) -> (n, hidden_dim, (n_h * n_w))
+
+        # Flatten → (N, 768, 196)
         x = x.reshape(n, self.hidden_dim, n_h * n_w)
 
-        # Permute in formato (N, S, E) per l'Encoder ViT
+        # Transpose in formato ViT → (N, 196, 768)
         x = x.permute(0, 2, 1)
 
         return x
 
     def forward(self, x):
         x = self._process_input(x)
-        B, _, _ = x.shape
+        B, S, D = x.shape
 
+        # Aggiungi class token
         cls = self.class_token.expand(B, -1, -1)
         x = torch.cat([cls, x], dim=1)
 
+        # Encoder ViT
         enc = self.encoder(x)
-        enc = enc[:, 1:]  # remove class token
 
-        z = self.proj(enc)
-        z = z.view(B, -1, self.dec_emb_dim, self.patch_size, self.patch_size)
-        z = rearrange(
-            z,
-            'b (nh nw) c ph pw -> b c (nh ph) (nw pw)',
-            nh=self.image_size // self.patch_size,
-            nw=self.image_size // self.patch_size
-        )
+        # Rimuovi class token → (B, 196, 768)
+        enc = enc[:, 1:]
 
-        out = self.decoder(z)
+        # Decodifica MAE → immagine ricostruita
+        out = self.decoder(enc)
         return out
-
     
     
 class MAEDecoder(nn.Module):
     def __init__(self, patch_dim=768, dec_dim=256):
         super().__init__()
 
-        # proiezione iniziale dei token
+        # Proiezione dei token ViT nel latent decoder
         self.proj = nn.Sequential(
             nn.Linear(patch_dim, 512),
             nn.GELU(),
             nn.Linear(512, dec_dim)
         )
 
-        # upsampling piramidale
+        # Decoder piramidale stile MAE
         self.deconv = nn.Sequential(
-            nn.ConvTranspose2d(dec_dim, 256, kernel_size=2, stride=2),  # 14→28
+            nn.ConvTranspose2d(dec_dim, 256, kernel_size=2, stride=2),  # 14 → 28
             nn.GELU(),
-            nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2),      # 28→56
+            nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2),      # 28 → 56
             nn.GELU(),
-            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),       # 56→112
+            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),       # 56 → 112
             nn.GELU(),
-            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2),        # 112→224
+            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2),        # 112 → 224
             nn.GELU(),
             nn.Conv2d(32, 3, kernel_size=3, padding=1),
             nn.Sigmoid()
@@ -119,14 +94,12 @@ class MAEDecoder(nn.Module):
 
     def forward(self, tokens):
         B, N, D = tokens.shape
-        H = W = int(N ** 0.5)  # 196→14×14
+        H = W = int(N ** 0.5)  # 196 → 14×14
 
-        x = self.proj(tokens)                         # (B,196,256)
-        x = x.permute(0,2,1).reshape(B,256,H,W)       # (B,256,14,14)
-        x = self.deconv(x)                            # (B,3,224,224)
-
+        x = self.proj(tokens)                 # (B,196,256)
+        x = x.permute(0,2,1).reshape(B,256,H,W)  # (B,256,14,14)
+        x = self.deconv(x)                    # (B,3,224,224)
         return x
-
 
 #--------------------------------------------------------------------------------#
 
