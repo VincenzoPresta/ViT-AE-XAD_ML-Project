@@ -116,6 +116,19 @@ class ViT_Encoder(nn.Module):
 
         self.to_64 = nn.Linear(self.hidden_dim, 64)
         self.up_to_28 = nn.Upsample(scale_factor=2)
+        
+        # ============================
+        # FREEZING DELLA PATCH EMBEDDING
+        # ============================
+        for param in vit.conv_proj.parameters():
+            param.requires_grad = False
+        
+        # ============================
+        # FREEZING DEI PRIMI 6 BLOCCHI ViT
+        # ============================
+        for block in vit.encoder.layers[:6]:
+            for param in block.parameters():
+                param.requires_grad = False
 
     def _process_input(self, x):
         B = x.size(0)

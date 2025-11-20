@@ -140,8 +140,8 @@ class Trainer:
                                            
         # ViTCNN: encoder ViT + decoder ResNet AE-XAD
         self.optimizer = torch.optim.Adam([
-            {'params': self.model.encoder.parameters()},   # ViT_Encoder: conv_proj, encoder_vit, to_64, up_to_28
-            {'params': self.model.decoder.parameters()},   # dec1, dec2, dec3, decoder_final
+            {'params': self.model.encoder.parameters(), 'lr': 1e-5},   # ViT_Encoder: conv_proj, encoder_vit, to_64, up_to_28
+            {'params': self.model.decoder.parameters(), 'lr': 1e-3},   # dec1, dec2, dec3, decoder_final
         ], lr=1e-3, weight_decay=1e-5)
 
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lambda ep: 0.985 ** ep)
@@ -295,7 +295,6 @@ class Trainer:
             name = 'model_conv_deep_v2'
         elif isinstance(self.model, ResNet_CNN_Attn):
             name = 'model_vgg_cnn'
-        
         #nuovo: ViT
         elif isinstance(self.model, ViT_CNN_Attn):
             name = 'model_vit_cnn'
@@ -371,14 +370,16 @@ class Trainer:
                     # AE-XAD supervisionato
                     tbar.set_description('Epoch:%d, Train loss: %.3f, Normal loss: %.3f, Anom loss: %3f' % 
                                         (epoch, train_loss / ns, loss_n, loss_a))
+                    
+                # ===== BACKPROPAGATION =====
+                self.optimizer.zero_grad()
+                loss.backward()
+                
+                # ===== GRADIENT CLIPPING (ViT stabilità) =====
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
 
-
-                #if isinstance(self.model, VGG_CNN_mask) and epoch>0.1*epochs:
-                #    self.stop_fe_training()
-
-            #if self.save_intermediate and not fe_untrain and (epoch+1) % 100 == 0:
-            #    torch.save(self.model.state_dict(), os.path.join(save_path, f'{self.loss}_{name}_{epoch+1}.pt'))
-            #    fe_untrain = True
+                self.optimizer.step()
+                # ============================
 
             self.scheduler.step()
 
