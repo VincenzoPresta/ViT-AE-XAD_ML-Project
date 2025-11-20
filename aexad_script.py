@@ -349,30 +349,21 @@ class Trainer:
                 output = self.model(image)
                                 
                 if self.loss == 'mse':
-                    loss = self.criterion(output, image)
+                    # ----------------------- L1 + MSE -----------------------
+                    loss_l1  = torch.nn.functional.l1_loss(output, image)
+                    loss_mse = torch.nn.functional.mse_loss(output, image)
+                    # bilanciamento ottimale per ricostruzione
+                    loss = 0.7 * loss_l1 + 0.3 * loss_mse
+                    # ---------------------------------------------------------
                 else:
                     loss, loss_n, loss_a = self.criterion(output, image, gt_label, label)
                     na += label.sum()
                     nn += image.shape[0] - na
-                ns += 1
-                self.optimizer.zero_grad()
-                loss.backward()
-
-                self.optimizer.step()
 
                 train_loss += loss.item()
                 if not self.loss == 'mse':
                     train_loss_n += loss_n.item()
                     train_loss_a += loss_a.item()
-                # In futuro magari inseriremo delle metriche
-
-                #plt.figure()
-                #plt.subplot(1, 2, 1)
-                #plt.imshow(image.detach().cpu().numpy()[0].swapaxes(0, 1).swapaxes(1, 2))
-                #plt.subplot(1, 2, 2)
-                #plt.imshow(output.detach().cpu().numpy()[0].swapaxes(0, 1).swapaxes(1, 2))
-                #plt.savefig(f'train_{i}_{epoch+1}.jpg')
-                #plt.close('all')
 
                 if self.loss == 'mse':
                     tbar.set_description('Epoch:%d, Train loss: %.3f' % (epoch, train_loss / ns))
