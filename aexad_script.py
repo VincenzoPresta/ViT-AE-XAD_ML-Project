@@ -230,10 +230,17 @@ class Trainer:
                     output = self.model(image).detach().cpu().numpy()
                 image = image.cpu().numpy()
 
-                heatmap = ((image - output) ** 2)
+                heatmap = ((image - output) ** 2)  # (B, C, H, W)
+
+                # Somma sui canali → (B, H, W)
+                heatmap = heatmap.sum(axis=1)
+                
+                heatmap = heatmap / (heatmap.max(axis=(1,2), keepdims=True) + 1e-8) # NORMALIZZAZIONE PER IMMAGINE – obbligatoria per AE-XAD Arrays
                 score = heatmap.reshape((image.shape[0], -1)).mean(axis=-1)
 
                 heatmaps.extend(heatmap)
+
+                
                 scores.extend(score)
                 gtmaps.extend(gtmap.detach().numpy())
                 labels.extend(label.detach().numpy())
