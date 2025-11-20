@@ -256,7 +256,7 @@ class Trainer:
                 plt.title("Ricostruzione"); plt.axis("off")
 
                 plt.subplot(1, 4, 3)
-                plt.imshow(heatmap[0].sum(axis=0), cmap="hot")   # somma canali per avere 2D
+                plt.imshow(heatmap[0], cmap="hot")   # somma canali per avere 2D -> modificato così perche è gia 2d
                 plt.title("Heatmap"); plt.axis("off")
 
                 plt.subplot(1, 4, 4)
