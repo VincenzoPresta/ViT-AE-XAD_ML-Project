@@ -278,7 +278,7 @@ class Trainer:
             param.requires_grad = False
 
 
-    def train(self, epochs, save_path='.'):
+    def train(self, epochs=200, save_path='.'):
         '''
         Trains the model on the train set provided by the train data loader
         :param epochs: int, number of epochs
