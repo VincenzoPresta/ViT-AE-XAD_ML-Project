@@ -10,35 +10,23 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
+
 class ViT_CNN_Attn(nn.Module):
+    """
+    Modello AE-XAD con encoder Vision Transformer e decoder ResNet originale.
+    """
     def __init__(self, dim):
-        super(ViT_CNN_Attn, self).__init__()
+        super().__init__()
         self.dim = dim
 
         # =====================
-        # ENCODER: VISION TRANSFORMER
+        # ENCODER: ViT (isolato)
         # =====================
-        vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-
-        self.hidden_dim = vit.hidden_dim     # 768
-        self.patch_size = vit.patch_size     # 16
-        self.image_size = vit.image_size     # 224
-
-        # Patch embedding + encoder
-        self.conv_proj   = vit.conv_proj
-        self.class_token = vit.class_token
-        self.encoder_vit = vit.encoder
-
-        # Proiezione tokens → 64 canali (come ResNet)
-        self.to_64 = nn.Linear(self.hidden_dim, 64)
-
-        # Per ottenere 28×28
-        self.up_to_28 = nn.Upsample(scale_factor=2)
+        self.encoder = ViT_Encoder()
 
         # =====================
         # DECODER: COPIA 1:1 DELLA RESNET
         # =====================
-        # Branch upsample
         self.up1 = nn.Upsample(scale_factor=2)
         self.up2 = nn.Upsample(scale_factor=2)
         self.up3 = nn.Upsample(scale_factor=2)
@@ -68,66 +56,92 @@ class ViT_CNN_Attn(nn.Module):
             nn.SELU()
         )
 
-        # final refinment
+        # Refinement finale
         self.decoder_final = nn.Sequential(
             nn.Conv2d(8, 8, 3, padding=1),
             nn.SELU(),
             nn.Conv2d(8, dim[0], 3, padding=1),
-            nn.ReLU()   # come ResNet_CNN_Attn
+            nn.ReLU()
         )
 
-    # -----------------------------
-    # PATCH EMBEDDING PER IL VIT
-    # -----------------------------
+    def forward(self, x):
+        # ----- ENCODER (ViT) -----
+        encoded = self.encoder(x)             # (B,64,28,28)
+
+        # ----- DECODER (originale) -----
+        upsampled1 = self.up1(encoded)
+        decoded1   = self.dec1(encoded)
+
+        upsampled2 = self.up2(upsampled1)
+        decoded2   = self.dec2(decoded1)
+
+        upsampled3 = self.up3(upsampled2)
+        decoded3   = self.dec3(decoded2)
+
+        # Maschera originale AE-XAD
+        decoded3 = decoded3 + decoded3 * torch.sum(
+            self.tan3(upsampled3)**2, axis=1
+        ).unsqueeze(1)
+
+        out = self.decoder_final(decoded3)
+        return out
+
+class ViT_Encoder(nn.Module):
+    """
+    Encoder ViT che sostituisce ResNet nel modello AE-XAD,
+    producendo un tensore (B, 64, 28, 28) compatibile con il decoder originale.
+    """
+    def __init__(self):
+        super().__init__()
+
+        vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+
+        self.hidden_dim = vit.hidden_dim     # 768
+        self.patch_size = vit.patch_size     # 16
+        self.image_size = vit.image_size     # 224
+
+        # Patch embedding + Transformer encoder
+        self.conv_proj   = vit.conv_proj
+        self.class_token = vit.class_token
+        self.encoder_vit = vit.encoder
+
+        # Proiezione a 64 canali (come ResNet)
+        self.to_64 = nn.Linear(self.hidden_dim, 64)
+
+        # Serve per 14→28
+        self.up_to_28 = nn.Upsample(scale_factor=2)
+
     def _process_input(self, x):
         B = x.size(0)
-
-        # (B,3,224,224) → (B,768,14,14)
-        x = self.conv_proj(x)
-        x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
-        x = x.permute(0, 2, 1)                 # (B,196,768)
+        x = self.conv_proj(x)                # (B, 768, 14, 14)
+        x = x.reshape(B, self.hidden_dim, -1) # (B,768,196)
+        x = x.permute(0, 2, 1)                # (B,196,768)
         return x
 
     def forward(self, x):
         B = x.size(0)
 
-        # ----- ENCODER VIT -----
+        # Patch embedding
         tokens = self._process_input(x)
 
-        # aggiungi CLS
+        # Aggiungi CLS
         cls = self.class_token.expand(B, -1, -1)
         tokens = torch.cat([cls, tokens], dim=1)
 
-        # encoder ViT
-        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
+        # Transformer encoder
+        encoded = self.encoder_vit(tokens)[:, 1:]    # (B,196,768)
 
-        # proiezione ai 64 canali
-        encoded = self.to_64(encoded)      # (B,196,64)
+        # Proiezione a 64 canali
+        encoded = self.to_64(encoded)                # (B,196,64)
 
-        # reshape → (B,64,14,14)
+        # Reshape → (B,64,14,14)
         encoded = encoded.reshape(B, 14, 14, 64).permute(0, 3, 1, 2)
 
-        # upsample → (B,64,28,28)
+        # Final shape → (B,64,28,28)
         encoded = self.up_to_28(encoded)
 
-        # ----- DECODER (copiato da ResNet CNN Attn) -----
+        return encoded
 
-        upsampled1 = self.up1(encoded)
-        decoded1 = self.dec1(encoded)
-
-        upsampled2 = self.up2(upsampled1)
-        decoded2 = self.dec2(decoded1)
-
-        upsampled3 = self.up3(upsampled2)
-        decoded3 = self.dec3(decoded2)
-
-        # mask come nella ResNet
-        decoded3 = decoded3 + decoded3 * torch.sum(self.tan3(upsampled3)**2, axis=1).unsqueeze(1)
-
-        out = self.decoder_final(decoded3)
-
-        return out
-    
 #-------------------------------------------------------------------
     
 class Shallow_Autoencoder(nn.Module):
