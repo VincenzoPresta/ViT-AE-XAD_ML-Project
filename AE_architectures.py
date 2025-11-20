@@ -13,28 +13,30 @@ from einops import rearrange
 
 class ViT_CNN_Attn(nn.Module):
     """
-    Modello AE-XAD con encoder Vision Transformer e decoder ResNet originale.
+    AE-XAD con:
+    - encoder Vision Transformer (classe ViT_Encoder)
+    - decoder CNN identico a ResNet_CNN_Attn
     """
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
 
-        # =====================
-        # ENCODER: ViT (isolato)
-        # =====================
+        # =============================
+        #          ENCODER
+        # =============================
+
         self.encoder = ViT_Encoder()
 
-        # Esponiamo i componenti al Trainer AE-XAD (richiesti nei param_groups)
+        # Esponiamo gli attributi necessari al Trainer
         self.conv_proj   = self.encoder.conv_proj
         self.class_token = self.encoder.class_token
         self.encoder_vit = self.encoder.encoder_vit
         self.to_64       = self.encoder.to_64
         self.up_to_28    = self.encoder.up_to_28
 
-
-        # =====================
-        # DECODER: COPIA 1:1 DELLA RESNET CNN
-        # =====================
+        # =============================
+        #          DECODER
+        # =============================
 
         self.up1 = nn.Upsample(scale_factor=2)
         self.up2 = nn.Upsample(scale_factor=2)
@@ -66,9 +68,10 @@ class ViT_CNN_Attn(nn.Module):
             nn.Conv2d(8, 8, 3, padding=1),
             nn.SELU(),
             nn.Conv2d(8, dim[0], 3, padding=1),
-            nn.ReLU()  # identico alla ResNet_CNN_Attn
+            nn.Sigmoid()    # fondamentale
         )
-        
+
+        # per AE-XAD
         self.decoder = nn.Sequential(
             self.dec1,
             self.dec2,
@@ -76,24 +79,30 @@ class ViT_CNN_Attn(nn.Module):
             self.decoder_final
         )
 
+
+    # =============================
+    #         FORWARD
+    # =============================
     def forward(self, x):
 
-        # ----- ENCODER (ViT) -----
-        encoded = self.encoder(x)   # (B,64,28,28)
+        # 1) Encoder → (B,64,28,28)
+        encoded = self.encoder(x)
 
-        # ----- DECODER (AE-XAD originale) -----
+        # 2) Decoder
         upsampled1 = self.up1(encoded)
-        decoded1   = self.dec1(encoded)
+        decoded1 = self.dec1(encoded)
 
         upsampled2 = self.up2(upsampled1)
-        decoded2   = self.dec2(decoded1)
+        decoded2 = self.dec2(decoded1)
 
         upsampled3 = self.up3(upsampled2)
-        decoded3   = self.dec3(decoded2)
+        decoded3 = self.dec3(decoded2)
 
-        decoded3 = decoded3 + decoded3 * torch.sum(self.tan3(upsampled3)**2, dim=1).unsqueeze(1)
+        # Mask identica alla ResNet_CNN_Attn
+        decoded3 = decoded3 + decoded3 * torch.sum(self.tan3(upsampled3)**2, axis=1).unsqueeze(1)
 
         out = self.decoder_final(decoded3)
+
         return out
 
 class ViT_Encoder(nn.Module):
