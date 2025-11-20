@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from einops import rearrange
-from torchvision.models import vgg11_bn, resnet50, vit_b_16, ViT_B_16_Weights inception_v3
+from torchvision.models import vgg11_bn, resnet50, vit_b_16, ViT_B_16_Weights, inception_v3
 import torch.nn.functional as F
 
 class ViT_CNN_Attn(nn.Module):
