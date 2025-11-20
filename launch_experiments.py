@@ -57,6 +57,7 @@ if __name__ == '__main__':
             X_train = X_train.unsqueeze(1)
             X_test  = X_test.unsqueeze(1)
 
+    if args.ds not in ['mnist', 'fmnist']: # per quei due si deve usare 28x28
         # Resize immagini e maschere
         X_train = F.interpolate(X_train, size=(224,224), mode="bilinear")
         X_test  = F.interpolate(X_test,  size=(224,224), mode="bilinear")
