@@ -23,6 +23,14 @@ class ViT_CNN_Attn(nn.Module):
         # ENCODER: ViT (isolato)
         # =====================
         self.encoder = ViT_Encoder()
+        
+        
+        # Esponiamo i parametri ViT al Trainer AE-XAD
+        self.conv_proj   = self.encoder.conv_proj
+        self.class_token = self.encoder.class_token
+        self.encoder_vit = self.encoder.encoder_vit
+        self.to_64       = self.encoder.to_64
+        self.up_to_28    = self.encoder.up_to_28
 
         # =====================
         # DECODER: COPIA 1:1 DELLA RESNET
