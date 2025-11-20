@@ -19,8 +19,6 @@ class MvtecAD(Dataset):
             transforms.ToPILImage(),
             transforms.Resize((224, 224), interpolation=Image.BILINEAR),
             transforms.ToTensor(),  # produce float in [0,1]
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225])
         ])
 
         if self.train:
@@ -68,6 +66,9 @@ class MvtecAD(Dataset):
 
         print('---', img.max(), gt.max())
 
-        sample = {'image': img, 'label': self.labels[index],
-                  'gt_label': gt / 255.0}
+        sample = {
+            'image': img,  # già in [0,1]
+            'label': self.labels[index],
+            'gt_label': gt / 255.0  # ok mantenere GT normalizzata
+            }
         return sample
