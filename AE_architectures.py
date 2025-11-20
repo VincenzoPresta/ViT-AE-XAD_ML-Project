@@ -5,6 +5,128 @@ from einops import rearrange
 from torchvision.models import vgg11_bn, resnet50, vit_b_32, vit_b_16, inception_v3
 import torch.nn.functional as F
 
+class ViT_CNN_Attn(nn.Module):
+    def __init__(self, dim):
+        super(ViT_CNN_Attn, self).__init__()
+        self.dim = dim
+        self.dec_emb_dim = 64
+
+        vit = vit_b_16(pretrained=True)
+        for param in vit.parameters():
+            param.requires_grad = True
+
+        self.image_size = vit.image_size
+        self.hidden_dim = vit.hidden_dim
+        self.patch_size = vit.patch_size
+
+        self.conv_proj = vit.conv_proj
+
+        self.class_token = vit.class_token
+        self.encoder = vit.encoder
+
+        layers = []
+
+        layers.append(nn.Linear(self.hidden_dim, (self.patch_size ** 2) * self.dec_emb_dim))
+        layers.append(nn.LeakyReLU(0.2))
+        layers.append(nn.Unflatten(-1, (self.patch_size ** 2, self.dec_emb_dim)))
+        self.encoder1 = nn.Sequential(*layers)
+
+        self.embed_attn = CBAM(self.dec_emb_dim)
+        self.embed_attn_act = nn.SELU()
+
+        self.tanh = nn.ReLU()
+
+        layers = []
+
+        layers.append(nn.Conv2d(self.dec_emb_dim, 32, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(32, 32, (3, 3), stride=1, padding=1))
+        layers.append(nn.SELU())
+        # layers.append(nn.Conv2d(32, 32, (1, 1), stride=1))
+        # layers.append(nn.SELU())
+
+        layers.append(nn.Conv2d(32, 16, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(16, 16, (3, 3), stride=1, padding=1))
+        layers.append(nn.SELU())
+        # layers.append(nn.Conv2d(16, 16, (1, 1), stride=1))
+        # layers.append(nn.SELU())
+
+        layers.append(nn.Conv2d(16, 8, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(8, 8, (3, 3), stride=1, padding=1))
+        layers.append(nn.SELU())
+
+        self.decoder1 = nn.Sequential(*layers)
+
+        layers = []
+
+        layers.append(nn.Conv2d(8, 4, (1, 1), stride=1))
+        layers.append(nn.SELU())
+        layers.append(nn.Conv2d(4, dim[0], (3, 3), stride=1, padding=1))
+        layers.append(nn.Sigmoid())
+
+        self.decoder2 = nn.Sequential(*layers)
+
+    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
+        n, c, h, w = x.shape
+        p = self.patch_size
+
+        
+        torch._assert(h == self.image_size, "Wrong image height!")
+        torch._assert(w == self.image_size, "Wrong image width!")
+        n_h = h // p
+        n_w = w // p
+
+        # (n, c, h, w) -> (n, hidden_dim, n_h, n_w)
+        x = self.conv_proj(x)
+        # (n, hidden_dim, n_h, n_w) -> (n, hidden_dim, (n_h * n_w))
+        x = x.reshape(n, self.hidden_dim, n_h * n_w)
+
+        # (n, hidden_dim, (n_h * n_w)) -> (n, (n_h * n_w), hidden_dim)
+        # The self attention layer expects inputs in the format (N, S, E)
+        # where S is the source sequence length, N is the batch size, E is the
+        # embedding dimension
+        x = x.permute(0, 2, 1)
+
+        return x
+
+    def forward(self, x):
+        x = self._process_input(x)
+        n = x.shape[0]
+
+        # class token
+        batch_class_token = self.class_token.expand(n, -1, -1)
+        x = torch.cat([batch_class_token, x], dim=1)
+
+        # ---- ESTRAZIONE ATTENTION MAP ----
+        encoder_outputs = self.encoder(x, output_attentions=True)
+        encoded = encoder_outputs.last_hidden_state[:, 1:]  # remove class token
+        attentions = encoder_outputs.attentions
+        # -----------------------------------
+
+        p = self.patch_size
+        B, N, _ = encoded.shape
+        dec_emb_dim = self.dec_emb_dim
+        h = w = self.image_size
+        n_h = h // p
+        n_w = w // p
+
+        decoded = self.encoder1(encoded)
+        B, N, _, _ = decoded.shape
+
+        decoded1 = decoded.view(B, N, dec_emb_dim, p, p)
+        decoded1 = rearrange(decoded1, 'b (nh nw) c ph pw -> b c (nh ph) (nw pw)', nh=n_h, nw=n_w)
+
+        decoded_attn = self.embed_attn_act(self.embed_attn(decoded1))
+        encoded_square = decoded_attn.sum(dim=1).unsqueeze(1)
+
+        decoded = self.decoder1(decoded1)
+        decoded = self.decoder2(decoded * encoded_square)
+
+        # ritorniamo anche le attention map
+        return decoded, attentions
+
 
 class Shallow_Autoencoder(nn.Module):
     def __init__(self, dim, flat_dim, latent_dim):
@@ -691,127 +813,6 @@ class ResNet_CNN_Attn(nn.Module):
         return decoded
 
 
-class ViT_CNN_Attn(nn.Module):
-    def __init__(self, dim):
-        super(ViT_CNN_Attn, self).__init__()
-        self.dim = dim
-        self.dec_emb_dim = 64
-
-        vit = vit_b_16(pretrained=True)
-        for param in vit.parameters():
-            param.requires_grad = True
-
-        self.image_size = vit.image_size
-        self.hidden_dim = vit.hidden_dim
-        self.patch_size = vit.patch_size
-
-        self.conv_proj = vit.conv_proj
-
-        self.class_token = vit.class_token
-        self.encoder = vit.encoder
-
-        layers = []
-
-        layers.append(nn.Linear(self.hidden_dim, (self.patch_size ** 2) * self.dec_emb_dim))
-        layers.append(nn.LeakyReLU(0.2))
-        layers.append(nn.Unflatten(-1, (self.patch_size ** 2, self.dec_emb_dim)))
-        self.encoder1 = nn.Sequential(*layers)
-
-        self.embed_attn = CBAM(self.dec_emb_dim)
-        self.embed_attn_act = nn.SELU()
-
-        self.tanh = nn.ReLU()
-
-        layers = []
-
-        layers.append(nn.Conv2d(self.dec_emb_dim, 32, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(32, 32, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-        # layers.append(nn.Conv2d(32, 32, (1, 1), stride=1))
-        # layers.append(nn.SELU())
-
-        layers.append(nn.Conv2d(32, 16, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(16, 16, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-        # layers.append(nn.Conv2d(16, 16, (1, 1), stride=1))
-        # layers.append(nn.SELU())
-
-        layers.append(nn.Conv2d(16, 8, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(8, 8, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        self.decoder1 = nn.Sequential(*layers)
-
-        layers = []
-
-        layers.append(nn.Conv2d(8, 4, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(4, dim[0], (3, 3), stride=1, padding=1))
-        layers.append(nn.Sigmoid())
-
-        self.decoder2 = nn.Sequential(*layers)
-
-    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
-        n, c, h, w = x.shape
-        p = self.patch_size
-
-        
-        torch._assert(h == self.image_size, "Wrong image height!")
-        torch._assert(w == self.image_size, "Wrong image width!")
-        n_h = h // p
-        n_w = w // p
-
-        # (n, c, h, w) -> (n, hidden_dim, n_h, n_w)
-        x = self.conv_proj(x)
-        # (n, hidden_dim, n_h, n_w) -> (n, hidden_dim, (n_h * n_w))
-        x = x.reshape(n, self.hidden_dim, n_h * n_w)
-
-        # (n, hidden_dim, (n_h * n_w)) -> (n, (n_h * n_w), hidden_dim)
-        # The self attention layer expects inputs in the format (N, S, E)
-        # where S is the source sequence length, N is the batch size, E is the
-        # embedding dimension
-        x = x.permute(0, 2, 1)
-
-        return x
-
-    def forward(self, x):
-        x = self._process_input(x)
-        n = x.shape[0]
-        # Expand the class token to the full batch
-        batch_class_token = self.class_token.expand(n, -1, -1)
-        x = torch.cat([batch_class_token, x], dim=1)
-        encoded = self.encoder(x)[:, 1:]  # Eliminiamo il token di classe
-
-        p = self.patch_size
-        B, N, _ = encoded.shape
-        dec_emb_dim = self.dec_emb_dim
-        h = w = self.image_size
-        n_h = h // p
-        n_w = w // p
-
-        #encoded_square = torch.sqrt(torch.sum(torch.pow(encoded, 2), axis=-1)).unsqueeze(-1)  # B, N, 1
-        #encoded_square = encoded_square.expand(-1, -1, p ** 2).view(B, N, p, p)
-        #encoded_square = rearrange(encoded_square, 'b (nh nw) ph pw -> b (nh ph) (nw pw)', nh=n_h, nw=n_w)
-
-        decoded = self.encoder1(encoded)  # .view(-1, self.image_size, self.image_size, self.dec_emb_dim).permute(0, 3, 1, 2)
-        B, N, _, _ = decoded.shape
-
-        decoded1 = decoded.view(B, N, dec_emb_dim, p, p)
-        decoded1 = rearrange(decoded1, 'b (nh nw) c ph pw -> b c (nh ph) (nw pw)', nh=n_h, nw=n_w)
-        decoded_attn = self.embed_attn_act(self.embed_attn(decoded1))
-
-        encoded_square = decoded_attn.sum(dim=1).unsqueeze(1)
-
-        decoded = self.decoder1(decoded1)  # unsqueeze
-        decoded = self.decoder2(decoded*encoded_square)
-                
-
-        return decoded
-
-
 
 class VGG_CNN_mask(nn.Module):
     def __init__(self, dim):
@@ -1141,6 +1142,7 @@ class ViT_CNN_mask(nn.Module):
         x = x.permute(0, 2, 1)
 
         return x
+    
     def forward(self, x):
         x = self._process_input(x)
         n = x.shape[0]
@@ -1170,107 +1172,6 @@ class ViT_CNN_mask(nn.Module):
         decoded = self.decoder2(torch.cat([decoded, encoded_square.unsqueeze(1)], dim=1))
 
         return decoded
-
-
-class ViT_CNN_mask_old(nn.Module):
-    def __init__(self, dim):
-        super(ViT_CNN_mask, self).__init__()
-        self.dim = dim
-
-        vit = vit_b_32(pretrained=True)
-
-        self.image_size = vit.image_size
-        self.hidden_dim = vit.hidden_dim
-        self.patch_size = vit.patch_size
-        self.conv_proj = vit.conv_proj
-        self.class_token = vit.class_token
-        self.encoder = vit.encoder
-        for param in self.conv_proj.parameters():
-            param.requires_grad = True
-        for param in self.encoder.parameters():
-            param.requires_grad = True
-
-
-        layers = []
-
-        layers.append(nn.Flatten())
-        layers.append(nn.Linear(((self.image_size//self.patch_size)**2+1)*self.hidden_dim, 2048))
-        layers.append(nn.LeakyReLU(0.2))
-        layers.append(nn.Linear(2048, 1024))
-        layers.append(nn.LeakyReLU(0.2))
-
-        self.encoder_final = nn.Sequential(*layers)
-
-        layers = []
-
-        layers.append(nn.Linear(1024, ((self.image_size//self.hidden_dim)**2)*128))
-        layers.append(nn.Unflatten(1, (128, self.image_size//self.hidden_dim, self.image_size//self.hidden_dim)))
-
-        self.decoder1 = nn.Sequential(*layers)
-
-        layers = []
-
-        layers.append(nn.ConvTranspose2d(128, 64, (4, 4), stride=2, padding=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(64, 64, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        layers.append(nn.ConvTranspose2d(64, 32, (4, 4), stride=2, padding=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(32, 32, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        layers.append(nn.ConvTranspose2d(32, 16, (4, 4), stride=2, padding=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(16, 16, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        layers.append(nn.ConvTranspose2d(16, 8, (4, 4), stride=2, padding=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(8, 8, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        layers.append(nn.ConvTranspose2d(8, 4, (4, 4), stride=2, padding=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(4, 4, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        layers.append(nn.Conv2d(4, dim[0], (3, 3), stride=1, padding=1))
-        layers.append(nn.Sigmoid())
-
-        self.decoder2 = nn.Sequential(*layers)
-
-    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
-        n, c, h, w = x.shape
-        p = self.patch_size
-        torch._assert(h == self.image_size, "Wrong image height!")
-        torch._assert(w == self.image_size, "Wrong image width!")
-        n_h = h // p
-        n_w = w // p
-
-        # (n, c, h, w) -> (n, hidden_dim, n_h, n_w)
-        x = self.conv_proj(x)
-        # (n, hidden_dim, n_h, n_w) -> (n, hidden_dim, (n_h * n_w))
-        x = x.reshape(n, self.hidden_dim, n_h * n_w)
-
-        # (n, hidden_dim, (n_h * n_w)) -> (n, (n_h * n_w), hidden_dim)
-        # The self attention layer expects inputs in the format (N, S, E)
-        # where S is the source sequence length, N is the batch size, E is the
-        # embedding dimension
-        x = x.permute(0, 2, 1)
-
-        return x
-    def forward(self, x):
-        x = self._process_input(x)
-        n = x.shape[0]
-        # Expand the class token to the full batch
-        batch_class_token = self.class_token.expand(n, -1, -1)
-        x = torch.cat([batch_class_token, x], dim=1)
-        encoded = self.encoder(x)[:, 1:]
-        encoded = self.encoder_final(encoded)
-        decoded = self.decoder(encoded) # unsqueeze
-        return decoded
-
 
 class ChannelAttention(nn.Module):
     def __init__(self, in_planes, ratio=16):
