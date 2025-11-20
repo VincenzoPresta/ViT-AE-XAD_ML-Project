@@ -23,24 +23,24 @@ class ViT_CNN_Attn(nn.Module):
         # ENCODER: ViT (isolato)
         # =====================
         self.encoder = ViT_Encoder()
-        
-        
-        # Esponiamo i parametri ViT al Trainer AE-XAD
+
+        # Esponiamo i componenti al Trainer AE-XAD (richiesti nei param_groups)
         self.conv_proj   = self.encoder.conv_proj
         self.class_token = self.encoder.class_token
         self.encoder_vit = self.encoder.encoder_vit
         self.to_64       = self.encoder.to_64
         self.up_to_28    = self.encoder.up_to_28
 
+
         # =====================
-        # DECODER: COPIA 1:1 DELLA RESNET
+        # DECODER: COPIA 1:1 DELLA RESNET CNN
         # =====================
+
         self.up1 = nn.Upsample(scale_factor=2)
         self.up2 = nn.Upsample(scale_factor=2)
         self.up3 = nn.Upsample(scale_factor=2)
         self.tan3 = nn.Tanh()
 
-        # dec1
         self.dec1 = nn.Sequential(
             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
             nn.SELU(),
@@ -48,7 +48,6 @@ class ViT_CNN_Attn(nn.Module):
             nn.SELU()
         )
 
-        # dec2
         self.dec2 = nn.Sequential(
             nn.ConvTranspose2d(32, 16, 4, stride=2, padding=1),
             nn.SELU(),
@@ -56,7 +55,6 @@ class ViT_CNN_Attn(nn.Module):
             nn.SELU()
         )
 
-        # dec3
         self.dec3 = nn.Sequential(
             nn.ConvTranspose2d(16, 8, 4, stride=2, padding=1),
             nn.SELU(),
@@ -64,19 +62,19 @@ class ViT_CNN_Attn(nn.Module):
             nn.SELU()
         )
 
-        # Refinement finale
         self.decoder_final = nn.Sequential(
             nn.Conv2d(8, 8, 3, padding=1),
             nn.SELU(),
             nn.Conv2d(8, dim[0], 3, padding=1),
-            nn.ReLU()
+            nn.ReLU()  # identico alla ResNet_CNN_Attn
         )
 
     def forward(self, x):
-        # ----- ENCODER (ViT) -----
-        encoded = self.encoder(x)             # (B,64,28,28)
 
-        # ----- DECODER (originale) -----
+        # ----- ENCODER (ViT) -----
+        encoded = self.encoder(x)   # (B,64,28,28)
+
+        # ----- DECODER (AE-XAD originale) -----
         upsampled1 = self.up1(encoded)
         decoded1   = self.dec1(encoded)
 
@@ -86,10 +84,7 @@ class ViT_CNN_Attn(nn.Module):
         upsampled3 = self.up3(upsampled2)
         decoded3   = self.dec3(decoded2)
 
-        # Maschera originale AE-XAD
-        decoded3 = decoded3 + decoded3 * torch.sum(
-            self.tan3(upsampled3)**2, axis=1
-        ).unsqueeze(1)
+        decoded3 = decoded3 + decoded3 * torch.sum(self.tan3(upsampled3)**2, dim=1).unsqueeze(1)
 
         out = self.decoder_final(decoded3)
         return out
@@ -108,20 +103,16 @@ class ViT_Encoder(nn.Module):
         self.patch_size = vit.patch_size     # 16
         self.image_size = vit.image_size     # 224
 
-        # Patch embedding + Transformer encoder
         self.conv_proj   = vit.conv_proj
         self.class_token = vit.class_token
         self.encoder_vit = vit.encoder
 
-        # Proiezione a 64 canali (come ResNet)
         self.to_64 = nn.Linear(self.hidden_dim, 64)
-
-        # Serve per 14→28
         self.up_to_28 = nn.Upsample(scale_factor=2)
 
     def _process_input(self, x):
         B = x.size(0)
-        x = self.conv_proj(x)                # (B, 768, 14, 14)
+        x = self.conv_proj(x)                # (B,768,14,14)
         x = x.reshape(B, self.hidden_dim, -1) # (B,768,196)
         x = x.permute(0, 2, 1)                # (B,196,768)
         return x
@@ -129,24 +120,17 @@ class ViT_Encoder(nn.Module):
     def forward(self, x):
         B = x.size(0)
 
-        # Patch embedding
         tokens = self._process_input(x)
 
-        # Aggiungi CLS
         cls = self.class_token.expand(B, -1, -1)
         tokens = torch.cat([cls, tokens], dim=1)
 
-        # Transformer encoder
         encoded = self.encoder_vit(tokens)[:, 1:]    # (B,196,768)
 
-        # Proiezione a 64 canali
         encoded = self.to_64(encoded)                # (B,196,64)
 
-        # Reshape → (B,64,14,14)
         encoded = encoded.reshape(B, 14, 14, 64).permute(0, 3, 1, 2)
-
-        # Final shape → (B,64,28,28)
-        encoded = self.up_to_28(encoded)
+        encoded = self.up_to_28(encoded)             # (B,64,28,28)
 
         return encoded
 
