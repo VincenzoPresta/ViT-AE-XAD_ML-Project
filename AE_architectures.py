@@ -68,6 +68,13 @@ class ViT_CNN_Attn(nn.Module):
             nn.Conv2d(8, dim[0], 3, padding=1),
             nn.ReLU()  # identico alla ResNet_CNN_Attn
         )
+        
+        self.decoder = nn.Sequential(
+            self.dec1,
+            self.dec2,
+            self.dec3,
+            self.decoder_final
+        )
 
     def forward(self, x):
 
