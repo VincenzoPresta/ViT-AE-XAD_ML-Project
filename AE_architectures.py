@@ -7,122 +7,101 @@ import torch.nn.functional as F
 
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
-        super(ViT_CNN_Attn, self).__init__()
+        super().__init__()
         self.dim = dim
-        self.dec_emb_dim = 64
 
+        # ------------------------
+        # ViT ENCODER
+        # ------------------------
         vit = vit_b_16(pretrained=True)
-        for param in vit.parameters():
-            param.requires_grad = True
+        for p in vit.parameters():  
+            p.requires_grad = True   # fine-tuning totale
 
-        self.image_size = vit.image_size
-        self.hidden_dim = vit.hidden_dim
-        self.patch_size = vit.patch_size
-
-        self.conv_proj = vit.conv_proj
-
+        self.image_size  = vit.image_size
+        self.hidden_dim  = vit.hidden_dim      # 768
+        self.patch_size  = vit.patch_size      # 16
+        self.conv_proj   = vit.conv_proj
         self.class_token = vit.class_token
-        self.encoder = vit.encoder
+        self.encoder     = vit.encoder
 
-        layers = []
+        # ------------------------
+        # DECODER (MAE)
+        # ------------------------
+        self.decoder = MAEDecoder(
+            patch_dim=self.hidden_dim,
+            dec_dim=256
+        )
 
-        layers.append(nn.Linear(self.hidden_dim, (self.patch_size ** 2) * self.dec_emb_dim))
-        layers.append(nn.LeakyReLU(0.2))
-        layers.append(nn.Unflatten(-1, (self.patch_size ** 2, self.dec_emb_dim)))
-        self.encoder1 = nn.Sequential(*layers)
-
-        self.embed_attn = CBAM(self.dec_emb_dim)
-        self.embed_attn_act = nn.SELU()
-
-        self.tanh = nn.ReLU()
-
-        layers = []
-
-        layers.append(nn.Conv2d(self.dec_emb_dim, 32, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(32, 32, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-        # layers.append(nn.Conv2d(32, 32, (1, 1), stride=1))
-        # layers.append(nn.SELU())
-
-        layers.append(nn.Conv2d(32, 16, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(16, 16, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-        # layers.append(nn.Conv2d(16, 16, (1, 1), stride=1))
-        # layers.append(nn.SELU())
-
-        layers.append(nn.Conv2d(16, 8, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(8, 8, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        self.decoder1 = nn.Sequential(*layers)
-
-        layers = []
-
-        layers.append(nn.Conv2d(8, 4, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(4, dim[0], (3, 3), stride=1, padding=1))
-        layers.append(nn.Sigmoid())
-
-        self.decoder2 = nn.Sequential(*layers)
-
-    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
+    # Procesing immagine → patch embedding
+    def _process_input(self, x):
         n, c, h, w = x.shape
         p = self.patch_size
 
-        
         torch._assert(h == self.image_size, "Wrong image height!")
         torch._assert(w == self.image_size, "Wrong image width!")
+
         n_h = h // p
         n_w = w // p
 
-        # (n, c, h, w) -> (n, hidden_dim, n_h, n_w)
-        x = self.conv_proj(x)
-        # (n, hidden_dim, n_h, n_w) -> (n, hidden_dim, (n_h * n_w))
-        x = x.reshape(n, self.hidden_dim, n_h * n_w)
-
-        # (n, hidden_dim, (n_h * n_w)) -> (n, (n_h * n_w), hidden_dim)
-        # The self attention layer expects inputs in the format (N, S, E)
-        # where S is the source sequence length, N is the batch size, E is the
-        # embedding dimension
-        x = x.permute(0, 2, 1)
-
+        x = self.conv_proj(x)                     # (N,768,14,14)
+        x = x.reshape(n, self.hidden_dim, n_h*n_w)
+        x = x.permute(0,2,1)                      # (N,196,768)
         return x
 
     def forward(self, x):
         x = self._process_input(x)
         n = x.shape[0]
 
-        # class token
-        batch_class_token = self.class_token.expand(n, -1, -1)
-        x = torch.cat([batch_class_token, x], dim=1)
+        # aggiungi il class token
+        batch_cls = self.class_token.expand(n, -1, -1)
+        x = torch.cat([batch_cls, x], dim=1)
 
-        # ---- ENCODER (senza output_attentions!) ----
-        encoded = self.encoder(x)[:, 1:]  # remove class token
-        # --------------------------------------------
+        # encodiamo (e scartiamo il class token)
+        encoded = self.encoder(x)[:,1:]          # (N,196,768)
 
-        p = self.patch_size
-        B, N, _ = encoded.shape
-        dec_emb_dim = self.dec_emb_dim
-        h = w = self.image_size
-        n_h = h // p
-        n_w = w // p
-
-        decoded = self.encoder1(encoded)
-        B, N, _, _ = decoded.shape
-
-        decoded1 = decoded.view(B, N, dec_emb_dim, p, p)
-        decoded1 = rearrange(decoded1, 'b (nh nw) c ph pw -> b c (nh ph) (nw pw)', nh=n_h, nw=n_w)
-
-        decoded_attn = self.embed_attn_act(self.embed_attn(decoded1))
-        encoded_square = decoded_attn.sum(dim=1).unsqueeze(1)
-
-        decoded = self.decoder1(decoded1)
-        decoded = self.decoder2(decoded * encoded_square)
+        # MAE decoder
+        decoded = self.decoder(encoded)
 
         return decoded
+    
+    
+class MAEDecoder(nn.Module):
+    def __init__(self, patch_dim=768, dec_dim=256):
+        super().__init__()
+
+        # proiezione iniziale dei token
+        self.proj = nn.Sequential(
+            nn.Linear(patch_dim, 512),
+            nn.GELU(),
+            nn.Linear(512, dec_dim)
+        )
+
+        # upsampling piramidale
+        self.deconv = nn.Sequential(
+            nn.ConvTranspose2d(dec_dim, 256, kernel_size=2, stride=2),  # 14→28
+            nn.GELU(),
+            nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2),      # 28→56
+            nn.GELU(),
+            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),       # 56→112
+            nn.GELU(),
+            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2),        # 112→224
+            nn.GELU(),
+            nn.Conv2d(32, 3, kernel_size=3, padding=1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, tokens):
+        B, N, D = tokens.shape
+        H = W = int(N ** 0.5)  # 196→14×14
+
+        x = self.proj(tokens)                         # (B,196,256)
+        x = x.permute(0,2,1).reshape(B,256,H,W)       # (B,256,14,14)
+        x = self.deconv(x)                            # (B,3,224,224)
+
+        return x
+
+
+#--------------------------------------------------------------------------------#
 
 class Shallow_Autoencoder(nn.Module):
     def __init__(self, dim, flat_dim, latent_dim):

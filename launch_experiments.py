@@ -36,6 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', help='Modification intesity')
     parser.add_argument('-s', type=int, help='Seed to use')
     parser.add_argument('-size', type=int, help='Size of the square')
+    parser.add_argument("--epochs", type=int, default=200, help="training epochs number")
     args = parser.parse_args()
 
     if args.i != 'rand':
@@ -212,14 +213,14 @@ if __name__ == '__main__':
     
     # ViT
     heatmaps, scores, gtmaps, labels, tot_time = launch_aexad(
-        data_path, 
-        200,              # epoche 
+        data_path,           
         16,              # batch size
         32,             # latent dim
         (224*224) / 25, # radius adattato al 224x224, come da paper
         None, 
         f,  
-        'vit',         
+        'vit',
+        epochs=args.epochs,         
         save_intermediate=True, 
         save_path=save_path
     )
