@@ -14,153 +14,120 @@ class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super(ViT_CNN_Attn, self).__init__()
         self.dim = dim
-        self.dec_emb_dim = 64
 
-        # ViT PRE-ADDDESTRATO (ENCODER)
+        # =====================
+        # ENCODER: VISION TRANSFORMER
+        # =====================
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-        for param in vit.parameters():
-            param.requires_grad = True   # poi eventualmente congeliamo qualche layer
 
-        self.image_size = vit.image_size   # 224
-        self.hidden_dim = vit.hidden_dim   # 768
-        self.patch_size = vit.patch_size   # 16
+        self.hidden_dim = vit.hidden_dim     # 768
+        self.patch_size = vit.patch_size     # 16
+        self.image_size = vit.image_size     # 224
 
-        # Patch embedding + encoder ViT (solo encoder, niente decoder ViT)
+        # Patch embedding + encoder
         self.conv_proj   = vit.conv_proj
         self.class_token = vit.class_token
-        self.encoder     = vit.encoder
+        self.encoder_vit = vit.encoder
 
-        # Proiezione token → feature per patch (come nella versione originale)
-        layers = []
-        layers.append(nn.Linear(self.hidden_dim,
-                                (self.patch_size ** 2) * self.dec_emb_dim))
-        layers.append(nn.LeakyReLU(0.2))
-        layers.append(nn.Unflatten(-1, (self.patch_size ** 2,
-                                        self.dec_emb_dim)))
-        self.encoder1 = nn.Sequential(*layers)
+        # Proiezione tokens → 64 canali (come ResNet)
+        self.to_64 = nn.Linear(self.hidden_dim, 64)
 
-        # CBAM su feature spaziali
-        self.embed_attn     = CBAM(self.dec_emb_dim)
-        self.embed_attn_act = nn.SELU()
-        self.tanh           = nn.ReLU()
+        # Per ottenere 28×28
+        self.up_to_28 = nn.Upsample(scale_factor=2)
 
-        # Decoder CNN (come AE-XAD, niente ViT decoder)
-        layers = []
-        layers.append(nn.Conv2d(self.dec_emb_dim, 32, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(32, 32, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
+        # =====================
+        # DECODER: COPIA 1:1 DELLA RESNET
+        # =====================
+        # Branch upsample
+        self.up1 = nn.Upsample(scale_factor=2)
+        self.up2 = nn.Upsample(scale_factor=2)
+        self.up3 = nn.Upsample(scale_factor=2)
+        self.tan3 = nn.Tanh()
 
-        layers.append(nn.Conv2d(32, 16, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(16, 16, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        layers.append(nn.Conv2d(16, 8, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(8, 8, (3, 3), stride=1, padding=1))
-        layers.append(nn.SELU())
-
-        self.decoder1 = nn.Sequential(*layers)
-
-        layers = []
-        layers.append(nn.Conv2d(8, 4, (1, 1), stride=1))
-        layers.append(nn.SELU())
-        layers.append(nn.Conv2d(4, dim[0], (3, 3), stride=1, padding=1))
-        layers.append(nn.Sigmoid())
-
-        self.decoder2 = nn.Sequential(*layers)
-        
-        self.decoder = nn.Sequential(
-            self.decoder1,
-            self.decoder2
+        # dec1
+        self.dec1 = nn.Sequential(
+            nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
+            nn.SELU(),
+            nn.Conv2d(32, 32, 3, padding=1),
+            nn.SELU()
         )
 
-    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, C, H, W)
-        n, c, h, w = x.shape
-        p = self.patch_size
+        # dec2
+        self.dec2 = nn.Sequential(
+            nn.ConvTranspose2d(32, 16, 4, stride=2, padding=1),
+            nn.SELU(),
+            nn.Conv2d(16, 16, 3, padding=1),
+            nn.SELU()
+        )
 
-        torch._assert(h == self.image_size, "Wrong image height!")
-        torch._assert(w == self.image_size, "Wrong image width!")
+        # dec3
+        self.dec3 = nn.Sequential(
+            nn.ConvTranspose2d(16, 8, 4, stride=2, padding=1),
+            nn.SELU(),
+            nn.Conv2d(8, 8, 3, padding=1),
+            nn.SELU()
+        )
 
-        n_h = h // p
-        n_w = w // p
+        # final refinment
+        self.decoder_final = nn.Sequential(
+            nn.Conv2d(8, 8, 3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(8, dim[0], 3, padding=1),
+            nn.ReLU()   # come ResNet_CNN_Attn
+        )
 
-        # (B, C, H, W) -> (B, hidden_dim, n_h, n_w)
+    # -----------------------------
+    # PATCH EMBEDDING PER IL VIT
+    # -----------------------------
+    def _process_input(self, x):
+        B = x.size(0)
+
+        # (B,3,224,224) → (B,768,14,14)
         x = self.conv_proj(x)
-        # -> (B, hidden_dim, n_h * n_w)
-        x = x.reshape(n, self.hidden_dim, n_h * n_w)
-        # -> (B, n_h * n_w, hidden_dim)
-        x = x.permute(0, 2, 1)
-
+        x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
+        x = x.permute(0, 2, 1)                 # (B,196,768)
         return x
 
     def forward(self, x):
-        # 1) patch embedding
-        x = self._process_input(x)   # (B, 196, 768)
-        n = x.shape[0]
+        B = x.size(0)
 
-        # 2) aggiungi CLS token
-        batch_class_token = self.class_token.expand(n, -1, -1)   # (B,1,768)
-        x = torch.cat([batch_class_token, x], dim=1)             # (B,197,768)
+        # ----- ENCODER VIT -----
+        tokens = self._process_input(x)
 
-        # 3) encoder ViT (usa già pos_embedding interna)
-        encoded = self.encoder(x)[:, 1:]   # (B,196,768) → rimuovi CLS
+        # aggiungi CLS
+        cls = self.class_token.expand(B, -1, -1)
+        tokens = torch.cat([cls, tokens], dim=1)
 
-        # 4) proiezione token → feature per patch (come AE-XAD)
-        p = self.patch_size
-        B, N, _ = encoded.shape
-        dec_emb_dim = self.dec_emb_dim
-        h = w = self.image_size
-        n_h = h // p
-        n_w = w // p
+        # encoder ViT
+        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
 
-        decoded = self.encoder1(encoded)   # (B, N, p^2, dec_emb_dim)
-        B, N, _, _ = decoded.shape
+        # proiezione ai 64 canali
+        encoded = self.to_64(encoded)      # (B,196,64)
 
-        decoded1 = decoded.view(B, N, dec_emb_dim, p, p)
-        decoded1 = rearrange(
-            decoded1,
-            'b (nh nw) c ph pw -> b c (nh ph) (nw pw)',
-            nh=n_h, nw=n_w
-        )  # (B, dec_emb_dim, H, W)
+        # reshape → (B,64,14,14)
+        encoded = encoded.reshape(B, 14, 14, 64).permute(0, 3, 1, 2)
 
-        # 5) CBAM + decoder CNN
-        decoded_attn   = self.embed_attn_act(self.embed_attn(decoded1))
-        encoded_square = decoded_attn.sum(dim=1).unsqueeze(1)
+        # upsample → (B,64,28,28)
+        encoded = self.up_to_28(encoded)
 
-        feat = self.decoder1(decoded1)
-        out  = self.decoder2(feat * encoded_square)
+        # ----- DECODER (copiato da ResNet CNN Attn) -----
+
+        upsampled1 = self.up1(encoded)
+        decoded1 = self.dec1(encoded)
+
+        upsampled2 = self.up2(upsampled1)
+        decoded2 = self.dec2(decoded1)
+
+        upsampled3 = self.up3(upsampled2)
+        decoded3 = self.dec3(decoded2)
+
+        # mask come nella ResNet
+        decoded3 = decoded3 + decoded3 * torch.sum(self.tan3(upsampled3)**2, axis=1).unsqueeze(1)
+
+        out = self.decoder_final(decoded3)
 
         return out
-
-#--------------------------------------------------------------------------------#
-
-class Shallow_Autoencoder(nn.Module):
-    def __init__(self, dim, flat_dim, latent_dim):
-        super(Shallow_Autoencoder, self).__init__()
-        self.dim = dim
-
-        self.encoder = nn.Sequential(
-            nn.Linear(flat_dim, latent_dim),
-            nn.ReLU()
-        )
-
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, flat_dim),
-            nn.Sigmoid(),
-        )
-
-
-    def forward(self, x):
-        x_f = x.flatten(start_dim=1)
-        encoded = self.encoder(x_f)
-        decoded = self.decoder(encoded)
-        decoded = torch.reshape(decoded, x.shape)
-        return decoded
-
-
+    
 class Deep_Autoencoder(nn.Module):
     def __init__(self, dim, flat_dim, intermediate_dim, latent_dim):
         super(Deep_Autoencoder, self).__init__()
