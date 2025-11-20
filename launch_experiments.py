@@ -24,7 +24,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 if __name__ == '__main__':
-    #print(torch.cuda.is_available())
+    print(torch.cuda.is_available())
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-ds', type=str, help='Dataset to use')
