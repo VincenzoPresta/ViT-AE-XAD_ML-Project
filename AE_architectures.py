@@ -48,6 +48,25 @@ class ViT_CNN_Attn(nn.Module):
             nn.Sigmoid()
         )
         # --------------------------------------------------------
+        
+    def _process_input(self, x: torch.Tensor) -> torch.Tensor:
+        n, c, h, w = x.shape
+        p = self.patch_size
+
+        torch._assert(h == self.image_size, "Wrong image height!")
+        torch._assert(w == self.image_size, "Wrong image width!")
+        n_h = h // p
+        n_w = w // p
+
+        # (n, c, h, w) -> (n, hidden_dim, n_h, n_w)
+        x = self.conv_proj(x)
+        # (n, hidden_dim, n_h, n_w) -> (n, hidden_dim, (n_h * n_w))
+        x = x.reshape(n, self.hidden_dim, n_h * n_w)
+
+        # Permute in formato (N, S, E) per l'Encoder ViT
+        x = x.permute(0, 2, 1)
+
+        return x
 
     def forward(self, x):
         x = self._process_input(x)
