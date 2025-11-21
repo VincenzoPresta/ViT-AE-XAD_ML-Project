@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset
 
 import torchvision.transforms as transforms
-from transforms_vit import get_vit_augmentation, get_vit_test_transform
+from transforms_vit import get_vit_augmentation
 
 
 class MvtecAD(Dataset):
