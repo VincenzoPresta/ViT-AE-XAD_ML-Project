@@ -4,25 +4,33 @@ import numpy as np
 import torch.nn.functional as F
 
 
+
+def gaussian_window(window_size, sigma):
+    gauss = torch.arange(window_size).float() - window_size // 2
+    gauss = torch.exp(-(gauss ** 2) / (2 * sigma ** 2))
+    return gauss / gauss.sum()
+
+def create_window(window_size, channel):
+    _1D = gaussian_window(window_size, 1.5).unsqueeze(1)
+    _2D = _1D.mm(_1D.t()).float()
+    window = _2D.unsqueeze(0).unsqueeze(0)
+    window = window.expand(channel, 1, window_size, window_size).contiguous()
+    return window
+
+
 # -----------------------------------------
 # SSIM (versione PyTorch stabile)
 # -----------------------------------------
 def ssim(img1, img2, window_size=11, channel=3, size_average=True):
-    # Gaussian window
-    def create_window(window_size, channel):
-        _1D_window = torch.Tensor([torch.exp(-(x - window_size//2)**2 / float(2*1.5**2)) for x in range(window_size)])
-        _1D_window = (_1D_window / _1D_window.sum()).unsqueeze(1)
-        window = _1D_window.mm(_1D_window.t()).unsqueeze(0).unsqueeze(0)
-        window = window.expand(channel, 1, window_size, window_size).contiguous()
-        return window
+    device = img1.device
 
-    window = create_window(window_size, channel).to(img1.device)
+    window = create_window(window_size, channel).to(device)
 
     mu1 = F.conv2d(img1, window, padding=window_size//2, groups=channel)
     mu2 = F.conv2d(img2, window, padding=window_size//2, groups=channel)
 
-    mu1_sq = mu1 ** 2
-    mu2_sq = mu2 ** 2
+    mu1_sq = mu1.pow(2)
+    mu2_sq = mu2.pow(2)
     mu1_mu2 = mu1 * mu2
 
     sigma1_sq = F.conv2d(img1 * img1, window, padding=window_size//2, groups=channel) - mu1_sq
@@ -38,7 +46,8 @@ def ssim(img1, img2, window_size=11, channel=3, size_average=True):
     if size_average:
         return ssim_map.mean()
     else:
-        return ssim_map.mean(dim=(1, 2, 3))
+        return ssim_map.mean(dim=(1,2,3))
+
 
 
 # --------------------------------------------------
@@ -49,11 +58,11 @@ class AEXAD_loss_ViT_SSIM(nn.Module):
         super().__init__()
 
     def forward(self, output, target):
-        l1 = torch.nn.functional.l1_loss(output, target)
-        l2 = torch.nn.functional.mse_loss(output, target)
+        l1 = F.l1_loss(output, target)
+        l2 = F.mse_loss(output, target)
         ssim_val = 1 - ssim(output, target, channel=output.shape[1])
 
-        loss = 0.6 * l1 + 0.2 * l2 + 0.2 * ssim_val
+        loss = 0.6*l1 + 0.2*l2 + 0.2*ssim_val
         return loss
 
 
