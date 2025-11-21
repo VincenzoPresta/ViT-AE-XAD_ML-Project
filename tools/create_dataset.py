@@ -6,6 +6,9 @@ from tensorflow.keras.datasets import mnist, fashion_mnist, cifar10
 import numpy as np
 from math import ceil
 
+from augmentation.transforms_vit import get_vit_augmentation
+import torchvision.transforms as T
+
 
 def extract_dataset(path, n_anom_per_cls, seed=None):
     '''
@@ -1451,9 +1454,12 @@ def mvtec_only_one_augmented(cl, path, n_anom_per_cls, a_cls, seed=None, return_
     else:
         return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
-def mvtec_ViT(cl, path, n_anom_per_cls, seed=None): #Nuova per ViT
+def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
+
+    np.random.seed(seed)
     
-    np.random.seed(seed=seed)
+    aug_train = get_vit_augmentation(224)   # augmentation ViT SOLO per train anomalies
+    pil_to_tensor = T.ToTensor()
 
     labels = (
         'bottle', 'cable', 'capsule', 'carpet', 'grid', 'hazelnut', 'leather',
@@ -1466,55 +1472,71 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None): #Nuova per ViT
 
     X_train, X_test, GT_train, GT_test = [], [], [], []
 
-    # Normal train
+    # === NORMAL TRAIN (NO AUGMENTATION) ===
     f_path = os.path.join(root, 'train', 'good')
     normal_files_tr = sorted(os.listdir(f_path))
     for file in normal_files_tr:
-        if file.lower().endswith(('png','jpg','npy')):
-            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+        if file.lower().endswith(('png','jpg','jpeg')):
+            img = Image.open(os.path.join(f_path, file)).convert('RGB')
+            img = img.resize((224,224), Image.NEAREST)
             X_train.append(np.array(img, dtype=np.uint8))
-            GT_train.append(np.zeros((224,224,1), dtype=np.uint8))  # dummy mask
+            GT_train.append(np.zeros((224,224,1), dtype=np.uint8))
 
-    # Normal test
+    # === NORMAL TEST (NO AUGMENTATION) ===
     f_path = os.path.join(root, 'test', 'good')
     normal_files_te = sorted(os.listdir(f_path))
     for file in normal_files_te:
-        if file.lower().endswith(('png','jpg','npy')):
-            img = Image.open(os.path.join(f_path, file)).convert('RGB').resize((224,224))
+        if file.lower().endswith(('png','jpg','jpeg')):
+            img = Image.open(os.path.join(f_path, file)).convert('RGB')
+            img = img.resize((224,224), Image.NEAREST)
             X_test.append(np.array(img, dtype=np.uint8))
             GT_test.append(np.zeros((224,224,1), dtype=np.uint8))
 
-    # Anomalies
+    # === ANOMALIES (AUG ON TRAIN, NO AUG ON TEST) ===
     outlier_data_dir = os.path.join(root, 'test')
     outlier_classes = sorted(os.listdir(outlier_data_dir))
+
     for cl_a in outlier_classes:
         if cl_a == 'good':
             continue
 
         outlier_files = [
             f for f in os.listdir(os.path.join(outlier_data_dir, cl_a))
-            if f.lower().endswith(('png','jpg','npy'))
+            if f.lower().endswith(('png','jpg','jpeg'))
         ]
         outlier_files.sort()
         idxs = np.random.permutation(len(outlier_files))
 
-        # Train anomalies
+        # ---------- TRAIN ANOMALIES WITH AUG ----------
         for file in [outlier_files[i] for i in idxs[:n_anom_per_cls]]:
-            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
-            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
-                         .convert('L').resize((224,224), Image.NEAREST)
-            X_train.append(np.array(img, dtype=np.uint8))
+            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
+            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file.replace('.png','_mask.png'))) \
+                         .convert('L')
+
+            img = img.resize((224,224), Image.NEAREST)
+            mask = mask.resize((224,224), Image.NEAREST)
+
+            # AUGMENTATION APPLIED HERE
+            img_aug = aug_train(img)                      # PIL → transforms → tensor normalized
+            img_aug = (img_aug * 0.5 + 0.5).clamp(0,1)    # de-normalize back to [0,1]
+            img_aug = (img_aug.permute(1,2,0).numpy()*255).astype(np.uint8)
+
+            X_train.append(img_aug)
             GT_train.append(np.array(mask, dtype=np.uint8)[...,None])
 
-        # Test anomalies
+        # ---------- TEST ANOMALIES (NO AUG) ----------
         for file in [outlier_files[i] for i in idxs[n_anom_per_cls:]]:
-            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB').resize((224,224))
-            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file).replace('.png','_mask.png')) \
-                         .convert('L').resize((224,224), Image.NEAREST)
+            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
+            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file.replace('.png','_mask.png'))) \
+                         .convert('L')
+
+            img = img.resize((224,224), Image.NEAREST)
+            mask = mask.resize((224,224), Image.NEAREST)
+
             X_test.append(np.array(img, dtype=np.uint8))
             GT_test.append(np.array(mask, dtype=np.uint8)[...,None])
 
-    # Convert to arrays
+    # Convert arrays
     X_train = np.array(X_train, dtype=np.uint8)
     X_test  = np.array(X_test, dtype=np.uint8)
     GT_train = np.array(GT_train, dtype=np.uint8)
