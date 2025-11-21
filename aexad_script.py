@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 from time import time
+from utils.filters import gaussian_smoothing
 
 from AE_architectures import Shallow_Autoencoder, Deep_Autoencoder, Conv_Autoencoder, PCA_Autoencoder, \
     Conv_Deep_Autoencoder, Conv_Deep_Autoencoder_v2, VGG_CNN_mask, ResNet_CNN_mask, \
@@ -210,16 +211,20 @@ class Trainer:
                     output = self.model(image).detach().cpu().numpy()
                 image = image.cpu().numpy()
 
+                # ====== MSE HEATMAP (prima del smoothing) ======
                 heatmap = ((image - output) ** 2)  # (B, C, H, W)
+                heatmap = heatmap.sum(axis=1)      # (B, H, W)
 
-                # Somma sui canali → (B, H, W)
-                heatmap = heatmap.sum(axis=1)
-                
-                heatmap = heatmap / (heatmap.max(axis=(1,2), keepdims=True) + 1e-8) # NORMALIZZAZIONE PER IMMAGINE – obbligatoria per AE-XAD Arrays
+                # ====== GAUSSIAN SMOOTHING ======
+                heatmap = gaussian_smoothing(heatmap, kernel_size=21, sigma=4.0)
+
+                # ====== NORMALIZZAZIONE DOPO SMOOTHING ======
+                heatmap = heatmap / (heatmap.max(axis=(1,2), keepdims=True) + 1e-8)
+
+                # ====== SCORE ======
                 score = heatmap.reshape((image.shape[0], -1)).mean(axis=-1)
 
                 heatmaps.extend(heatmap)
-
                 
                 scores.extend(score)
                 gtmaps.extend(gtmap.detach().numpy())
@@ -248,6 +253,8 @@ class Trainer:
                 plt.close("all")
 
             return np.array(heatmaps), np.array(scores), np.array(gtmaps), np.array(labels)
+
+    
 
 
 
