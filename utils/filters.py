@@ -77,3 +77,9 @@ def heatmap_refine(hm, sigma=1.0, bilateral_d=9, bilateral_sigma_color=30, bilat
     hm_final = gaussian_filter(hm_closed, sigma=sigma)
 
     return hm_final
+
+def unsharp_mask(hm, amount=1.0, sigma=1.0):
+    # gaussian blur piccolo
+    blur = gaussian_smoothing(hm, kernel_size=5, sigma=sigma)
+    # sharpen: hm + amount*(hm - blur)
+    return hm + amount * (hm - blur)
