@@ -165,51 +165,11 @@ if __name__ == '__main__':
     tracker = EmissionsTracker()
     tracker.start()
 
-    #FCDD
-    '''htmaps, scores, gtmaps, labels, tot_time = launch_fcdd(data_path, epochs=200, batch_size=16)  # 400
-    np.save(open(os.path.join(save_path, 'fcdd_gt.npy'), 'wb'), gtmaps)
-    np.save(open(os.path.join(save_path, 'fcdd_labels.npy'), 'wb'), labels)
-    np.save(open(os.path.join(save_path, 'fcdd_htmaps.npy'), 'wb'), htmaps)
-    np.save(open(os.path.join(save_path, 'fcdd_scores.npy'), 'wb'), np.array(scores))
-    times.append(tot_time)
-
-    emissions = tracker.stop()
-    print('EMISSIONS: ', emissions)
-    pickle.dump(emissions, open(os.path.join(save_path, 'emissions_fcdd.pkl'), 'wb'))
-
-    del htmaps, scores
-    torch.cuda.empty_cache()'''
-
-    #htmaps, scores, gtmaps, labels, tot_time = launch_dev(dataset_root=data_path, epochs=50)  # 50
-    #np.save(open(os.path.join(save_path, 'deviation_htmaps.npy'), 'wb'), htmaps)
-    #np.save(open(os.path.join(save_path, 'deviation_scores.npy'), 'wb'), np.array(scores))
-    #np.save(open(os.path.join(save_path, 'deviation_gtmaps.npy'), 'wb'), gtmaps)
-    #np.save(open(os.path.join(save_path, 'deviation_labels.npy'), 'wb'), np.array(labels))
-    #times.append(tot_time)
-    #del htmaps, scores
-    #torch.cuda.empty_cache()
 
 
     def f(x):
        return 1-x
    
-   
-    #SHALLOW
-    '''heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'shallow',
-                                                   save_intermediate=True, save_path=save_path)
-    np.save(open(os.path.join(save_path, 'aexad_htmaps.npy'), 'wb'), heatmaps)
-    np.save(open(os.path.join(save_path, 'aexad_scores.npy'), 'wb'), scores)'''
-
-    #CONV
-    '''heatmaps, scores, _, _, tot_time = launch_aexad(data_path, 1000, 16, 32, (28*28) / 25, None, f, 'conv',
-                                                   save_intermediate=True, save_path=save_path)
-    np.save(open(os.path.join(save_path, 'aexad_htmaps_conv.npy'), 'wb'), heatmaps)
-    np.save(open(os.path.join(save_path, 'aexad_scores_conv.npy'), 'wb'), scores)
-
-    times.append(tot_time)
-    times = np.array(times)
-    np.save(open(os.path.join(save_path, 'times_competitors.npy'), 'wb'), np.array(times))
-    print(times)'''
     
     # ViT
     heatmaps, scores, gtmaps, labels, tot_time = launch_aexad(
