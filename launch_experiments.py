@@ -37,7 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', type=int, help='Seed to use')
     parser.add_argument('-size', type=int, help='Size of the square')
     parser.add_argument("--epochs", type=int, default=200, help="training epochs number")
-    parser.add_argument("--batch", type=int, default=8, help="batch size for training")
+    parser.add_argument("--batch_size", type=int, default=8, help="batch size for training")
     args = parser.parse_args()
 
     if args.i != 'rand':
