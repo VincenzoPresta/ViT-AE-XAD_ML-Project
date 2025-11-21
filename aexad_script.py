@@ -141,7 +141,7 @@ class Trainer:
         # ViTCNN: encoder ViT + decoder ResNet AE-XAD
         self.optimizer = torch.optim.Adam([
             {'params': self.model.encoder.parameters(), 'lr': 1e-5},   # ViT_Encoder: conv_proj, encoder_vit, to_64, up_to_28
-            {'params': self.model.decoder.parameters(), 'lr': 1e-3},   # dec1, dec2, dec3, decoder_final
+            {'params': self.model.decoder.parameters(), 'lr': 5e-4},   # dec1, dec2, dec3, decoder_final
         ], lr=1e-3, weight_decay=1e-5)
 
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lambda ep: 0.985 ** ep)

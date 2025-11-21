@@ -123,7 +123,11 @@ class ViT_Encoder(nn.Module):
         self.class_token = vit.class_token
         self.encoder_vit = vit.encoder
 
-        self.to_64 = nn.Linear(self.hidden_dim, 64)
+        self.to_64 = nn.Sequential(
+            nn.Linear(self.hidden_dim, 64),
+            nn.LayerNorm(64)
+        )
+        
         self.up_to_28 = nn.Upsample(scale_factor=2)
         
         # ============================

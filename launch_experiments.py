@@ -214,7 +214,7 @@ if __name__ == '__main__':
     # ViT
     heatmaps, scores, gtmaps, labels, tot_time = launch_aexad(
         data_path,           
-        16,              # batch size
+        8,              # batch size
         32,             # latent dim
         (224*224) / 25, # radius adattato al 224x224, come da paper
         None, 
