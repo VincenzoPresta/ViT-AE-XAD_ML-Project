@@ -223,10 +223,8 @@ class Trainer:
                 heatmap = ((image - output) ** 2)  # (B, C, H, W)
                 heatmap = heatmap.sum(axis=1)      # (B, H, W)
 
-                # ====== Refinement della heatmap ======
+                # ====== heatmap ======
                 #heatmap = gaussian_smoothing(heatmap, kernel_size=21, sigma=4.0)
-                
-                heatmap = refine_hmap(heatmap)
                 
                 # ====== NORMALIZZAZIONE DOPO SMOOTHING ======
                 heatmap = heatmap / (heatmap.max(axis=(1,2), keepdims=True) + 1e-8)
