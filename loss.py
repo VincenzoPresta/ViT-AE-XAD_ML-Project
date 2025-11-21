@@ -1,6 +1,61 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import torch.nn.functional as F
+
+
+# -----------------------------------------
+# SSIM (versione PyTorch stabile)
+# -----------------------------------------
+def ssim(img1, img2, window_size=11, channel=3, size_average=True):
+    # Gaussian window
+    def create_window(window_size, channel):
+        _1D_window = torch.Tensor([torch.exp(-(x - window_size//2)**2 / float(2*1.5**2)) for x in range(window_size)])
+        _1D_window = (_1D_window / _1D_window.sum()).unsqueeze(1)
+        window = _1D_window.mm(_1D_window.t()).unsqueeze(0).unsqueeze(0)
+        window = window.expand(channel, 1, window_size, window_size).contiguous()
+        return window
+
+    window = create_window(window_size, channel).to(img1.device)
+
+    mu1 = F.conv2d(img1, window, padding=window_size//2, groups=channel)
+    mu2 = F.conv2d(img2, window, padding=window_size//2, groups=channel)
+
+    mu1_sq = mu1 ** 2
+    mu2_sq = mu2 ** 2
+    mu1_mu2 = mu1 * mu2
+
+    sigma1_sq = F.conv2d(img1 * img1, window, padding=window_size//2, groups=channel) - mu1_sq
+    sigma2_sq = F.conv2d(img2 * img2, window, padding=window_size//2, groups=channel) - mu2_sq
+    sigma12 = F.conv2d(img1 * img2, window, padding=window_size//2, groups=channel) - mu1_mu2
+
+    C1 = 0.01 ** 2
+    C2 = 0.03 ** 2
+
+    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / \
+               ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+
+    if size_average:
+        return ssim_map.mean()
+    else:
+        return ssim_map.mean(dim=(1, 2, 3))
+
+
+# --------------------------------------------------
+# LOSS 3-TERMINE per ViT-AE-XAD
+# --------------------------------------------------
+class AEXAD_loss_ViT_SSIM(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, output, target):
+        l1 = torch.nn.functional.l1_loss(output, target)
+        l2 = torch.nn.functional.mse_loss(output, target)
+        ssim_val = 1 - ssim(output, target, channel=output.shape[1])
+
+        loss = 0.6 * l1 + 0.2 * l2 + 0.2 * ssim_val
+        return loss
+
 
 
 class AEXAD_loss(nn.Module):
@@ -130,7 +185,7 @@ class AEXAD_loss_norm(nn.Module):
         return weighted_loss, loss_n, loss_a  # / torch.sum(lambda_vec)
     
     
-class AEXAD_loss_ViT(nn.Module):
+class AEXAD_loss_ViT(nn.Module): #FORSE DA ELIMINARE - vecchia loss introdotta all'inizio per il ViT
     def __init__(self, lambda_p=None, lambda_s=None,
                  f=lambda x: torch.where(x >= 0.5, 0.0, 1.0),
                  cuda=True):

@@ -15,7 +15,7 @@ from aexad_dataloaders.dataset import CustomAD
 from aexad_dataloaders.mvtec_dataset import MvtecAD
 from aexad_dataloaders.custom_VGG import CustomVGGAD
 from augmented import AugmentedAD
-from loss import AEXAD_loss, AEXAD_loss_weighted, AEXAD_loss_norm, AEXAD_loss_norm_vgg, MSE_loss_vgg, AEXAD_loss_ViT
+from loss import AEXAD_loss, AEXAD_loss_weighted, AEXAD_loss_norm, AEXAD_loss_norm_vgg, MSE_loss_vgg, AEXAD_loss_ViT_SSIM
 
 
 class Trainer:
@@ -155,7 +155,7 @@ class Trainer:
                                  self.train_loader.dataset.std, lambda_p, lambda_s, f, self.cuda)
             else:
                 if isinstance(self.model, ViT_CNN_Attn):
-                    self.criterion = AEXAD_loss_ViT(lambda_p, lambda_s, f, self.cuda)
+                    self.criterion = AEXAD_loss_ViT_SSIM() #NUOVA LOSS VIT
                 else:    
                     self.criterion = AEXAD_loss_norm(lambda_p, lambda_s, f, self.cuda)
             #self.criterion = AEXAD_loss(lambda_p, lambda_s, f, self.cuda)
@@ -344,32 +344,43 @@ class Trainer:
                     
                 output = self.model(image)
                                 
-                if self.loss == 'mse':
-                    # ----------------------- L1 + MSE -----------------------
-                    loss_l1  = torch.nn.functional.l1_loss(output, image)
-                    loss_mse = torch.nn.functional.mse_loss(output, image)
-                    # bilanciamento ottimale per ricostruzione
-                    loss = 0.7 * loss_l1 + 0.3 * loss_mse
-                    # ---------------------------------------------------------
+                # ===== LOSS HANDLING =====
+
+                if isinstance(self.model, ViT_CNN_Attn):
+                    # -----------------------------------------
+                    # Nuova loss 3-termine (L1 + L2 + SSIM)
+                    # Nessuna supervisione AE-XAD
+                    # -----------------------------------------
+                    loss = self.criterion(output, image)
+
                 else:
-                    loss, loss_n, loss_a = self.criterion(output, image, gt_label, label)
-                    na += label.sum()
-                    nn += image.shape[0] - na
-                
+                    # -----------------------------------------
+                    # Pipeline originale AE-XAD (supervisionata)
+                    # -----------------------------------------
+                    if self.loss == 'mse':
+                        loss_l1  = torch.nn.functional.l1_loss(output, image)
+                        loss_mse = torch.nn.functional.mse_loss(output, image)
+                        loss = 0.7 * loss_l1 + 0.3 * loss_mse
+                    else:
+                        loss, loss_n, loss_a = self.criterion(output, image, gt_label, label)
+                        na += label.sum()
+                        nn += image.shape[0] - na
                 ns += 1
                 train_loss += loss.item()
-                
-                if not self.loss == 'mse':
-                    train_loss_n += loss_n.item()
-                    train_loss_a += loss_a.item()
 
-                if self.loss == 'mse':
-                    # solo AE puro
-                    tbar.set_description('Epoch:%d, Train loss: %.3f' % (epoch, train_loss / ns))
+
+                # ===== LOGGING =====
+                if isinstance(self.model, ViT_CNN_Attn):
+                    tbar.set_description(f"Epoch:{epoch}, ViT loss: {train_loss / ns:.3f}")
+
+                elif self.loss == 'mse':
+                    tbar.set_description(f"Epoch:{epoch}, Train loss: {train_loss / ns:.3f}")
+
                 else:
-                    # AE-XAD supervisionato
-                    tbar.set_description('Epoch:%d, Train loss: %.3f, Normal loss: %.3f, Anom loss: %3f' % 
-                                        (epoch, train_loss / ns, loss_n, loss_a))
+                    tbar.set_description(
+                        f"Epoch:{epoch}, Train loss: {train_loss / ns:.3f}, "
+                        f"Normal loss: {loss_n:.3f}, Anom loss: {loss_a:.3f}"
+    )
                     
                 # ===== BACKPROPAGATION =====
                 print("BACKPROP")
