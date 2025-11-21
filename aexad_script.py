@@ -122,13 +122,21 @@ class Trainer:
                                            {'params': self.model.layer2.parameters(), 'lr': 1e-5},
                                            ], lr=1e-3, weight_decay=1e-4)'''
                                            
+    #--------VIT OPTIMIZER------------#
+                                           
         # ViTCNN: encoder ViT + decoder ResNet AE-XAD
         self.optimizer = torch.optim.Adam([
             {'params': self.model.encoder.parameters(), 'lr': 1e-5},   # ViT_Encoder: conv_proj, encoder_vit, to_64, up_to_28
             {'params': self.model.decoder.parameters(), 'lr': 5e-4},   # dec1, dec2, dec3, decoder_final
         ], lr=1e-3, weight_decay=1e-5)
 
-        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lambda ep: 0.985 ** ep)
+        # ===== WARMUP + COSINE DECAY SCHEDULER =====
+
+        # Verrà ridefinito in train() quando conosciamo gli steps per epoch
+        self.scheduler = None
+        self.total_steps = None
+        self.warmup_steps = None
+
 
 #--------LOSS--------------
 
@@ -288,9 +296,28 @@ class Trainer:
         #nuovo: ViT
         elif isinstance(self.model, ViT_CNN_Attn):
             name = 'model_vit_cnn'
-                    
+                
         fe_untrain = False
+        
         self.model.train()
+        
+        # ===== DEFINE TOTAL STEPS =====
+        steps_per_epoch = len(self.train_loader)
+        self.total_steps = epochs * steps_per_epoch
+        self.warmup_steps = int(0.1 * self.total_steps)   # warmup 10%
+
+        def lr_lambda(current_step):
+            # WARMUP PHASE
+            if current_step < self.warmup_steps:
+                return float(current_step) / float(max(1, self.warmup_steps))
+
+            # COSINE DECAY PHASE
+            progress = float(current_step - self.warmup_steps) / float(max(1, self.total_steps - self.warmup_steps))
+            return 0.5 * (1.0 + np.cos(np.pi * progress))
+
+        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda)
+        current_step = 0
+        
         for epoch in range(epochs):
             train_loss = 0.0
             train_loss_n = 0.0
@@ -299,6 +326,7 @@ class Trainer:
             nn = 0
             ns = 0
             tbar = tqdm(self.train_loader, disable=self.silent)
+            
             for i, sample in enumerate(tbar):
                 image, label, gt_label = sample['image'], sample['label'], sample['gt_label']
                 
@@ -379,11 +407,13 @@ class Trainer:
                 
                 # ===== GRADIENT CLIPPING (ViT stabilità) =====
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-
                 self.optimizer.step()
-                # ============================
-
-            self.scheduler.step()
+                self.scheduler.step()
+                
+                # ===== LR LOG =====
+                current_lrs = [g['lr'] for g in self.optimizer.param_groups]
+                print(f"[Epoch {epoch}] LR encoder:", current_lrs[0], "| LR decoder:", current_lrs[1])
+                current_step += 1
 
         torch.save(self.model.state_dict(), os.path.join(save_path, f'{self.loss}_{name}.pt'))
 
