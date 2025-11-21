@@ -10,7 +10,7 @@ from AE_architectures import ViT_CNN_Attn
 
 
 class Trainer:
-    def __init__(self, model, train_loader, test_loader, loss='mse', save_path='.', cuda=True):
+    def __init__(self, model, train_loader, test_loader, save_path='.', cuda=True):
 
         self.model = model
         self.train_loader = train_loader
@@ -27,8 +27,7 @@ class Trainer:
             self.model.cuda()
 
         # ---- LOSS ----
-        if loss == "vit_ssim":
-            self.criterion = AEXAD_Loss()
+        self.criterion = AEXAD_Loss()
             
         if self.cuda:
             self.criterion = self.criterion.cuda()

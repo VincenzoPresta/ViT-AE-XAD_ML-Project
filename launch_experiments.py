@@ -87,7 +87,6 @@ if __name__ == "__main__":
         model=model,
         train_loader=train_loader,
         test_loader=test_loader,
-        loss="vit_ssim",
         save_path=save_path,
         cuda=True
     )
