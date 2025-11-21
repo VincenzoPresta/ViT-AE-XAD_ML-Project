@@ -82,6 +82,9 @@ class AEXAD_Loss(nn.Module):
         super().__init__()
 
     def forward(self, rec_img, target, gt, y):
+        
+        print("check: forward ae xad loss")
+        
         device = rec_img.device
         
         # === Shape info ===
