@@ -1,159 +1,73 @@
 import torch
 import torch.nn as nn
-import numpy as np
 import torch.nn.functional as F
-
-
-
-def gaussian_window(window_size, sigma):
-    gauss = torch.arange(window_size).float() - window_size // 2
-    gauss = torch.exp(-(gauss ** 2) / (2 * sigma ** 2))
-    return gauss / gauss.sum()
-
-def create_window(window_size, channel):
-    _1D = gaussian_window(window_size, 1.5).unsqueeze(1)
-    _2D = _1D.mm(_1D.t()).float()
-    window = _2D.unsqueeze(0).unsqueeze(0)
-    window = window.expand(channel, 1, window_size, window_size).contiguous()
-    return window
-
-
-# -----------------------------------------
-# SSIM (versione PyTorch stabile)
-# -----------------------------------------
-def ssim(img1, img2, window_size=11, channel=3, size_average=True):
-    device = img1.device
-
-    window = create_window(window_size, channel).to(device)
-
-    mu1 = F.conv2d(img1, window, padding=window_size//2, groups=channel)
-    mu2 = F.conv2d(img2, window, padding=window_size//2, groups=channel)
-
-    mu1_sq = mu1.pow(2)
-    mu2_sq = mu2.pow(2)
-    mu1_mu2 = mu1 * mu2
-
-    sigma1_sq = F.conv2d(img1 * img1, window, padding=window_size//2, groups=channel) - mu1_sq
-    sigma2_sq = F.conv2d(img2 * img2, window, padding=window_size//2, groups=channel) - mu2_sq
-    sigma12 = F.conv2d(img1 * img2, window, padding=window_size//2, groups=channel) - mu1_mu2
-
-    C1 = 0.01 ** 2
-    C2 = 0.03 ** 2
-
-    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / \
-               ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
-
-    if size_average:
-        return ssim_map.mean()
-    else:
-        return ssim_map.mean(dim=(1,2,3))
-
-
-# --------------------------------------------------
-# LOSS 3-TERMINE per ViT-AE-XAD
-# --------------------------------------------------
-class AEXAD_loss_ViT_SSIM(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, output, target):
-        l1 = F.l1_loss(output, target)
-        l2 = F.mse_loss(output, target)
-        ssim_val = 1 - ssim(output, target, channel=output.shape[1])
-
-        loss = 0.6*l1 + 0.2*l2 + 0.2*ssim_val
-        return loss
-
-#-------------------------#
-
-import torch
-import torch.nn as nn
-import numpy as np
 
 class AEXAD_Loss(nn.Module):
     """
-    Implementazione ufficiale della loss AE-XAD (Eq. 1), compatibile con encoder ViT.
-    - F(x) = 2                       (versione ufficiale)
-    - λ_p = D / (#pixel_anomali)     (per-pixel weight)
-    - Normalizzazione per-pixel (F(x)-x)^2
+    Implementazione ufficiale AE-XAD (Eq. 1).
+    Compatibile con ViT.
     """
-
     def __init__(self):
         super().__init__()
 
     def forward(self, rec_img, target, gt, y):
         
-        print("check: forward ae xad loss")
-        
-        print(">>> rec_img shape:", rec_img.shape)
-        print(">>> target shape:", target.shape)
-        print(">>> gt shape (AFTER DATALOADER):", gt.shape)
+        print("=== LOSS DEBUG START ===")
+        print("rec_img:", rec_img.shape)
+        print("target:", target.shape)
+        print("gt (input):", gt.shape)
         
         device = rec_img.device
         
-        # === Shape info ===
         B, C, H, W = target.shape
-        D = C * H * W   # numero totale di feature del paper
-        
-        # ======================================================
-        # 1. Sistemazione GT (universale e robusta)
-        # ======================================================
+        D = C * H * W
 
-        # Caso patologico GT shape = (B, H, 1, W)
-        if gt.ndim == 4 and gt.shape[1] == H and gt.shape[2] == 1 and gt.shape[3] == W:
+        # ======== FIX GT ========
+        # Se GT ha shape (B,224,1,224) → sistemala
+        if gt.ndim == 4 and gt.shape[1] == H and gt.shape[2] == 1:
             gt = gt.permute(0, 2, 1, 3)
 
-        # Se GT ha più di 1 canale → compressione a un canale
+        # Se GT ha più canali → collapsalo a 1 canale
         if gt.shape[1] != 1:
             gt = torch.sum(gt, dim=1, keepdim=True)
             gt = (gt > 0).float()
 
-        # Replica GT a 3 canali se necessario
-        if C == 3 and gt.shape[1] == 1:
-            gt = gt.repeat(1, C, 1, 1)
+        # Replica GT a 3 canali
+        if C == 3:
+            gt = gt.repeat(1, 3, 1, 1)
+            
+        print("gt (after fix):", gt.shape)
 
-        gt = gt.to(device)  # fondamentale
-        
-        print(">>> gt shape (AFTER FIX):", gt.shape)
+        gt = gt.to(device)
 
-        # ======================================================
-        # 2. Denominatore ufficiale (F(x)-x)^2
-        # ======================================================
-        
+        # ======== DENOMINATORE ========
         F_x = 2.0
-        max_diff = (F_x - target) ** 2
+        max_diff = (F_x - target)**2
         max_diff = torch.clamp(max_diff, min=1e-6)
 
-        # ======================================================
-        # 3. Termini ricostruzione
-        # ======================================================
-        
-        rec_n = (rec_img - target) ** 2 / max_diff
-        rec_o = (F_x - rec_img) ** 2 / max_diff
+        # ======== RICOSTRUZIONI ========
+        rec_n = (rec_img - target)**2 / max_diff
+        rec_o = (F_x - rec_img)**2 / max_diff
 
-        # ======================================================
-        # 4. λ_p = D / (#anomali)
-        # ======================================================
-
-        anomaly_pixels = torch.sum(gt, dim=(1, 2, 3))
+        # ======== LAMBDA_p ========
+        anomaly_pixels = torch.sum(gt, dim=(1,2,3))
         anomaly_pixels = torch.clamp(anomaly_pixels, min=1.0)
-
-        lambda_p = (D / anomaly_pixels).view(B, 1, 1).to(device)
-        lambda_p = lambda_p.repeat(1, C, H, W)
-
-        # ======================================================
-        # 5. Loss per-pixel (Eq. 1 del paper)
-        # ======================================================
         
-        print(">>> lambda_p shape:", lambda_p.shape)
-        print(">>> rec_n shape:", rec_n.shape)
-        print(">>> rec_o shape:", rec_o.shape)
+        print("anomaly_pixels shape:", anomaly_pixels.shape)
+        print("anomaly_pixels:", anomaly_pixels[:4])   # primi 4 valori
 
+        lambda_p = (D / anomaly_pixels).view(B,1,1).to(device)
+        lambda_p = lambda_p.repeat(1,C,H,W)
+        
+        print("lambda_p (FINAL):", lambda_p.shape)
+
+        # ======== LOSS ========
+        
+        print("rec_n:", rec_n.shape)
+        print("rec_o:", rec_o.shape)
+        print("=== END LOSS DEBUG ===")
+        
         loss_vec = (1 - gt) * rec_n + lambda_p * gt * rec_o
 
-        # ======================================================
-        # 6. Loss finale batch-wise
-        # ======================================================
-
-        loss = torch.mean(torch.sum(loss_vec, dim=(1, 2, 3)))
+        loss = torch.mean(torch.sum(loss_vec, dim=(1,2,3)))
         return loss
