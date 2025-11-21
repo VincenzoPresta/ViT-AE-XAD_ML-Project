@@ -10,7 +10,17 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
+class RefinementBlock(nn.Module):
+    def __init__(self, channels):
+        super().__init__()
+        self.refine = nn.Sequential(
+            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+        )
 
+    def forward(self, x):
+        return x + self.refine(x)   # skip connection
 class ViT_CNN_Attn(nn.Module):
     """
     AE-XAD con:
@@ -38,11 +48,6 @@ class ViT_CNN_Attn(nn.Module):
         #          DECODER
         # =============================
 
-        self.up1 = nn.Upsample(scale_factor=2)
-        self.up2 = nn.Upsample(scale_factor=2)
-        self.up3 = nn.Upsample(scale_factor=2)
-        self.tan3 = nn.Tanh()
-
         self.dec1 = nn.Sequential(
             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
             nn.SELU(),
@@ -64,46 +69,53 @@ class ViT_CNN_Attn(nn.Module):
             nn.SELU()
         )
 
+        # === Refinement block sullo spazio dei 8 canali ===
+        self.refine = RefinementBlock(channels=8)
+
         self.decoder_final = nn.Sequential(
             nn.Conv2d(8, 8, 3, padding=1),
             nn.SELU(),
             nn.Conv2d(8, dim[0], 3, padding=1),
-            nn.Sigmoid()    # fondamentale
+            nn.Sigmoid()
         )
 
-        # per AE-XAD
+        # Decoder finale
         self.decoder = nn.Sequential(
             self.dec1,
             self.dec2,
             self.dec3,
+            self.refine,
             self.decoder_final
         )
 
 
-    # =============================
-    #         FORWARD
-    # =============================
     def forward(self, x):
 
-        # 1) Encoder → (B,64,28,28)
-        encoded = self.encoder(x)
+        # ===== 1) ENCODER =====
+        encoded = self.encoder(x)   # (B,64,28,28)
 
-        # 2) Decoder
-        upsampled1 = self.up1(encoded)
-        decoded1 = self.dec1(encoded)
+        # ===== 2) DECODER =====
+        x = self.dec1(encoded)      # (B,32,56,56)
+        x = self.dec2(x)            # (B,16,112,112)
+        x = self.dec3(x)            # (B,8,224,224)
 
-        upsampled2 = self.up2(upsampled1)
-        decoded2 = self.dec2(decoded1)
+        # ===== 3) MASK MODULATION (identica all’originale) =====
+        # upsample encoded 3 volte (senza conv) per la mask
+        up = self.up1(encoded)
+        up = self.up2(up)
+        up = self.up3(up)
 
-        upsampled3 = self.up3(upsampled2)
-        decoded3 = self.dec3(decoded2)
+        mask = torch.sum(self.tan3(up)**2, axis=1).unsqueeze(1)
+        x = x + x * mask
 
-        # Mask identica alla ResNet_CNN_Attn
-        decoded3 = decoded3 + decoded3 * torch.sum(self.tan3(upsampled3)**2, axis=1).unsqueeze(1)
+        # ===== 4) Refinement Block =====
+        x = self.refine(x)
 
-        out = self.decoder_final(decoded3)
+        # ===== 5) Final conv layer =====
+        out = self.decoder_final(x)
 
         return out
+
 
 class ViT_Encoder(nn.Module):
     """
