@@ -1,11 +1,12 @@
 import PIL.Image as Image
-
 import numpy as np
 import os
 import torch
 from torch.utils.data import Dataset
 
 import torchvision.transforms as transforms
+from utils.transforms_vit import get_vit_augmentation, get_vit_test_transform
+
 
 class MvtecAD(Dataset):
     def __init__(self, path, seed=29, train=True):
@@ -14,61 +15,62 @@ class MvtecAD(Dataset):
         self.train = train
         self.seed = seed
         self.dim = (3, 224, 224)
-        
-        self.transform = transforms.Compose([
+
+        # === TRANSFORM (solo struttura, apply dopo) ===
+        self.base_resize = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((224, 224), interpolation=Image.BILINEAR),
-            transforms.ToTensor(),  # produce float in [0,1]
         ])
 
         if self.train:
-            split = 'train'
+            self.aug = get_vit_augmentation(224)
         else:
-            split = 'test'
+            self.aug = get_vit_test_transform(224)
 
+        # === LOAD X ===
+        split = 'train' if train else 'test'
         print('Loading image data...')
-        x_os = np.load(os.path.join(path, f'X_{split}.npy'))  # / 255.0)[:,:,:,0]
-        print('Reshaping image data...')
-        x = np.empty((x_os.shape[0], self.dim[0], self.dim[1], self.dim[2]), dtype=x_os.dtype)
-        for i in range(x_os.shape[0]):
-            x[i] = self.transform(x_os[i])
-        del x_os
+        x_np = np.load(os.path.join(path, f'X_{split}.npy'))
         print('Done')
 
-        y = np.load(os.path.join(path, f'Y_{split}.npy'))
-
-        print('Loading gt data...')
-        gt_os = np.load(os.path.join(path, f'GT_{split}.npy'))
-        print('Reshaping gt data...')
-        gt = np.empty((gt_os.shape[0], self.dim[0], self.dim[1], self.dim[2]), dtype=gt_os.dtype)
-        for i in range(gt_os.shape[0]):
-            gt[i] = self.transform(gt_os[i])
-        del gt_os
+        print('Loading GT data...')
+        gt_np = np.load(os.path.join(path, f'GT_{split}.npy'))
         print('Done')
 
-        # normal_data = x[y == 0]
-        # outlier_data = x[y == 1]
+        self.labels = np.load(os.path.join(path, f'Y_{split}.npy'))
 
-        self.gt = gt
-        self.labels = y
-        self.images = x
+        # === SALVO LE IMMAGINI GREZZE (NON trasformate) ===
+        self.images = x_np     # shape (N, H, W, C)
+        self.gt = gt_np        # shape (N, H, W, C)
 
 
     def __len__(self):
         return len(self.images)
 
+
     def __getitem__(self, index):
-        img = self.images[index]
-        gt = self.gt[index]
 
-        #img = self.transform(image)
-        #gt = self.transform(image_label)
+        # Recuperiamo immagini grezze (np array)
+        img_np = self.images[index]
+        gt_np = self.gt[index]
 
-        print('---', img.max(), gt.max())
+        # Converti a PIL (resize)
+        img = self.base_resize(img_np)
+        gt = self.base_resize(gt_np)
+
+        # === APPLICA AUGMENTATION SOLO SULL'IMMAGINE ===
+        # gt NON va augmentata
+        img = self.aug(img)
+
+        # GT → sempre ToTensor + normalizzazione [0,1]
+        gt = transforms.ToTensor()(gt)
+
+        # Normalizziamo GT da [0,255] a [0,1] (se non già normalizzata)
+        gt = gt / 255.0
 
         sample = {
-            'image': img,  # già in [0,1]
+            'image': img,
             'label': self.labels[index],
-            'gt_label': gt / 255.0  # ok mantenere GT normalizzata
-            }
+            'gt_label': gt
+        }
         return sample
