@@ -94,21 +94,21 @@ class AEXAD_Loss(nn.Module):
 
         device = rec_img.device
         B, C, H, W = target.shape
-        D = C * H * W  # numero totale di feature nel paper
+        
+        # ===== SANITY FIX universale per GT =====
+        # se GT ha più di 1 canale → riducila a un solo canale
+        if gt.shape[1] != 1:
+            # sommiamo su tutti i canali e thresholdiamo
+            gt = torch.sum(gt, dim=1, keepdim=True)
+            gt = (gt > 0).float()
 
-        # ======================================================
-        # 1. Sistemazione automatica shape GT
-        # ======================================================
+        # ora GT è (B,1,H,W)
 
-        # Caso patologico GT shape = (B, H, 1, W)
-        if gt.ndim == 4 and gt.shape[1] == H and gt.shape[2] == 1 and gt.shape[3] == W:
-            gt = gt.permute(0, 2, 1, 3)
+        # ===== replica GT a 3 canali se necessario =====
+        if C == 3 and gt.shape[1] == 1:
+            gt = gt.repeat(1, C, 1, 1)
 
-        # GT 1-canale → replica a 3 canali
-        if gt.shape[1] == 1 and C == 3:
-            gt = gt.repeat(1, 3, 1, 1)
-
-        gt = gt.to(device)  # fondamentale per evitare errori CPU/GPU
+        gt = gt.to(device)
 
         # ======================================================
         # 2. Denominatore ufficiale: (F(x) - x)^2

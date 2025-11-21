@@ -6,7 +6,7 @@ from datasets.transforms_vit import get_vit_augmentation
 
 def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
 
-    print ("loaded mvtec for ViT")
+    print ("loaded mvtec for ViT - new loader")
 
     np.random.seed(seed)
     
