@@ -73,84 +73,74 @@ import numpy as np
 class AEXAD_Loss(nn.Module):
     """
     Implementazione ufficiale della loss AE-XAD (Eq. 1), compatibile con encoder ViT.
-    
-    - F(x) = 2                          (versione ufficiale del paper)
-    - λ_p = D / (#pixel_anomali)        (definizione originale)
-    - normalizzazione per-pixel con (F(x) - x)^2
-    - supporto automatico a GT 1-canale o shape invertita
-    - GPU-safe e batch-safe
+    - F(x) = 2                       (versione ufficiale)
+    - λ_p = D / (#pixel_anomali)     (per-pixel weight)
+    - Normalizzazione per-pixel (F(x)-x)^2
     """
 
     def __init__(self):
         super().__init__()
 
     def forward(self, rec_img, target, gt, y):
-        """
-        rec_img: (B, 3, H, W)   output del decoder
-        target:  (B, 3, H, W)   immagine originale
-        gt:      (B, 1, H, W) o (B, 3, H, W) maschera GT (0=normale, 1=anomalia)
-        y:       (B,) label immagine (non usato dal paper, tenuto per compatibilità)
-        """
-
         device = rec_img.device
-        B, C, H, W = target.shape
         
-        # ===== SANITY FIX universale per GT =====
-        # se GT ha più di 1 canale → riducila a un solo canale
+        # === Shape info ===
+        B, C, H, W = target.shape
+        D = C * H * W   # numero totale di feature del paper
+        
+        # ======================================================
+        # 1. Sistemazione GT (universale e robusta)
+        # ======================================================
+
+        # Caso patologico GT shape = (B, H, 1, W)
+        if gt.ndim == 4 and gt.shape[1] == H and gt.shape[2] == 1 and gt.shape[3] == W:
+            gt = gt.permute(0, 2, 1, 3)
+
+        # Se GT ha più di 1 canale → compressione a un canale
         if gt.shape[1] != 1:
-            # sommiamo su tutti i canali e thresholdiamo
             gt = torch.sum(gt, dim=1, keepdim=True)
             gt = (gt > 0).float()
 
-        # ora GT è (B,1,H,W)
-
-        # ===== replica GT a 3 canali se necessario =====
+        # Replica GT a 3 canali se necessario
         if C == 3 and gt.shape[1] == 1:
             gt = gt.repeat(1, C, 1, 1)
 
-        gt = gt.to(device)
+        gt = gt.to(device)  # fondamentale
 
         # ======================================================
-        # 2. Denominatore ufficiale: (F(x) - x)^2
+        # 2. Denominatore ufficiale (F(x)-x)^2
         # ======================================================
-
+        
         F_x = 2.0
         max_diff = (F_x - target) ** 2
-        max_diff = torch.clamp(max_diff, min=1e-6)  # stabilità numerica
+        max_diff = torch.clamp(max_diff, min=1e-6)
 
         # ======================================================
-        # 3. Termini della loss come da Eq. (1)
+        # 3. Termini ricostruzione
         # ======================================================
-
-        # Ricostruzione normale (zona normale: gt=0)
+        
         rec_n = (rec_img - target) ** 2 / max_diff
-
-        # Ricostruzione forzata a F(x) nelle anomalie (gt=1)
         rec_o = (F_x - rec_img) ** 2 / max_diff
 
         # ======================================================
-        # 4. λ_p = D / (#pixel_anomali) come nel paper
+        # 4. λ_p = D / (#anomali)
         # ======================================================
 
         anomaly_pixels = torch.sum(gt, dim=(1, 2, 3))
-        anomaly_pixels = torch.clamp(anomaly_pixels, min=1.0)  # evita div by zero
+        anomaly_pixels = torch.clamp(anomaly_pixels, min=1.0)
 
-        # shape → (B, 1, 1)
         lambda_p = (D / anomaly_pixels).view(B, 1, 1).to(device)
-
-        # broadcast → (B, C, H, W)
         lambda_p = lambda_p.repeat(1, C, H, W)
 
         # ======================================================
-        # 5. Loss per pixel (Eq. 1)
+        # 5. Loss per-pixel (Eq. 1 del paper)
         # ======================================================
 
         loss_vec = (1 - gt) * rec_n + lambda_p * gt * rec_o
 
         # ======================================================
-        # 6. Loss finale = mean(batch_sum_over_pixels)
+        # 6. Loss finale batch-wise
         # ======================================================
 
         loss = torch.mean(torch.sum(loss_vec, dim=(1, 2, 3)))
-
         return loss
