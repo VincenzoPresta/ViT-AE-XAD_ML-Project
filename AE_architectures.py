@@ -10,17 +10,6 @@ import torch
 import torch.nn as nn
 from einops import rearrange
 
-class RefinementBlock(nn.Module):
-    def __init__(self, channels):
-        super().__init__()
-        self.refine = nn.Sequential(
-            nn.Conv2d(channels, channels, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        )
-
-    def forward(self, x):
-        return x + self.refine(x)   # skip connection
 class ViT_CNN_Attn(nn.Module):
     """
     AE-XAD con:
@@ -74,9 +63,6 @@ class ViT_CNN_Attn(nn.Module):
             nn.SELU()
         )
 
-        # === Refinement block sullo spazio dei 8 canali ===
-        self.refine = RefinementBlock(channels=8)
-
         self.decoder_final = nn.Sequential(
             nn.Conv2d(8, 8, 3, padding=1),
             nn.SELU(),
@@ -89,7 +75,6 @@ class ViT_CNN_Attn(nn.Module):
             self.dec1,
             self.dec2,
             self.dec3,
-            self.refine,
             self.decoder_final
         )
 
@@ -113,10 +98,7 @@ class ViT_CNN_Attn(nn.Module):
         mask = torch.sum(self.tan3(up)**2, axis=1).unsqueeze(1)
         x = x + x * mask
 
-        # ===== 4) Refinement Block =====
-        x = self.refine(x)
-
-        # ===== 5) Final conv layer =====
+        # ===== 4) Final conv layer =====
         out = self.decoder_final(x)
 
         return out
