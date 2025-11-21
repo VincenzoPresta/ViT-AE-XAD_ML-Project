@@ -30,6 +30,11 @@ class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
+        
+        self.up1 = nn.Upsample(scale_factor=2)
+        self.up2 = nn.Upsample(scale_factor=2)
+        self.up3 = nn.Upsample(scale_factor=2)
+        self.tan3 = nn.Tanh()
 
         # =============================
         #          ENCODER
