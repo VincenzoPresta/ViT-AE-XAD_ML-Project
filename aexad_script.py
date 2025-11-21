@@ -372,6 +372,7 @@ class Trainer:
                                         (epoch, train_loss / ns, loss_n, loss_a))
                     
                 # ===== BACKPROPAGATION =====
+                print("BACKPROP")
                 self.optimizer.zero_grad()
                 loss.backward()
                 
