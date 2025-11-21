@@ -3,9 +3,9 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from utils.filters import gaussian_smoothing
+from utils.gaussian import gaussian_smoothing
 from loss import  AEXAD_Loss
-from AE_architectures import ViT_CNN_Attn
+from models import ViT_CNN_Attn
 
 
 class Trainer:
@@ -67,8 +67,7 @@ class Trainer:
 
             for batch in tbar:
                 img = batch["image"]
-                print("[DEBUG train] image:", img.shape, "min:", img.min().item(), "max:", img.max().item())
-
+                
                 if self.cuda:
                     img = img.cuda()
 
@@ -76,11 +75,6 @@ class Trainer:
                 
                 gt = batch["gt_label"]     # o batch["gt"]
                 y  = batch["label"]        # opzionale
-                
-                
-                print(">>> CHECK GT SHAPE BEFORE LOSS:", gt.shape)
-                print(">>> CHECK OUT SHAPE:", out.shape)
-                print(">>> CHECK IMG SHAPE:", img.shape)
                 
                 loss = self.criterion(out, img, gt, y)
 
@@ -94,7 +88,9 @@ class Trainer:
                 epoch_loss += loss.item()
                 step += 1
 
-                tbar.set_description(f"Epoch {epoch} | Loss {epoch_loss/(step):.4f}")
+            avg_loss = epoch_loss / step
+            tbar.set_description(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
+            print(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
 
         torch.save(self.model.state_dict(), os.path.join(self.save_path, "vit_final.pt"))
 

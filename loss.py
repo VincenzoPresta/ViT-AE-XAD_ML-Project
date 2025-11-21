@@ -12,11 +12,6 @@ class AEXAD_Loss(nn.Module):
 
     def forward(self, rec_img, target, gt, y):
         
-        print("=== LOSS DEBUG START ===")
-        print("rec_img:", rec_img.shape)
-        print("target:", target.shape)
-        print("gt (input):", gt.shape)
-        
         device = rec_img.device
         
         B, C, H, W = target.shape
@@ -35,8 +30,6 @@ class AEXAD_Loss(nn.Module):
         # Replica GT a 3 canali
         if C == 3:
             gt = gt.repeat(1, 3, 1, 1)
-            
-        print("gt (after fix):", gt.shape)
 
         gt = gt.to(device)
 
@@ -53,20 +46,12 @@ class AEXAD_Loss(nn.Module):
         anomaly_pixels = torch.sum(gt, dim=(1,2,3))
         anomaly_pixels = torch.clamp(anomaly_pixels, min=1.0)
         
-        print("anomaly_pixels shape:", anomaly_pixels.shape)
-        print("anomaly_pixels:", anomaly_pixels[:4])   # primi 4 valori
 
         lambda_p = (D / anomaly_pixels).to(device)      # shape: (B,)
         lambda_p = lambda_p.view(B, 1, 1, 1)            # shape: (B,1,1,1)
         lambda_p = lambda_p.repeat(1, C, H, W)          # shape: (B,3,224,224)
-        
-        print("lambda_p (FINAL):", lambda_p.shape)
 
         # ======== LOSS ========
-        
-        print("rec_n:", rec_n.shape)
-        print("rec_o:", rec_o.shape)
-        print("=== END LOSS DEBUG ===")
         
         loss_vec = (1 - gt) * rec_n + lambda_p * gt * rec_o
 

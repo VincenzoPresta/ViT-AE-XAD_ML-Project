@@ -4,8 +4,8 @@ import numpy as np
 import torch
 from codecarbon import EmissionsTracker
 from datasets.mvtec_vit import mvtec_ViT
-from dataloaders.custom_tensor_loader import TensorDatasetAD
-from AE_architectures import ViT_CNN_Attn
+from dataloaders.tensor_loader import TensorDatasetAD
+from models import ViT_CNN_Attn
 from aexad_script import Trainer
 
 
@@ -102,6 +102,8 @@ if __name__ == "__main__":
     # ============================================================
     #                        TESTING
     # ============================================================
+    
+    print(">>> Running TEST ...")
     heatmaps, scores, gtmaps, labels = trainer.test()
 
     np.save(os.path.join(save_path, "aexad_htmaps_vit.npy"), heatmaps)
