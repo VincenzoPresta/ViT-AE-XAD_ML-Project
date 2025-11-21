@@ -1,11 +1,10 @@
 import os
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from utils.filters import gaussian_smoothing
-from loss import AEXAD_loss_ViT_SSIM, AEXAD_Loss
+from loss import  AEXAD_Loss
 from AE_architectures import ViT_CNN_Attn
 
 
