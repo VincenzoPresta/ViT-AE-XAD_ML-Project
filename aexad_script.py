@@ -12,7 +12,6 @@ from AE_architectures import Shallow_Autoencoder, Deep_Autoencoder, Conv_Autoenc
     Conv_Deep_Autoencoder, Conv_Deep_Autoencoder_v2, VGG_CNN_mask, ResNet_CNN_mask, \
     ViT_CNN_mask, Conv_Deep_Autoencoder_v2_Attn, ViT_CNN_Attn, ResNet_CNN_Attn
 from aexad_dataloaders.dataset import CustomAD
-from utils.mvtec_dataset import MvtecAD
 from aexad_dataloaders.custom_VGG import CustomVGGAD
 from augmented import AugmentedAD
 from loss import AEXAD_loss, AEXAD_loss_weighted, AEXAD_loss_norm, AEXAD_loss_norm_vgg, MSE_loss_vgg, AEXAD_loss_ViT_SSIM
