@@ -53,22 +53,6 @@ class Trainer:
                 self.train_loader = DataLoader(ds, batch_size=batch_size, sampler=sampler)
                 #self.train_loader = DataLoader(CustomAD(path, train=True), batch_size=batch_size, shuffle=True)
                 self.test_loader = DataLoader(CustomAD(path, train=False), batch_size=batch_size, shuffle=False)
-        elif dataset == 'mvtec':
-            print(dataset)
-            ds = MvtecAD(path, train=True)
-            #weights = np.where(ds.labels == 1, 0.6, 0.4)
-            #sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, num_samples=len(ds.labels))
-            self.train_loader = DataLoader(ds, batch_size=batch_size)#, sampler=sampler)
-            #self.test_loader = DataLoader(AugmentedAD(path, train=False), batch_size=batch_size, shuffle=False)
-            self.test_loader = DataLoader(MvtecAD(path, train=False), batch_size=batch_size, shuffle=False)
-        else:
-            print('E ', dataset)
-            ds = MvtecAD(path, train=True)
-            weights = np.where(ds.labels == 1, 0.6, 0.4)
-            sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, num_samples=len(ds.labels))
-            self.train_loader = DataLoader(ds, batch_size=batch_size, sampler=sampler)
-            #self.test_loader = DataLoader(AugmentedAD(path, train=False), batch_size=batch_size, shuffle=False)
-            self.test_loader = DataLoader(MvtecAD(path, train=False), batch_size=batch_size, shuffle=False)
 
         self.save_intermediate = save_intermediate
 
