@@ -1455,6 +1455,8 @@ def mvtec_only_one_augmented(cl, path, n_anom_per_cls, a_cls, seed=None, return_
         return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
 def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
+    
+    print("CIAO SONO ENTRATO QUI IN CREATE DATASET!!!")
 
     np.random.seed(seed)
     
