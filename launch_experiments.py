@@ -1,202 +1,113 @@
 import argparse
 import os
-import shutil
-import pickle
-
 import numpy as np
 import torch
-import torch.nn.functional as F
 from codecarbon import EmissionsTracker
+from datasets.mvtec_vit import mvtec_ViT
+from dataloaders.custom_tensor_loader import TensorDatasetAD
+from AE_architectures import ViT_CNN_Attn
+from aexad_script import Trainer
 
-from torchvision.transforms import Resize
 
-from tools.create_dataset import square, square_diff, mvtec, mvtec_only_one, mvtec_only_one_augmented, \
-    mvtec_personalized, load_dataset, extract_dataset, mvtec_all_classes, mvtec_ViT, btad
+def save_dataset(path, X_train, Y_train, X_test, Y_test, GT_train, GT_test):
+    os.makedirs(path, exist_ok=True)
 
-    
-#per ora commento, non mi interessa usare i competitor    
-'''from run_fcdd import launch as launch_fcdd
-from run_deviation import launch as launch_dev'''
+    np.save(os.path.join(path, "X_train.npy"), X_train)
+    np.save(os.path.join(path, "Y_train.npy"), Y_train)
+    np.save(os.path.join(path, "GT_train.npy"), GT_train)
 
-from aexad_script import launch as launch_aexad
+    np.save(os.path.join(path, "X_test.npy"), X_test)
+    np.save(os.path.join(path, "Y_test.npy"), Y_test)
+    np.save(os.path.join(path, "GT_test.npy"), GT_test)
 
-import warnings
-warnings.filterwarnings("ignore")
+    print(f"[DATA SAVED] → {path}")
 
-if __name__ == '__main__':
-    print(torch.cuda.is_available())
+
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-ds', type=str, help='Dataset to use')
-    parser.add_argument('-c', type=int, help='Considered class')
-    parser.add_argument('-ac', type=int, help='Considered anomaly type', default=0)
-    parser.add_argument('-na', type=int, help='Number of anomalies', default=1)
-    parser.add_argument('-patr', type=float, default=2)
-    parser.add_argument('-pate', type=float, default=10)
-    parser.add_argument('-i', help='Modification intesity')
-    parser.add_argument('-s', type=int, help='Seed to use')
-    parser.add_argument('-size', type=int, help='Size of the square')
-    parser.add_argument("--epochs", type=int, default=200, help="training epochs number")
-    parser.add_argument("--batch_size", type=int, default=8, help="batch size for training")
+    parser.add_argument("-ds", type=str, required=True, help="Dataset (mvtec)")
+    parser.add_argument("-c", type=int, required=True, help="Class index")
+    parser.add_argument("-na", type=int, default=1, help="Number of train anomalies")
+    parser.add_argument("-s", type=int, default=0, help="Seed")
+    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--batch_size", type=int, default=32)
     args = parser.parse_args()
 
-    if args.i != 'rand':
-        args.i = float(args.i)
+    # ============================================================
+    #                  DATASET: MVTec (default)
+    # ============================================================
+    if args.ds == "mvtec":
 
-    if args.ds in ['mnist', 'fmnist', 'cifar']:
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
-            square(args.c, perc_anom_train=args.patr, perc_anom_test=args.pate,
-                size=args.size, intensity=args.i, DATASET=args.ds, seed=args.s)
-        
-        # Converti in tensori float
-        X_train = torch.tensor(X_train, dtype=torch.float32)
-        X_test  = torch.tensor(X_test, dtype=torch.float32)
-        GT_train = torch.tensor(GT_train, dtype=torch.float32)
-        GT_test  = torch.tensor(GT_test, dtype=torch.float32)
-
-        # Se manca il canale, aggiungilo
-        if X_train.ndim == 3:
-            X_train = X_train.unsqueeze(1)
-            X_test  = X_test.unsqueeze(1)
-
-        X_train = F.interpolate(X_train, size=(224,224), mode="bilinear")
-        X_test  = F.interpolate(X_test,  size=(224,224), mode="bilinear")
-        GT_train = F.interpolate(GT_train, size=(224,224), mode="nearest")
-        GT_test  = F.interpolate(GT_test,  size=(224,224), mode="nearest")
-
-        # Conversione finale a numpy
-        X_train = X_train.numpy()
-        X_test  = X_test.numpy()
-        GT_train = GT_train.numpy()
-        GT_test  = GT_test.numpy()
-
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
-        save_path  = os.path.join('results', args.ds, str(args.c), str(args.s))
-        
-    elif args.ds == 'mnist_diff':
-        dataset = 'mnist'
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = \
-            square_diff(args.c, perc_anom_train=args.patr, perc_anom_test=args.pate, size=args.size,
-                   intensity=args.i, DATASET=dataset, seed=args.s)
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
-        save_path = os.path.join('results', args.ds, str(args.c), str(args.s))
-        
-    elif args.ds == 'mvtec':
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_ViT(args.c, 'datasets/mvtec', args.na, seed=args.s)
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
-        save_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
-        print(save_path)
-        
-    elif args.ds == 'mvtec_o_a':
-        dataset = 'mvtec'
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_only_one(args.c, 'datasets/mvtec', args.na,
-                                                                             a_cls=args.ac,
-                                                                             seed=args.s)
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
-        save_path = os.path.join('results', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
-    elif args.ds == 'mvtec_o_a_aug':
-        dataset = 'mvtec'
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_only_one_augmented(args.c, 'datasets/mvtec', args.na,
-                                                                             a_cls=args.ac,
-                                                                             seed=args.s)
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
-        save_path = os.path.join('results', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
-    elif args.ds == 'mvtec_our':
-        dataset = 'mvtec'
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test, _, _, files_train, files_test = mvtec_personalized(args.c, 'datasets/mvtec',
-                                                                                       n_anom_per_cls=args.na,
-                                                                                       seed=args.s)
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
-        save_path = os.path.join('results', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
-        np.save(open(os.path.join(save_path, 'files_train_comp.npy'), 'wb'), files_train)
-        np.save(open(os.path.join(save_path, 'files_test_comp.npy'), 'wb'), files_test)
-    elif args.ds == 'mvtec_all':
-        dataset = 'mvtec'
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test, _, _, files_train, files_test = mvtec_all_classes(args.c, 'datasets/mvtec',
-                                                                                       n_anom_per_cls=args.na,
-                                                                                       seed=args.s)
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.ac), str(args.s))
-        save_path = os.path.join('results', 'only_anom', args.ds, str(args.c), str(args.ac), str(args.s), str(args.na))
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        np.save(open(os.path.join(save_path, 'files_train_comp.npy'), 'wb'), files_train)
-        np.save(open(os.path.join(save_path, 'files_test_comp.npy'), 'wb'), files_test)
-    elif args.ds == 'hazelnut' or args.ds == 'road_inspection':
-        dataset = args.ds
-        data_path = os.path.join('datasets', args.ds, 'files')
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = load_dataset(f'datasets/{args.ds}')
-        save_path = os.path.join('results', args.ds)
-        
-    elif args.ds == 'btad':
-        # Dataset BTAD (01, 02, 03) gestito dal loader custom in tools/create_dataset.py
-        X_train, Y_train, X_test, Y_test, GT_train, GT_test = btad(
-            base_path='datasets/btad',
-            n_anom_per_cls=args.na,
-            seed=args.s,
-            class_id=args.c
+        X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_ViT(
+            args.c, "datasets/mvtec", n_anom_per_cls=args.na, seed=args.s
         )
-        data_path = os.path.join('datasets', args.ds, str(args.c), str(args.s))
-        save_path = os.path.join('results', args.ds, str(args.c), str(args.s), str(args.na))
 
+        data_path = os.path.join("datasets/mvtec", str(args.c), str(args.s))
+        save_path = os.path.join("results/mvtec", str(args.c), str(args.s), str(args.na))
+        os.makedirs(save_path, exist_ok=True)
 
-    X_train = X_train.swapaxes(2, 3).swapaxes(1, 2)
-    X_test = X_test.swapaxes(2, 3).swapaxes(1, 2)
-    GT_train = GT_train.swapaxes(2, 3).swapaxes(1, 2)
-    GT_test = GT_test.swapaxes(2, 3).swapaxes(1, 2)
+    else:
+        raise ValueError(f"Dataset {args.ds} non supportato ancora.")
 
-    if not os.path.exists(data_path):
-        os.makedirs(data_path)
+    # ============================================================
+    #               CONVERSIONE IN NCHW FLOAT32
+    # ============================================================
+    X_train = X_train.transpose(0, 3, 1, 2).astype(np.float32) / 255.
+    X_test  = X_test.transpose(0, 3, 1, 2).astype(np.float32) / 255.
 
-    np.save(open(os.path.join(data_path, 'X_train.npy'), 'wb'), X_train[Y_train==1])
-    np.save(open(os.path.join(data_path, 'X_test.npy'), 'wb'), X_test)
-    np.save(open(os.path.join(data_path, 'Y_train.npy'), 'wb'), Y_train[Y_train==1])
-    np.save(open(os.path.join(data_path, 'Y_test.npy'), 'wb'), Y_test)
-    np.save(open(os.path.join(data_path, 'GT_train.npy'), 'wb'), GT_train[Y_train==1])
-    np.save(open(os.path.join(data_path, 'GT_test.npy'), 'wb'), GT_test)
+    GT_train = GT_train.transpose(0, 3, 1, 2).astype(np.float32)
+    GT_test  = GT_test.transpose(0, 3, 1, 2).astype(np.float32)
 
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+    save_dataset(data_path, X_train, Y_train, X_test, Y_test, GT_train, GT_test)
 
-    pickle.dump(args, open(os.path.join(save_path, 'args'), 'wb'))
+    # ============================================================
+    #                 COSTRUZIONE DATASET E DATALOADER
+    # ============================================================
+    train_set = TensorDatasetAD(data_path, train=True)
+    test_set  = TensorDatasetAD(data_path, train=False)
 
-    times = []
-    print(torch.cuda.is_available())
-    del X_train, Y_train, X_test, Y_test, GT_train, GT_test
+    train_loader = torch.utils.data.DataLoader(
+        train_set, batch_size=args.batch_size, shuffle=True
+    )
+
+    test_loader = torch.utils.data.DataLoader(
+        test_set, batch_size=1, shuffle=False
+    )
+
+    # ============================================================
+    #                         MODELLO
+    # ============================================================
+    model = ViT_CNN_Attn((3, 224, 224))
+
+    # ============================================================
+    #                         TRAINER
+    # ============================================================
+    trainer = Trainer(
+        model=model,
+        train_loader=train_loader,
+        test_loader=test_loader,
+        loss="vit_ssim",
+        save_path=save_path,
+        cuda=True
+    )
 
     tracker = EmissionsTracker()
     tracker.start()
 
+    # ============================================================
+    #                        TRAINING
+    # ============================================================
+    trainer.train(epochs=args.epochs, save_path=save_path)
 
+    # ============================================================
+    #                        TESTING
+    # ============================================================
+    heatmaps, scores, gtmaps, labels = trainer.test()
 
-    def f(x):
-       return 1-x
-   
-    
-    # ViT
-    heatmaps, scores, gtmaps, labels, tot_time = launch_aexad(
-        data_path,           
-        args.batch_size, # batch size dinamico
-        32,             # latent dim
-        (224*224) / 25, # radius adattato al 224x224
-        None, 
-        f,  
-        'vit',
-        epochs=args.epochs,         
-        save_intermediate=True, 
-        save_path=save_path
-    )
-    np.save(open(os.path.join(save_path, 'aexad_htmaps_vit.npy'), 'wb'), heatmaps)
-    np.save(open(os.path.join(save_path, 'aexad_scores_vit.npy'), 'wb'), scores)
+    np.save(os.path.join(save_path, "aexad_htmaps_vit.npy"), heatmaps)
+    np.save(os.path.join(save_path, "aexad_scores_vit.npy"), scores)
     np.save(os.path.join(save_path, "aexad_labels.npy"), labels)
     np.save(os.path.join(save_path, "aexad_gt.npy"), gtmaps)
 
-    times.append(tot_time)
-    times = np.array(times)
-    np.save(open(os.path.join(save_path, 'times_competitors.npy'), 'wb'), np.array(times))
-    print(times)
-
-
-    shutil.rmtree(data_path)
-
-
-
+    print("\n=== EXPERIMENT COMPLETED ===")

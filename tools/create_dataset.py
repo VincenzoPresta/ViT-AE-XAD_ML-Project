@@ -6,7 +6,7 @@ from tensorflow.keras.datasets import mnist, fashion_mnist, cifar10
 import numpy as np
 from math import ceil
 
-from augmentation.transforms_vit import get_vit_augmentation
+from datasets.transforms_vit import get_vit_augmentation
 import torchvision.transforms as T
 
 
@@ -1455,8 +1455,8 @@ def mvtec_only_one_augmented(cl, path, n_anom_per_cls, a_cls, seed=None, return_
         return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
 def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
-    
-    print("CIAO SONO ENTRATO QUI IN CREATE DATASET!!!")
+
+    print ("loaded mvtec for ViT")
 
     np.random.seed(seed)
     
