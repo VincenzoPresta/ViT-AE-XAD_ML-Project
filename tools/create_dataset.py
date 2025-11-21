@@ -1456,7 +1456,7 @@ def mvtec_only_one_augmented(cl, path, n_anom_per_cls, a_cls, seed=None, return_
 
 def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
 
-    print ("loaded mvtec for ViT")
+    print ("loaded mvtec for ViT - VECCHIA VERSIONE")
 
     np.random.seed(seed)
     

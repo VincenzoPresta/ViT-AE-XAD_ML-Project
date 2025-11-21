@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from utils.filters import gaussian_smoothing
-from loss import AEXAD_loss_ViT_SSIM
+from loss import AEXAD_loss_ViT_SSIM, AEXAD_Loss
 from AE_architectures import ViT_CNN_Attn
 
 
@@ -28,7 +28,7 @@ class Trainer:
 
         # ---- LOSS ----
         if loss == "vit_ssim":
-            self.criterion = AEXAD_loss_ViT_SSIM()
+            self.criterion = AEXAD_Loss()
             
         if self.cuda:
             self.criterion = self.criterion.cuda()
@@ -75,7 +75,10 @@ class Trainer:
                     img = img.cuda()
 
                 out = self.model(img)
-                loss = self.criterion(out, img)
+                
+                gt = batch["gt_label"]     # o batch["gt"]
+                y  = batch["label"]        # opzionale
+                loss = self.criterion(out, img, gt, y)
 
                 # backward
                 self.optimizer.zero_grad()
