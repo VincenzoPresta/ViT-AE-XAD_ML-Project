@@ -77,6 +77,12 @@ class Trainer:
                 
                 gt = batch["gt_label"]     # o batch["gt"]
                 y  = batch["label"]        # opzionale
+                
+                
+                print(">>> CHECK GT SHAPE BEFORE LOSS:", gt.shape)
+                print(">>> CHECK OUT SHAPE:", out.shape)
+                print(">>> CHECK IMG SHAPE:", img.shape)
+                
                 loss = self.criterion(out, img, gt, y)
 
                 # backward
