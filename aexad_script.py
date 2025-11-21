@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 from time import time
-from utils.filters import gaussian_smoothing, heatmap_refine
+from utils.filters import heatmap_refine, refine_sharp_anomaly
 
 from AE_architectures import Shallow_Autoencoder, Deep_Autoencoder, Conv_Autoencoder, PCA_Autoencoder, \
     Conv_Deep_Autoencoder, Conv_Deep_Autoencoder_v2, VGG_CNN_mask, ResNet_CNN_mask, \
@@ -226,7 +226,7 @@ class Trainer:
                 # ====== HEATMAP REFINEMENT ======
                 hm_refined = []
                 for hm in heatmap:
-                    hm_refined.append(heatmap_refine(hm))
+                    hm_refined.append(refine_sharp_anomaly(hm))
                 heatmap = np.stack(hm_refined, axis=0)
 
                 # ====== NORMALIZZAZIONE DOPO SMOOTHING ======

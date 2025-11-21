@@ -29,6 +29,25 @@ def gaussian_smoothing(hm, kernel_size=21, sigma=4.0):
     return hm.detach().cpu().numpy()
 
 
+def refine_sharp_anomaly(hm, blur_ks=21, blur_sigma=8):
+    """
+    Refinement per anomalie sottili:
+    - enfatizza local contrast
+    - preserva bordi stretti
+    - non gonfia la heatmap
+    """
+    hm = hm.astype(np.float32)
+
+    # local blur
+    blurred = cv2.GaussianBlur(hm, (blur_ks, blur_ks), blur_sigma)
+
+    # local contrast enhancement
+    refined = hm - blurred
+    refined = np.maximum(refined, 0)
+
+    return refined
+
+
 def heatmap_refine(hm, sigma=1.0, bilateral_d=9, bilateral_sigma_color=30, bilateral_sigma_space=7):
     """
     Migliora la heatmap in tre fasi, senza alterarne la struttura:
