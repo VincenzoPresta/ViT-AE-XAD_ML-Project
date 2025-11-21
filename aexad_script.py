@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 from time import time
-from utils.filters import gaussian_smoothing, unsharp_mask
+from utils.filters import gaussian_smoothing, unsharp_mask, refine_hmap
 
 from AE_architectures import Shallow_Autoencoder, Deep_Autoencoder, Conv_Autoencoder, PCA_Autoencoder, \
     Conv_Deep_Autoencoder, Conv_Deep_Autoencoder_v2, VGG_CNN_mask, ResNet_CNN_mask, \
@@ -223,8 +223,10 @@ class Trainer:
                 heatmap = ((image - output) ** 2)  # (B, C, H, W)
                 heatmap = heatmap.sum(axis=1)      # (B, H, W)
 
-                # ====== SMOOTHING ======
-                heatmap = gaussian_smoothing(heatmap, kernel_size=21, sigma=4.0)
+                # ====== Refinement della heatmap ======
+                #heatmap = gaussian_smoothing(heatmap, kernel_size=21, sigma=4.0)
+                
+                heatmap = refine_hmap(heatmap)
                 
                 # ====== NORMALIZZAZIONE DOPO SMOOTHING ======
                 heatmap = heatmap / (heatmap.max(axis=(1,2), keepdims=True) + 1e-8)
