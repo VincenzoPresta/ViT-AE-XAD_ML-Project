@@ -56,8 +56,9 @@ class AEXAD_Loss(nn.Module):
         print("anomaly_pixels shape:", anomaly_pixels.shape)
         print("anomaly_pixels:", anomaly_pixels[:4])   # primi 4 valori
 
-        lambda_p = (D / anomaly_pixels).view(B,1,1).to(device)
-        lambda_p = lambda_p.repeat(1,C,H,W)
+        lambda_p = (D / anomaly_pixels).to(device)      # shape: (B,)
+        lambda_p = lambda_p.view(B, 1, 1, 1)            # shape: (B,1,1,1)
+        lambda_p = lambda_p.repeat(1, C, H, W)          # shape: (B,3,224,224)
         
         print("lambda_p (FINAL):", lambda_p.shape)
 
