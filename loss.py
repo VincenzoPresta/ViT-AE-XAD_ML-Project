@@ -85,6 +85,10 @@ class AEXAD_Loss(nn.Module):
         
         print("check: forward ae xad loss")
         
+        print(">>> rec_img shape:", rec_img.shape)
+        print(">>> target shape:", target.shape)
+        print(">>> gt shape (AFTER DATALOADER):", gt.shape)
+        
         device = rec_img.device
         
         # === Shape info ===
@@ -109,6 +113,8 @@ class AEXAD_Loss(nn.Module):
             gt = gt.repeat(1, C, 1, 1)
 
         gt = gt.to(device)  # fondamentale
+        
+        print(">>> gt shape (AFTER FIX):", gt.shape)
 
         # ======================================================
         # 2. Denominatore ufficiale (F(x)-x)^2
@@ -138,6 +144,10 @@ class AEXAD_Loss(nn.Module):
         # ======================================================
         # 5. Loss per-pixel (Eq. 1 del paper)
         # ======================================================
+        
+        print(">>> lambda_p shape:", lambda_p.shape)
+        print(">>> rec_n shape:", rec_n.shape)
+        print(">>> rec_o shape:", rec_o.shape)
 
         loss_vec = (1 - gt) * rec_n + lambda_p * gt * rec_o
 
