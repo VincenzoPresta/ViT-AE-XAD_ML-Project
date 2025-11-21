@@ -224,10 +224,8 @@ class Trainer:
                 heatmap = heatmap.sum(axis=1)      # (B, H, W)
 
                 # ====== HEATMAP REFINEMENT ======
-                heatmap = gaussian_smoothing(heatmap, kernel_size=7, sigma=1.2)
+                heatmap = gaussian_smoothing(heatmap, kernel_size=17, sigma=3.3)
                 
-                heatmap = unsharp_mask(heatmap, amount=1.5, sigma=1.0)
-
                 # ====== NORMALIZZAZIONE DOPO SMOOTHING ======
                 heatmap = heatmap / (heatmap.max(axis=(1,2), keepdims=True) + 1e-8)
 
