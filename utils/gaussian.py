@@ -1,8 +1,6 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
-import cv2
-from scipy.ndimage import binary_closing, gaussian_filter
 
 
 def gaussian_smoothing(hm, kernel_size=21, sigma=4.0):
@@ -27,11 +25,3 @@ def gaussian_smoothing(hm, kernel_size=21, sigma=4.0):
     hm = hm.squeeze(1)
 
     return hm.detach().cpu().numpy()
-
-
-
-
-
-
-
-

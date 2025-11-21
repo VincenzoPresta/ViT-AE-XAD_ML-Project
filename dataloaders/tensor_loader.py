@@ -2,7 +2,13 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from torchvision.transforms import Normalize
 
+
+# normalizzazione ufficiale del ViT
+vit_mean = [0.485, 0.456, 0.406]
+vit_std  = [0.229, 0.224, 0.225]
+vit_normalize = Normalize(mean=vit_mean, std=vit_std)
 
 class TensorDatasetAD(Dataset):
     """
@@ -40,6 +46,8 @@ class TensorDatasetAD(Dataset):
         img = torch.tensor(self.images[idx])   # (C,H,W)
         gt  = torch.tensor(self.gt[idx])       # (1,H,W)
         lab = torch.tensor(self.labels[idx])   # scalar 0/1
+        
+        img = vit_normalize(img)
 
         return {
             "image": img,
