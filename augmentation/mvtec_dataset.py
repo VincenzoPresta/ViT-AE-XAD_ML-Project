@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import Dataset
 
 import torchvision.transforms as transforms
-from transforms_vit import get_vit_augmentation
+from augmentation.transforms_vit import get_vit_augmentation, get_vit_test_transform
 
 
 class MvtecAD(Dataset):
@@ -16,21 +16,23 @@ class MvtecAD(Dataset):
         self.seed = seed
         self.dim = (3, 224, 224)
 
-        # === TRANSFORM (solo struttura, apply dopo) ===
+        # Resize - sempre uguale per X e GT
         self.base_resize = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize((224, 224), interpolation=Image.BILINEAR),
         ])
 
+        # ---- AUGMENTATION ----
         if self.train:
             self.aug = get_vit_augmentation(224)
         else:
             self.aug = get_vit_test_transform(224)
 
-        # === LOAD X ===
+        # ---- LOAD .NPY DATA ----
         split = 'train' if train else 'test'
+
         print('Loading image data...')
-        x_np = np.load(os.path.join(path, f'X_{split}.npy'))
+        x_np = np.load(os.path.join(path, f'X_{split}.npy'))   # (N,H,W,C)
         print('Done')
 
         print('Loading GT data...')
@@ -39,9 +41,8 @@ class MvtecAD(Dataset):
 
         self.labels = np.load(os.path.join(path, f'Y_{split}.npy'))
 
-        # === SALVO LE IMMAGINI GREZZE (NON trasformate) ===
-        self.images = x_np     # shape (N, H, W, C)
-        self.gt = gt_np        # shape (N, H, W, C)
+        self.images = x_np
+        self.gt = gt_np
 
 
     def __len__(self):
@@ -50,27 +51,22 @@ class MvtecAD(Dataset):
 
     def __getitem__(self, index):
 
-        # Recuperiamo immagini grezze (np array)
         img_np = self.images[index]
         gt_np = self.gt[index]
 
-        # Converti a PIL (resize)
+        # Resize
         img = self.base_resize(img_np)
-        gt = self.base_resize(gt_np)
+        gt  = self.base_resize(gt_np)
 
-        # === APPLICA AUGMENTATION SOLO SULL'IMMAGINE ===
-        # gt NON va augmentata
+        # Img: augmentation (train) o test-transform
         img = self.aug(img)
 
-        # GT → sempre ToTensor + normalizzazione [0,1]
+        # GT: solo ToTensor e normalizzazione
         gt = transforms.ToTensor()(gt)
-
-        # Normalizziamo GT da [0,255] a [0,1] (se non già normalizzata)
         gt = gt / 255.0
 
-        sample = {
+        return {
             'image': img,
             'label': self.labels[index],
             'gt_label': gt
         }
-        return sample

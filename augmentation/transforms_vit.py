@@ -11,8 +11,8 @@ class AddGaussianNoise(torch.nn.Module):
     def forward(self, tensor):
         return tensor + torch.randn_like(tensor) * self.std
 
-
-def get_vit_augmentation(img_size=224):
+ 
+def get_vit_augmentation(img_size=224): #for train
     return T.Compose([
         T.RandomResizedCrop(img_size, scale=(0.90, 1.00)),
         T.RandomApply([
@@ -25,5 +25,12 @@ def get_vit_augmentation(img_size=224):
         T.RandomVerticalFlip(p=0.5),
         T.ToTensor(),
         AddGaussianNoise(0., 0.02),
+        T.Normalize(mean=[0.5], std=[0.5])
+    ])
+
+def get_vit_test_transform(img_size=224):
+    return T.Compose([
+        T.Resize((img_size, img_size)),
+        T.ToTensor(),
         T.Normalize(mean=[0.5], std=[0.5])
     ])
