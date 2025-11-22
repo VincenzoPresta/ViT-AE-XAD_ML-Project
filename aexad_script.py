@@ -148,7 +148,8 @@ class Trainer:
                 e_norm = (e - e.mean()) / (e.std() + 1e-6)
 
                 # === 4) GAUSSIAN FILTER h = F_k(ê) ===
-                h = gaussian_smoothing(e_norm[None,...], kernel_size=21, sigma=4)[0]
+                e_norm_2d = e_norm.squeeze()        # ora è (H,W)
+                h = gaussian_smoothing(e_norm_2d[None,...], kernel_size=21, sigma=4)[0]
 
                 # === 5) BINARIZATION — threshold μ_h + σ_h ===
                 mu_h = h.mean()
