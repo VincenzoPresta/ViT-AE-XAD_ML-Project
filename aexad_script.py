@@ -188,7 +188,7 @@ class Trainer:
                 plt.axis("off")
 
                 plt.subplot(2,3,5)
-                plt.imshow(binary_h, cmap="cividis")
+                plt.imshow(binary_h, cmap="inferno")
                 plt.title("Binarized heatmap")
                 plt.axis("off")
 

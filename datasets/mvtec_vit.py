@@ -1,7 +1,8 @@
 import os
-import PIL.Image as Image
 import numpy as np
+import random
 import torchvision.transforms as T
+from PIL import Image, ImageOps
 from datasets.transforms_vit import get_vit_augmentation
 
 def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
@@ -58,22 +59,45 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
         outlier_files.sort()
         idxs = np.random.permutation(len(outlier_files))
 
-        # ---------- TRAIN ANOMALIES WITH AUG ----------
+        # ---------- TRAIN ANOMALIES WITH AUG + COPY-PASTE ----------
         for file in [outlier_files[i] for i in idxs[:n_anom_per_cls]]:
+
+            # load anomaly + mask
             img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
-            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file.replace('.png','_mask.png'))) \
-                         .convert('L')
+            mask = Image.open(os.path.join(root, 'ground_truth', cl_a, file.replace('.png','_mask.png'))).convert('L')
 
             img = img.resize((224,224), Image.NEAREST)
             mask = mask.resize((224,224), Image.NEAREST)
 
-            # AUGMENTATION APPLIED HERE
-            img_aug = aug_train(img)                      # PIL → transforms → tensor normalized
-            img_aug = (img_aug * 0.5 + 0.5).clamp(0,1)    # de-normalize back to [0,1]
+            # 1) ADD ORIGINAL ANOMALY (augmented)
+            img_aug = aug_train(img)
+            img_aug = (img_aug * 0.5 + 0.5).clamp(0,1)
             img_aug = (img_aug.permute(1,2,0).numpy()*255).astype(np.uint8)
 
             X_train.append(img_aug)
             GT_train.append(np.array(mask, dtype=np.uint8)[...,None])
+
+            # 2) COPY-PASTE: generate 10 synthetic anomalies
+            # pick normal base images
+            for _ in range(10):
+                idx_n = np.random.randint(len(normal_files_tr))
+                normal_file = normal_files_tr[idx_n]
+
+                base = Image.open(os.path.join(root, 'train', 'good', normal_file)).convert('RGB')
+                base = base.resize((224,224), Image.NEAREST)
+
+                new_img, new_mask = copy_paste_defect(base, img, mask)
+
+                if new_img is None:
+                    continue
+
+                # optional: apply ViT augmentation after paste
+                t_img = aug_train(new_img)
+                t_img = (t_img * 0.5 + 0.5).clamp(0,1)
+                t_img = (t_img.permute(1,2,0).numpy()*255).astype(np.uint8)
+
+                X_train.append(t_img)
+                GT_train.append(np.array(new_mask, dtype=np.uint8)[...,None])
 
         # ---------- TEST ANOMALIES (NO AUG) ----------
         for file in [outlier_files[i] for i in idxs[n_anom_per_cls:]]:
@@ -102,3 +126,48 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
     print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
+
+
+def copy_paste_defect(normal_img, anomaly_img, anomaly_mask):
+    """
+    normal_img: PIL RGB 224x224 (base)
+    anomaly_img: PIL RGB 224x224 (fonte difetto)
+    anomaly_mask: PIL L 224x224 (0/255)
+    """
+
+    # Convert mask to boolean
+    mask_np = np.array(anomaly_mask) > 127
+    if mask_np.sum() == 0:
+        return None, None  # anomaly too small
+
+    # Bounding box of defect
+    ys, xs = np.where(mask_np)
+    y1, y2 = ys.min(), ys.max()
+    x1, x2 = xs.min(), xs.max()
+
+    defect = anomaly_img.crop((x1, y1, x2, y2))
+    defect_mask = anomaly_mask.crop((x1, y1, x2, y2))
+
+    # --- geometric light augmentations ---
+    if random.random() < 0.5:
+        defect = ImageOps.mirror(defect)
+        defect_mask = ImageOps.mirror(defect_mask)
+
+    if random.random() < 0.5:
+        angle = random.uniform(-25, 25)
+        defect = defect.rotate(angle, resample=Image.BILINEAR, expand=True)
+        defect_mask = defect_mask.rotate(angle, resample=Image.NEAREST, expand=True)
+
+    # Resize patch back roughly to original bbox size (keeps consistency)
+    defect = defect.resize((x2-x1, y2-y1), Image.BILINEAR)
+    defect_mask = defect_mask.resize((x2-x1, y2-y1), Image.NEAREST)
+
+    # Paste defect on normal image
+    normal_img = normal_img.copy()
+    normal_img.paste(defect, (x1, y1), defect_mask)
+
+    # Build the new mask (binary)
+    new_mask = Image.new('L', (224,224), 0)
+    new_mask.paste(defect_mask, (x1, y1))
+
+    return normal_img, new_mask
