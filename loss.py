@@ -16,19 +16,20 @@ class AEXAD_Loss(nn.Module):
         B, C, H, W = target.shape
         D = C * H * W
 
-        # ======== GT FIX ========
+        # ======== GT FIX (CORRETTO) ========
         gt = gt.float()
 
         # (B, H, W, 1) → (B,1,H,W)
         if gt.ndim == 4 and gt.shape[-1] == 1:
             gt = gt.permute(0, 3, 1, 2)
 
-        # binaria
-        gt = (gt > 0).float().to(device)
+        # binarizza correttamente {0,255} → {0,1}
+        gt = (gt >= 128).float()
 
-        # replica GT a 3 canali
+        # replica GT a 3 canali se target è RGB
         if C == 3:
             gt = gt.repeat(1, 3, 1, 1)
+
 
         # ======= AE-XAD loss ufficiale ========
         F_x = 2.0
