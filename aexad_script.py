@@ -26,7 +26,7 @@ class Trainer:
             self.model.cuda()
 
         # ---- LOSS ----
-        self.criterion = AEXAD_Loss(debug=True)
+        self.criterion = AEXAD_Loss(debug=False)
             
         if self.cuda:
             self.criterion = self.criterion.cuda()
