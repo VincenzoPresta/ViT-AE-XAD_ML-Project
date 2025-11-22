@@ -31,11 +31,16 @@ class Trainer:
         if self.cuda:
             self.criterion = self.criterion.cuda()
 
-        # ---- OPTIMIZER ----
-        self.optimizer = torch.optim.Adam([
-            {'params': self.model.encoder.parameters(), 'lr': 1e-5},
-            {'params': self.model.decoder.parameters(), 'lr': 5e-4}
-        ], lr=1e-3, weight_decay=1e-5)
+        # --- OPTIMIZER  ---
+        # enc_unfrozen = ultimi layer del ViT (6–11)
+        # decoder = intero decoder AE-XAD
+        trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+
+        self.optimizer = torch.optim.Adam(
+            trainable_params,
+            lr=1e-3,
+            weight_decay=1e-4
+        )
 
         # scheduler sarà definito nel train
         self.scheduler = None
