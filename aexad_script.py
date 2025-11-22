@@ -135,15 +135,61 @@ class Trainer:
                 scores.append(score)
                 gtmaps.append(gt_np)
                 labels.append(lab.numpy())
+                
+                #-------------PLOT A 6 COME DA PAPER--------------#
 
-                # qualitative plot
-                fig = plt.figure(figsize=(14,4))
-                plt.subplot(1,4,1); plt.imshow(img_np[0].transpose(1,2,0)); plt.axis("off"); plt.title("Input")
-                plt.subplot(1,4,2); plt.imshow(out[0].transpose(1,2,0)); plt.axis("off"); plt.title("Reconstruction")
-                plt.subplot(1,4,3); plt.imshow(hmap[0], cmap="inferno"); plt.axis("off"); plt.title("Heatmap")
-                plt.subplot(1,4,4); plt.imshow(gt_np[0].squeeze(), cmap="gray"); plt.axis("off"); plt.title("GT mask")
-                plt.savefig(os.path.join(results_dir, f"test_{i}.jpg"))
+                # === 1) RAW RECONSTRUCTION ERROR e = (x - x̃)^2 ===
+                e = ((img_np - out)**2).sum(1)   # (H,W)
+
+                # === 2) SCORE MAP S(t) — Eq(4) ===
+                score_raw = e.copy()  # prima della normalizzazione
+
+                # === 3) NORMALIZATION ê — Eq(3) ===
+                e_norm = (e - e.mean()) / (e.std() + 1e-6)
+
+                # === 4) GAUSSIAN FILTER h = F_k(ê) ===
+                h = gaussian_smoothing(e_norm[None,...], kernel_size=21, sigma=4)[0]
+
+                # === 5) BINARIZATION — threshold μ_h + σ_h ===
+                mu_h = h.mean()
+                sigma_h = h.std()
+                binary_h = (h > (mu_h + sigma_h)).astype(np.uint8)
+                
+                fig = plt.figure(figsize=(14,8))
+
+                plt.subplot(2,3,1)
+                plt.imshow(img_np[0].transpose(1,2,0))
+                plt.title("Input image")
+                plt.axis("off")
+
+                plt.subplot(2,3,2)
+                plt.imshow(out.transpose(1,2,0))
+                plt.title("AE-XAD reconstruction")
+                plt.axis("off")
+
+                plt.subplot(2,3,3)
+                plt.imshow(score_raw, cmap="inferno")
+                plt.title("AE-XAD heatmap (raw)")
+                plt.axis("off")
+
+                plt.subplot(2,3,4)
+                plt.imshow(h, cmap="inferno")
+                plt.title("Filter application")
+                plt.axis("off")
+
+                plt.subplot(2,3,5)
+                plt.imshow(binary_h, cmap="gray")
+                plt.title("Binarized heatmap")
+                plt.axis("off")
+
+                plt.subplot(2,3,6)
+                plt.imshow(gt_np[0].squeeze(), cmap="gray")
+                plt.title("Ground truth mask")
+                plt.axis("off")
+                
+                plt.savefig(os.path.join(results_dir, f"test_{i}_full.jpg"))
                 plt.close(fig)
+
 
         return (
             np.concatenate(heatmaps),
