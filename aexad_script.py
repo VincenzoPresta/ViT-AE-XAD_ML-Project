@@ -157,14 +157,18 @@ class Trainer:
                 binary_h = (h > (mu_h + sigma_h)).astype(np.uint8)
                 
                 fig = plt.figure(figsize=(14,8))
+                
+                img_np = img.cpu().numpy()[0]       # (3,224,224)
+                out_np = out.cpu().numpy()[0]       # (3,224,224)
+                gt_np  = gt.numpy()[0]              # (1,224,224)
 
                 plt.subplot(2,3,1)
-                plt.imshow(img_np[0].transpose(1,2,0))
+                plt.imshow(img_np.transpose(1,2,0))
                 plt.title("Input image")
                 plt.axis("off")
 
                 plt.subplot(2,3,2)
-                plt.imshow(out.transpose(1,2,0))
+                plt.imshow(out_np.transpose(1,2,0))
                 plt.title("AE-XAD reconstruction")
                 plt.axis("off")
 
@@ -184,9 +188,10 @@ class Trainer:
                 plt.axis("off")
 
                 plt.subplot(2,3,6)
-                plt.imshow(gt_np[0].squeeze(), cmap="gray")
+                plt.imshow(gt_np.squeeze(), cmap="gray")
                 plt.title("Ground truth mask")
                 plt.axis("off")
+
                 
                 plt.savefig(os.path.join(results_dir, f"test_{i}_full.jpg"))
                 plt.close(fig)
