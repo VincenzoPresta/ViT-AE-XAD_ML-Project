@@ -5,7 +5,7 @@ import torchvision.transforms as T
 from PIL import Image, ImageOps
 from datasets.transforms_vit import get_vit_augmentation
 
-def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
+def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste = False): 
 
     print ("loaded mvtec for ViT - new loader")
 
@@ -76,28 +76,29 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None):
 
             X_train.append(img_aug)
             GT_train.append(np.array(mask, dtype=np.uint8)[...,None])
+            
+            if(use_copy_paste): #TODO si potrebbe chiedere se è interessante aggiungerlo o meno
+                # COPY-PASTE: generate 10 synthetic anomalies
+                # pick normal base images
+                for _ in range(10):
+                    idx_n = np.random.randint(len(normal_files_tr))
+                    normal_file = normal_files_tr[idx_n]
 
-            # 2) COPY-PASTE: generate 10 synthetic anomalies
-            # pick normal base images
-            for _ in range(10):
-                idx_n = np.random.randint(len(normal_files_tr))
-                normal_file = normal_files_tr[idx_n]
+                    base = Image.open(os.path.join(root, 'train', 'good', normal_file)).convert('RGB')
+                    base = base.resize((224,224), Image.NEAREST)
 
-                base = Image.open(os.path.join(root, 'train', 'good', normal_file)).convert('RGB')
-                base = base.resize((224,224), Image.NEAREST)
+                    new_img, new_mask = copy_paste_defect(base, img, mask)
 
-                new_img, new_mask = copy_paste_defect(base, img, mask)
+                    if new_img is None:
+                        continue
 
-                if new_img is None:
-                    continue
+                    # optional: apply ViT augmentation after paste
+                    t_img = aug_train(new_img)
+                    t_img = (t_img * 0.5 + 0.5).clamp(0,1)
+                    t_img = (t_img.permute(1,2,0).numpy()*255).astype(np.uint8)
 
-                # optional: apply ViT augmentation after paste
-                t_img = aug_train(new_img)
-                t_img = (t_img * 0.5 + 0.5).clamp(0,1)
-                t_img = (t_img.permute(1,2,0).numpy()*255).astype(np.uint8)
-
-                X_train.append(t_img)
-                GT_train.append(np.array(new_mask, dtype=np.uint8)[...,None])
+                    X_train.append(t_img)
+                    GT_train.append(np.array(new_mask, dtype=np.uint8)[...,None])
 
         # ---------- TEST ANOMALIES (NO AUG) ----------
         for file in [outlier_files[i] for i in idxs[n_anom_per_cls:]]:
