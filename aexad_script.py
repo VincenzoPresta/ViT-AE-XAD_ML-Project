@@ -112,55 +112,60 @@ class Trainer:
         with torch.no_grad():
             for i, batch in enumerate(self.test_loader):
 
-                img = batch["image"]
-                gt  = batch["gt_label"]
+                img = batch["image"]      # (1,3,224,224)
+                gt  = batch["gt_label"]   # (1,1,224,224)
                 lab = batch["label"]
 
                 if self.cuda:
                     img = img.cuda()
 
-                out = self.model(img).cpu().numpy()
-                img_np = img.cpu().numpy()
-                gt_np  = gt.numpy()
+                # ----------------------------
+                # MODEL FORWARD
+                # ----------------------------
+                out_t = self.model(img).cpu()      # tensor (1,3,224,224)
+                out   = out_t.numpy()[0]           # numpy  (3,224,224)
 
-                # heatmap
-                hmap = ((img_np - out)**2).sum(1)
+                img_np = img.cpu().numpy()[0]      # (3,224,224)
+                gt_np  = gt.numpy()[0]             # (1,224,224)
+
+                # ----------------------------
+                # HEATMAP GREZZA
+                # ----------------------------
+                hmap = ((img_np - out)**2).sum(0)     # (224,224)
                 hmap = hmap**0.7
-                hmap = gaussian_smoothing(hmap, 21, 4)
-                hmap /= hmap.max(axis=(1,2), keepdims=True) + 1e-8
+                hmap_s = gaussian_smoothing(hmap[None, ...], 21, 4)[0]
+                hmap_s /= (hmap_s.max() + 1e-8)
 
-                score = hmap.reshape(hmap.shape[0], -1).mean(1)
-
-                heatmaps.append(hmap)
-                scores.append(score)
-                gtmaps.append(gt_np)
+                heatmaps.append(hmap_s[None, ...])
+                scores.append(hmap_s.mean())
+                gtmaps.append(gt_np[None, ...])
                 labels.append(lab.numpy())
-                
-                #-------------PLOT A 6 COME DA PAPER--------------#
 
-                # === 1) RAW RECONSTRUCTION ERROR e = (x - x̃)^2 ===
-                e = ((img_np - out)**2).sum(1)   # (H,W)
+                # =====================================================
+                #                PLOT 6 FIGURE (STILE PAPER)
+                # =====================================================
 
-                # === 2) SCORE MAP S(t) — Eq(4) ===
-                score_raw = e.copy()  # prima della normalizzazione
+                # 1) RAW RECON ERROR
+                e = ((img_np - out)**2).sum(0)     # (H,W)
 
-                # === 3) NORMALIZATION ê — Eq(3) ===
+                # 2) SCORE MAP raw
+                score_raw = e.copy()
+
+                # 3) NORMALIZATION ê
                 e_norm = (e - e.mean()) / (e.std() + 1e-6)
 
-                # === 4) GAUSSIAN FILTER h = F_k(ê) ===
-                e_norm_2d = e_norm.squeeze()        # ora è (H,W)
-                h = gaussian_smoothing(e_norm_2d[None,...], kernel_size=21, sigma=4)[0]
+                # 4) GAUSSIAN FILTER F_k(ê)
+                h = gaussian_smoothing(e_norm[None,...], kernel_size=21, sigma=4)[0]
 
-                # === 5) BINARIZATION — threshold μ_h + σ_h ===
+                # 5) BINARIZATION
                 mu_h = h.mean()
                 sigma_h = h.std()
                 binary_h = (h > (mu_h + sigma_h)).astype(np.uint8)
-                
+
+                # -----------------------------------------------------
+                #               PLOTTING (2×3 grid)
+                # -----------------------------------------------------
                 fig = plt.figure(figsize=(14,8))
-                
-                img_np = img.cpu().numpy()[0]       # (3,224,224)
-                out_np = out.cpu().numpy()[0]       # (3,224,224)
-                gt_np  = gt.numpy()[0]              # (1,224,224)
 
                 plt.subplot(2,3,1)
                 plt.imshow(img_np.transpose(1,2,0))
@@ -168,7 +173,7 @@ class Trainer:
                 plt.axis("off")
 
                 plt.subplot(2,3,2)
-                plt.imshow(out_np.transpose(1,2,0))
+                plt.imshow(out.transpose(1,2,0))
                 plt.title("AE-XAD reconstruction")
                 plt.axis("off")
 
@@ -192,14 +197,13 @@ class Trainer:
                 plt.title("Ground truth mask")
                 plt.axis("off")
 
-                
                 plt.savefig(os.path.join(results_dir, f"test_{i}_full.jpg"))
                 plt.close(fig)
 
-
         return (
             np.concatenate(heatmaps),
-            np.concatenate(scores),
+            np.array(scores),
             np.concatenate(gtmaps),
             np.concatenate(labels)
         )
+
