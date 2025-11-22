@@ -51,18 +51,6 @@ class Trainer:
     # ============================================
     def train(self, epochs=200):
         
-        steps_per_epoch = len(self.train_loader)
-        total_steps = epochs * steps_per_epoch
-        warmup_steps = int(0.1 * total_steps)
-
-        def lr_lambda(step):
-            if step < warmup_steps:
-                return step / warmup_steps
-            progress = (step - warmup_steps) / (total_steps - warmup_steps)
-            return 0.5 * (1 + np.cos(np.pi * progress))
-
-        self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda)
-
         step = 0
         self.model.train()
 
@@ -72,28 +60,25 @@ class Trainer:
 
             for batch in tbar:
                 img = batch["image"]
-                
                 if self.cuda:
                     img = img.cuda()
 
                 out = self.model(img)
-                
-                gt = batch["gt_label"]     # o batch["gt"]
-                y  = batch["label"]        # opzionale
+                gt = batch["gt_label"]     
+                y  = batch["label"]        
                 
                 loss = self.criterion(out, img, gt, y)
 
-                # backward
+                # backprop
                 self.optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 self.optimizer.step()
-                self.scheduler.step()
-
+                
                 epoch_loss += loss.item()
                 step += 1
 
-            avg_loss = epoch_loss / step
+            avg_loss = epoch_loss / len(self.train_loader)
             tbar.set_description(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
             print(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
 
