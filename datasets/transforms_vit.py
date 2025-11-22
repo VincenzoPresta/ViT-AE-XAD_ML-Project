@@ -1,6 +1,9 @@
 import torchvision.transforms as T
 import torch
 
+
+##----PER FARE EVENTUALE AUGMENTATION-----##
+
 class AddGaussianNoise(torch.nn.Module):
     def __init__(self, mean=0., std=0.02):
         super().__init__()
