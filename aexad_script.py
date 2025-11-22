@@ -67,6 +67,10 @@ class Trainer:
                 gt = batch["gt_label"]     
                 y  = batch["label"]        
                 
+                print("img:", img.shape, img.min().item(), img.max().item())
+                print("gt :", gt.shape, gt.min().item(), gt.max().item())
+                print("unique gt values:", torch.unique(gt))
+                
                 loss = self.criterion(out, img, gt, y)
 
                 # backprop
