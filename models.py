@@ -13,17 +13,9 @@ class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        
-        self.up1 = nn.Upsample(scale_factor=2)
-        self.up2 = nn.Upsample(scale_factor=2)
-        self.up3 = nn.Upsample(scale_factor=2)
-        self.tan3 = nn.Tanh()
-
-        # =============================
-        #          ENCODER
-        # =============================
 
         self.encoder = ViT_Encoder()
+        self.decoder = AEXAD_Decoder()
 
         # Esponiamo gli attributi necessari al Trainer
         self.conv_proj   = self.encoder.conv_proj
@@ -32,70 +24,103 @@ class ViT_CNN_Attn(nn.Module):
         self.to_64       = self.encoder.to_64
         self.up_to_28    = self.encoder.up_to_28
 
-        # =============================
-        #          DECODER
-        # =============================
+        
+    def forward(self, x):
 
+        encoded = self.encoder(x)   # (B,64,28,28)
+        
+        out = self.decoder(encoded)
+
+        return out
+    
+    
+class AEXAD_Decoder(nn.Module):
+    def __init__(self, out_channels=3):
+        super().__init__()
+
+        # -------------------------------------------
+        # BRANCH 1 (NON–TRAINABLE)
+        # -------------------------------------------
+        self.up1 = nn.Upsample(scale_factor=2)
+        self.up2 = nn.Upsample(scale_factor=2)
+        self.up3 = nn.Upsample(scale_factor=2)
+        self.tanh = nn.Tanh()
+
+        # NOTA: nessun parametro in Branch 1 viene appreso
+        for p in self.up1.parameters(): p.requires_grad = False
+        for p in self.up2.parameters(): p.requires_grad = False
+        for p in self.up3.parameters(): p.requires_grad = False
+
+        # -------------------------------------------
+        # BRANCH 2 (TRAINABLE)
+        # -------------------------------------------
+        # 28×28×64 → 56×56×32
         self.dec1 = nn.Sequential(
-            nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),
+            nn.Conv2d(64, 32, 3, padding=1),
             nn.SELU(),
-            nn.Conv2d(32, 32, 3, padding=1),
-            nn.SELU()
+            nn.ConvTranspose2d(32, 32, kernel_size=4, stride=2, padding=1),
+            nn.SELU(),
         )
 
+        # 56×56×32 → 112×112×16
         self.dec2 = nn.Sequential(
-            nn.ConvTranspose2d(32, 16, 4, stride=2, padding=1),
+            nn.Conv2d(32, 16, 3, padding=1),
             nn.SELU(),
-            nn.Conv2d(16, 16, 3, padding=1),
-            nn.SELU()
+            nn.ConvTranspose2d(16, 16, kernel_size=4, stride=2, padding=1),
+            nn.SELU(),
         )
 
+        # 112×112×16 → 224×224×8
         self.dec3 = nn.Sequential(
-            nn.ConvTranspose2d(16, 8, 4, stride=2, padding=1),
+            nn.Conv2d(16, 8, 3, padding=1),
             nn.SELU(),
-            nn.Conv2d(8, 8, 3, padding=1),
-            nn.SELU()
+            nn.ConvTranspose2d(8, 8, kernel_size=4, stride=2, padding=1),
+            nn.SELU(),
         )
 
-        self.decoder_final = nn.Sequential(
+        # -------------------------------------------
+        # FINAL CONV (8 → 3)
+        # -------------------------------------------
+        self.final = nn.Sequential(
             nn.Conv2d(8, 8, 3, padding=1),
             nn.SELU(),
-            nn.Conv2d(8, dim[0], 3, padding=1),
+            nn.Conv2d(8, out_channels, 3, padding=1),
             nn.Sigmoid()
         )
 
-        # Decoder finale
-        self.decoder = nn.Sequential(
-            self.dec1,
-            self.dec2,
-            self.dec3,
-            self.decoder_final
-        )
+    def forward(self, encoded):
+        B, C, H, W = encoded.shape  # (B,64,28,28)
 
+        # ===========================
+        # BRANCH 1 - NON TRAINABILE
+        # ===========================
+        b1 = self.up1(encoded)
+        b1 = self.up2(b1)
+        b1 = self.up3(b1)              # (B,64,224,224)
+        b1 = self.tanh(b1)
 
-    def forward(self, x):
+        # somma gruppi di 8 canali: 64 → 8
+        # ogni canale i = somma(encoded[ i*8 : (i+1)*8 ])
+        b1 = b1.view(B, 8, 8, 224, 224).sum(dim=2)   # (B,8,224,224)
 
-        # ===== 1) ENCODER =====
-        encoded = self.encoder(x)   # (B,64,28,28)
+        # ===========================
+        # BRANCH 2 - TRAINABILE
+        # ===========================
+        b2 = self.dec1(encoded)        # (B,32,56,56)
+        b2 = self.dec2(b2)             # (B,16,112,112)
+        b2 = self.dec3(b2)             # (B,8,224,224)
 
-        # ===== 2) DECODER =====
-        x = self.dec1(encoded)      # (B,32,56,56)
-        x = self.dec2(x)            # (B,16,112,112)
-        x = self.dec3(x)            # (B,8,224,224)
+        # ===========================
+        # MASK MODULATION
+        # ===========================
+        fused = b2 + b2 * b1           # (B,8,224,224)
 
-        # ===== 3) MASK MODULATION (identica all’originale) =====
-        # upsample encoded 3 volte (senza conv) per la mask
-        up = self.up1(encoded)
-        up = self.up2(up)
-        up = self.up3(up)
-
-        mask = torch.sum(self.tan3(up)**2, axis=1).unsqueeze(1)
-        x = x + x * mask
-
-        # ===== 4) Final conv layer =====
-        out = self.decoder_final(x)
-
+        # ===========================
+        # OUTPUT FINALE
+        # ===========================
+        out = self.final(fused)        # (B,3,224,224)
         return out
+
 
 
 class ViT_Encoder(nn.Module):
