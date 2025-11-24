@@ -98,7 +98,9 @@ def aexad_heatmap_and_score(img_np, out_np):
 
     # k̂ estimation
     e_tilde_np = e_tilde.cpu().numpy()
+    e_tilde_np = np.squeeze(e_tilde_np)  #forza 2D
     k_hat = estimate_k(e_tilde_np)
+
 
     # Filtered map
     filtered = gaussian_filter_paper(e_tilde, k_hat)
