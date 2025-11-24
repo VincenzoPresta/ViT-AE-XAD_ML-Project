@@ -44,7 +44,9 @@ if __name__ == "__main__":
         )
 
         data_path = os.path.join("datasets/mvtec", str(args.c), str(args.s))
-        save_path = os.path.join("results/mvtec", str(args.c), str(args.s), str(args.na))
+        save_path = os.path.join(
+            "results/mvtec", str(args.c), str(args.s), str(args.na)
+        )
         os.makedirs(save_path, exist_ok=True)
 
     else:
@@ -53,11 +55,11 @@ if __name__ == "__main__":
     # ============================================================
     #               CONVERSIONE IN NCHW FLOAT32
     # ============================================================
-    X_train = X_train.transpose(0, 3, 1, 2).astype(np.float32) / 255.
-    X_test  = X_test.transpose(0, 3, 1, 2).astype(np.float32) / 255.
+    X_train = X_train.transpose(0, 3, 1, 2).astype(np.float32) / 255.0
+    X_test = X_test.transpose(0, 3, 1, 2).astype(np.float32) / 255.0
 
     GT_train = GT_train.transpose(0, 3, 1, 2).astype(np.float32)
-    GT_test  = GT_test.transpose(0, 3, 1, 2).astype(np.float32)
+    GT_test = GT_test.transpose(0, 3, 1, 2).astype(np.float32)
 
     save_dataset(data_path, X_train, Y_train, X_test, Y_test, GT_train, GT_test)
 
@@ -65,15 +67,13 @@ if __name__ == "__main__":
     #                 COSTRUZIONE DATASET E DATALOADER
     # ============================================================
     train_set = TensorDatasetAD(data_path, train=True)
-    test_set  = TensorDatasetAD(data_path, train=False)
+    test_set = TensorDatasetAD(data_path, train=False)
 
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=args.batch_size, shuffle=True
     )
 
-    test_loader = torch.utils.data.DataLoader(
-        test_set, batch_size=1, shuffle=False
-    )
+    test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False)
 
     # ============================================================
     #                         MODELLO
@@ -88,11 +88,11 @@ if __name__ == "__main__":
         train_loader=train_loader,
         test_loader=test_loader,
         save_path=save_path,
-        cuda=True
+        cuda=True,
     )
 
-    '''tracker = EmissionsTracker()
-    tracker.start()'''
+    """tracker = EmissionsTracker()
+    tracker.start()"""
 
     # ============================================================
     #                        TRAINING
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     # ============================================================
     #                        TESTING
     # ============================================================
-    
+
     print(">>> Running TEST ...")
     heatmaps, scores, gtmaps, labels = trainer.test()
 
