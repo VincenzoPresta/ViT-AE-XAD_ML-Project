@@ -94,7 +94,7 @@ def aexad_heatmap_and_score(img_np, out_np):
     e = ((img_t - out_t)**2).sum(dim=0)
 
     # Normalized error
-    e_tilde = normalize_error(e, img_t, out_t)
+    e_tilde = normalize_error(e, img_t, out_t, mode="1-x")
 
     # k̂ estimation
     e_tilde_np = e_tilde.cpu().numpy()
