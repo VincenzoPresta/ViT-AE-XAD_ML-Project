@@ -91,8 +91,8 @@ if __name__ == "__main__":
         cuda=True
     )
 
-    tracker = EmissionsTracker()
-    tracker.start()
+    '''tracker = EmissionsTracker()
+    tracker.start()'''
 
     # ============================================================
     #                        TRAINING

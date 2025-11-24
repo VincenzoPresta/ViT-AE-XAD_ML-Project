@@ -10,19 +10,22 @@ from scipy.ndimage import label
 #           NORMALIZZAZIONE (paper)
 # ============================================
 
+
 def normalize_error(e, img, out):
     F_t = 2.0
 
     # numerator: sum over channels
-    num = ((img - out) ** 2).sum(dim=0)          # (H,W)
+    num = ((img - out) ** 2).sum(dim=0)  # (H,W)
     # denominator: also pixelwise, sum channels
-    den = ((F_t - img) ** 2).sum(dim=0) + 1e-8   # (H,W)
+    den = ((F_t - img) ** 2).sum(dim=0) + 1e-8  # (H,W)
 
-    return num / den                              # (H,W)
+    return num / den  # (H,W)
+
 
 # ============================================
 #         STIMA AUTOMATICA DI k̂ (paper)
 # ============================================
+
 
 def estimate_k(e_tilde):
     mu = e_tilde.mean()
@@ -54,6 +57,7 @@ def estimate_k(e_tilde):
 #        FILTRO GAUSSIANO (paper)
 # ============================================
 
+
 def gaussian_filter_paper(e_tilde, k_hat):
     kernel_size = 2 * k_hat + 1
     sigma = k_hat / 3
@@ -63,7 +67,7 @@ def gaussian_filter_paper(e_tilde, k_hat):
     kernel = torch.exp(-(xx**2 + xx.T**2) / (2 * sigma * sigma))
     kernel /= kernel.sum()
 
-    kernel = kernel.view(1,1,kernel_size,kernel_size).to(e_tilde.device)
+    kernel = kernel.view(1, 1, kernel_size, kernel_size).to(e_tilde.device)
 
     et = e_tilde.unsqueeze(0).unsqueeze(0)
     h = F.conv2d(et, kernel, padding=k_hat).squeeze()
@@ -75,6 +79,7 @@ def gaussian_filter_paper(e_tilde, k_hat):
 #           SCORE S(t) = || e · Fk(e) ||
 # ============================================
 
+
 def compute_score(e, filtered):
     return float((e * filtered).sum())
 
@@ -82,6 +87,7 @@ def compute_score(e, filtered):
 # ============================================
 #      PIPELINE COMPLETA AE-XAD (paper)
 # ============================================
+
 
 def aexad_heatmap_and_score(img_np, out_np):
     img_t = torch.tensor(img_np, dtype=torch.float32)
@@ -97,7 +103,7 @@ def aexad_heatmap_and_score(img_np, out_np):
     # ensure 2D shape (H,W)
     e_tilde_np = e_tilde.cpu().numpy()
     while e_tilde_np.ndim > 2:
-        e_tilde_np = e_tilde_np[0] #elimina dimensioni extra create da pytorch
+        e_tilde_np = e_tilde_np[0]  # elimina dimensioni extra create da pytorch
 
     k_hat = estimate_k(e_tilde_np)
 
@@ -105,10 +111,15 @@ def aexad_heatmap_and_score(img_np, out_np):
     filtered = gaussian_filter_paper(e_tilde, k_hat)
     filtered_np = filtered.cpu().numpy()
 
+    # === NORMALIZZAZIONE MIN-MAX (paper) ===
+    h_norm = (filtered_np - filtered_np.min()) / (
+        filtered_np.max() - filtered_np.min() + 1e-8
+    )
+
     # binarization µh + σh
-    mu_h = filtered_np.mean()
-    sigma_h = filtered_np.std()
-    binary_h = (filtered_np > (mu_h + sigma_h)).astype(np.uint8)
+    mu_h = h_norm.mean()
+    sigma_h = h_norm.std()
+    binary_h = (h_norm > (mu_h + sigma_h)).astype(np.uint8)
 
     # score S(t)
     score = compute_score(e, filtered)
