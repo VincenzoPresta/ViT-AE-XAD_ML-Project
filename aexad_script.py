@@ -149,8 +149,6 @@ class Trainer:
 
                 fig = plt.figure(figsize=(14,8))
                 
-                vmin = min(e_raw.min(), h_filtered.min())
-                vmax = max(e_raw.max(), h_filtered.max())
 
                 plt.subplot(2,3,1)
                 plt.imshow(img_np.transpose(1,2,0))
@@ -163,13 +161,13 @@ class Trainer:
                 plt.axis("off")
 
                 plt.subplot(2,3,3)
-                plt.imshow(e_raw, cmap="inferno", vmin=vmin, vmax=vmax)
+                plt.imshow(e_raw, cmap="inferno")
                 plt.title("Raw reconstruction error")
                 plt.axis("off")
 
 
                 plt.subplot(2,3,4)
-                plt.imshow(h_filtered, cmap="inferno", vmin=vmin, vmax=vmax)
+                plt.imshow(h_filtered, cmap="inferno")
                 plt.title(f"Filtered heatmap")
                 plt.axis("off")
 
