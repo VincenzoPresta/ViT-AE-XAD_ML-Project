@@ -111,9 +111,13 @@ def aexad_heatmap_and_score(img_np, out_np):
     # Normalized error
     e_tilde = normalize_error(e, img_t, out_t, mode="1-x")
 
+    # FIX: collapse channels if any (paper expects a 2D matrix)
+    if e_tilde.ndim > 2:
+        e_tilde = e_tilde.mean(dim=0)   # (3,H,W) -> (H,W)
+
     # k̂ estimation
     e_tilde_np = e_tilde.cpu().numpy()
-    e_tilde_np = np.squeeze(e_tilde_np)  #forza 2D
+    e_tilde_np = np.squeeze(e_tilde_np)  # garantisce (H,W)
     k_hat = estimate_k(e_tilde_np)
 
 
