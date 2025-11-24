@@ -28,19 +28,33 @@ def normalize_error(e, img, out, mode="2"):
 # ============================================
 
 def estimate_k(e_tilde):
+    # ensure 2D
+    e_tilde = np.squeeze(e_tilde)
+
     mu = e_tilde.mean()
     sigma = e_tilde.std()
+
     bw = (e_tilde > (mu + sigma)).astype(np.uint8)
+
+    # ensure 2D
+    bw = np.squeeze(bw)
+
+    if bw.ndim != 2:
+        # fallback: collapse last dimension
+        bw = bw[..., 0]
 
     if bw.max() == 0:
         return 1
 
     labeled, num = label(bw)
+
     lengths_h = []
     lengths_v = []
 
     for comp in range(1, num + 1):
+        # now ALWAYS yields ys,xs only
         ys, xs = np.where(labeled == comp)
+
         if len(xs) > 0:
             lengths_h.append(xs.max() - xs.min() + 1)
         if len(ys) > 0:
@@ -51,6 +65,7 @@ def estimate_k(e_tilde):
 
     L = max(np.mean(lengths_h), np.mean(lengths_v))
     return max(1, int(L / 2))
+
 
 
 # ============================================
