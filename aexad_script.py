@@ -4,9 +4,9 @@ import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from utils.gaussian import gaussian_smoothing
+from utils.testing_tools import aexad_heatmap_and_score
 from loss import  AEXAD_Loss
 from models import ViT_CNN_Attn
-
 
 class Trainer:
     def __init__(self, model, train_loader, test_loader, save_path='.', cuda=True):
@@ -45,7 +45,6 @@ class Trainer:
         # scheduler sarà definito nel train
         self.scheduler = None
 
-
     # ============================================
     #                   TRAIN
     # ============================================
@@ -62,7 +61,7 @@ class Trainer:
                 img = batch["image"]
                 if self.cuda:
                     img = img.cuda()
-
+                
                 out = self.model(img)
                 gt = batch["gt_label"]     
                 y  = batch["label"]        
@@ -83,7 +82,6 @@ class Trainer:
             print(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
 
         torch.save(self.model.state_dict(), os.path.join(self.save_path, "vit_final.pt"))
-
 
     # ============================================
     #                   TEST
@@ -109,52 +107,32 @@ class Trainer:
                 if self.cuda:
                     img = img.cuda()
 
-                # ----------------------------
-                # MODEL FORWARD
-                # ----------------------------
+                # --------------------------------------------
+                #               MODEL FORWARD
+                # --------------------------------------------
                 out_t = self.model(img).cpu()      # tensor (1,3,224,224)
                 out   = out_t.numpy()[0]           # numpy  (3,224,224)
 
                 img_np = img.cpu().numpy()[0]      # (3,224,224)
                 gt_np  = gt.numpy()[0]             # (1,224,224)
 
-                # ----------------------------
-                # HEATMAP GREZZA
-                # ----------------------------
-                hmap = ((img_np - out)**2).sum(0)     # (224,224)
-                hmap = hmap**0.7
-                hmap_s = gaussian_smoothing(hmap[None, ...], 21, 4)[0]
-                hmap_s /= (hmap_s.max() + 1e-8)
+                # --------------------------------------------
+                #      AE-XAD HEATMAP & SCORE UFFICIALI
+                # --------------------------------------------
+                e_raw, h_filtered, h_bin, score, k_hat = aexad_heatmap_and_score(
+                    img_np, out
+                )
 
-                heatmaps.append(hmap_s[None, ...])
-                scores.append(hmap_s.mean())
+                # Salviamo per le metriche finali
+                heatmaps.append(h_filtered[None, ...])
+                scores.append(score)
                 gtmaps.append(gt_np[None, ...])
                 labels.append(lab.numpy())
 
                 # =====================================================
-                #                PLOT 6 FIGURE (STILE PAPER)
+                #           PLOT 6 IMMAGINI (STILE PAPER)
                 # =====================================================
 
-                # 1) RAW RECON ERROR
-                e = ((img_np - out)**2).sum(0)     # (H,W)
-
-                # 2) SCORE MAP raw
-                score_raw = e.copy()
-
-                # 3) NORMALIZATION ê
-                e_norm = (e - e.mean()) / (e.std() + 1e-6)
-
-                # 4) GAUSSIAN FILTER F_k(ê)
-                h = gaussian_smoothing(e_norm[None,...], kernel_size=21, sigma=4)[0]
-
-                # 5) BINARIZATION
-                mu_h = h.mean()
-                sigma_h = h.std()
-                binary_h = (h > (mu_h + sigma_h)).astype(np.uint8)
-
-                # -----------------------------------------------------
-                #               PLOTTING (2×3 grid)
-                # -----------------------------------------------------
                 fig = plt.figure(figsize=(14,8))
 
                 plt.subplot(2,3,1)
@@ -168,17 +146,17 @@ class Trainer:
                 plt.axis("off")
 
                 plt.subplot(2,3,3)
-                plt.imshow(score_raw, cmap="inferno")
-                plt.title("AE-XAD heatmap (raw)")
+                plt.imshow(e_raw, cmap="inferno")
+                plt.title("Raw reconstruction error")
                 plt.axis("off")
 
                 plt.subplot(2,3,4)
-                plt.imshow(h, cmap="inferno")
-                plt.title("Filter application")
+                plt.imshow(h_filtered, cmap="inferno")
+                plt.title(f"Filtered heatmap (k̂={k_hat})")
                 plt.axis("off")
 
                 plt.subplot(2,3,5)
-                plt.imshow(binary_h, cmap="inferno")
+                plt.imshow(h_bin, cmap="inferno")
                 plt.title("Binarized heatmap")
                 plt.axis("off")
 
@@ -196,4 +174,5 @@ class Trainer:
             np.concatenate(gtmaps),
             np.concatenate(labels)
         )
+
 

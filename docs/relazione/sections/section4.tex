@@ -1,0 +1,90 @@
+
+\section{Loss Function}
+
+La componente centrale di AE--XAD è una loss semi-supervisionata progettata
+per ottenere una ricostruzione accurata delle regioni normali e, al tempo
+stesso, una ricostruzione deliberatamente distante nelle regioni anomale.
+Come mostrato in \cite{AE_XAD_Arrays}, dato un campione $x \in [0,1]^D$
+e la relativa heatmap binaria $y \in \{0,1\}^D$, la loss per-pixel è definita come:
+
+\begin{equation}
+\ell(x,y) =
+\sum_{j=1}^{D}
+\left[
+(1-y_j)\,
+\frac{(x_j - \tilde{x}_j)^2}{(F(x_j)-x_j)^2}
+\;+\;
+\lambda_y\, y_j\,
+\frac{(F(x_j)-\tilde{x}_j)^2}{(F(x_j)-x_j)^2}
+\right].
+\label{eq:pixel_loss}
+\end{equation}
+
+La loss totale sull'intero training set è data da:
+
+\begin{equation}
+L(X,Y) = \frac{1}{|X|}
+\sum_{(x,y) \in X \times Y}
+\ell(x,y).
+\label{eq:global_loss}
+\end{equation}
+
+\subsection{Interpretazione dei termini}
+
+La formulazione della loss riflette due comportamenti distinti:
+
+\begin{itemize}
+    \item \textbf{Pixel normali ($y_j = 0$):}
+    \[
+    \frac{(x_j - \tilde{x}_j)^2}{(F(x_j)-x_j)^2}.
+    \]
+    In questo caso, il modello è incentivato a ricostruire fedelmente il pixel
+    originale $x_j$. Il denominatore normalizza l’errore affinché i contributi
+    siano comparabili tra diversi valori di intensità.
+
+    \item \textbf{Pixel anomali ($y_j = 1$):}
+    \[
+    \lambda_y \frac{(F(x_j)-\tilde{x}_j)^2}{(F(x_j)-x_j)^2}.
+    \]
+    Qui il modello non deve ricostruire $x_j$, ma deve avvicinare $\tilde{x}_j$
+    al valore trasformato $F(x_j)$, forzando un errore di ricostruzione elevato
+    nelle regioni anomale. Questo comportamento è essenziale affinché la
+    differenza $|x_j - \tilde{x}_j|$ diventi un indicatore affidabile di anomalia.
+\end{itemize}
+
+\subsection{Ruolo della trasformazione $F$}
+La funzione $F : [0,1] \to \mathbb{R}$ è un iperparametro introdotto per
+massimizzare la distanza di ricostruzione nelle regioni anomale.  
+Due scelte discusse in \cite{AE_XAD_Arrays} sono:
+
+\begin{itemize}
+    \item $F_{-}(x) = 1 - x$, che rappresenta il negativo del pixel;
+    \item $F_{v}(x) = v$, con $v \notin [0,1]$ (nel paper viene utilizzato $v = 2$).
+\end{itemize}
+
+In entrambi i casi, $F(x_j)$ è costruita per essere distante dall'originale
+$x_j$, aumentando così l’ampiezza dell’errore ricostruttivo nelle zone anomale.
+
+\subsection{Peso di bilanciamento $\lambda_y$}
+Il coefficiente $\lambda_y$ compensa lo sbilanciamento tra pixel normali e
+anomali:
+
+\[
+\lambda_y =
+\begin{cases}
+D / \|y\|_1 & \text{se } \|y\|_1 > 0,\\
+1 & \text{altrimenti}.
+\end{cases}
+\]
+
+Poiché le anomalie sono generalmente molto rare nello spazio dei pixel,
+$\lambda_y$ evita che la loss sia dominata dai termini relativi ai pixel normali.
+
+\subsection{Effetto complessivo della loss}
+
+Complessivamente, la loss in Eq.~\eqref{eq:pixel_loss} realizza un comportamento
+\emph{explainability-by-design}: le regioni normali vengono ricostruite con
+accuratezza, mentre quelle anomale vengono ricostruite in modo intenzionalmente
+errato. La differenza tra immagine originale e ricostruita diventa così una
+stima affidabile dell’outlierness locale, utilizzabile per generare heatmap
+interpretabili.
