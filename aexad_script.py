@@ -3,10 +3,10 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from utils.gaussian import gaussian_smoothing
 from utils.testing_tools import aexad_heatmap_and_score
 from loss import  AEXAD_Loss
 from models import ViT_CNN_Attn
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 class Trainer:
     def __init__(self, model, train_loader, test_loader, save_path='.', cuda=True):
@@ -16,40 +16,45 @@ class Trainer:
         self.test_loader = test_loader
         self.save_path = save_path
         
-        if isinstance(self.model, ViT_CNN_Attn):
-            name = "model_vit"
-        else:
+        if not isinstance(self.model, ViT_CNN_Attn):
             raise RuntimeError("Unexpected model type")
 
         self.cuda = cuda and torch.cuda.is_available()
         if self.cuda:
             self.model.cuda()
 
-        # ---- LOSS ----
+        # ----------------------
+        # LOSS AE-XAD (paper)
+        # ----------------------
         self.criterion = AEXAD_Loss(debug=False)
-            
         if self.cuda:
             self.criterion = self.criterion.cuda()
 
-        # --- OPTIMIZER  ---
-        # enc_unfrozen = ultimi layer del ViT (6–11)
-        # decoder = intero decoder AE-XAD
+        # ----------------------
+        # OPTIMIZER
+        # ----------------------
         trainable_params = [p for p in self.model.parameters() if p.requires_grad]
 
         self.optimizer = torch.optim.Adam(
             trainable_params,
-            lr=1e-3,
-            weight_decay=1e-4
+            lr=5e-4,              # LR consigliato
+            weight_decay=1e-5
         )
 
-        # scheduler sarà definito nel train
-        self.scheduler = None
+        # ----------------------
+        # SCHEDULER: Cosine
+        # ----------------------
+        self.scheduler = CosineAnnealingLR(
+            self.optimizer,
+            T_max=200,   # epoche
+            eta_min=1e-6
+        )
 
     # ============================================
     #                   TRAIN
     # ============================================
     def train(self, epochs=200):
-        
+
         step = 0
         self.model.train()
 
@@ -59,26 +64,35 @@ class Trainer:
 
             for batch in tbar:
                 img = batch["image"]
+                gt  = batch["gt_label"]
+                y   = batch["label"]
+
                 if self.cuda:
                     img = img.cuda()
-                
+                    gt = gt.cuda()
+
+                # AE-XAD reconstruction
                 out = self.model(img)
-                gt = batch["gt_label"]     
-                y  = batch["label"]        
-                
+
+                # loss
                 loss = self.criterion(out, img, gt, y)
 
-                # backprop
                 self.optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 self.optimizer.step()
-                
+
                 epoch_loss += loss.item()
                 step += 1
 
+            # scheduler update
+            self.scheduler.step()
+
             avg_loss = epoch_loss / len(self.train_loader)
-            tbar.set_description(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
+
+            tbar.set_description(
+                f"[Epoch {epoch}] Loss={avg_loss:.4f} LR={self.scheduler.get_last_lr()[0]:.6f}"
+            )
             print(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
 
         torch.save(self.model.state_dict(), os.path.join(self.save_path, "vit_final.pt"))
