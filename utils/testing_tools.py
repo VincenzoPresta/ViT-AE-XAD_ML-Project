@@ -109,7 +109,7 @@ def aexad_heatmap_and_score(img_np, out_np):
     e = ((img_t - out_t)**2).sum(dim=0)
 
     # Normalized error
-    e_tilde = normalize_error(e, img_t, out_t, mode="1-x")
+    e_tilde = normalize_error(e, img_t, out_t, mode="2")
 
     # FIX: collapse channels if any (paper expects a 2D matrix)
     if e_tilde.ndim > 2:
