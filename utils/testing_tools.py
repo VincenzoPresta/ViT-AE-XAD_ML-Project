@@ -11,11 +11,14 @@ from scipy.ndimage import label
 # ============================================
 
 def normalize_error(e, img, out):
-    F_t = 2.0  # F(x) = v = 2, come in AE-XAD Arrays
-    num = (img - out) ** 2
-    den = (F_t - img) ** 2 + 1e-8
-    return num / den
+    F_t = 2.0
 
+    # numerator: sum over channels
+    num = ((img - out) ** 2).sum(dim=0)          # (H,W)
+    # denominator: also pixelwise, sum channels
+    den = ((F_t - img) ** 2).sum(dim=0) + 1e-8   # (H,W)
+
+    return num / den                              # (H,W)
 
 # ============================================
 #         STIMA AUTOMATICA DI k̂ (paper)
