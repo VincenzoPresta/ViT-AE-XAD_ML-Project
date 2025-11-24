@@ -91,7 +91,12 @@ def aexad_heatmap_and_score(img_np, out_np):
     e_tilde = normalize_error(e, img_t, out_t)
 
     # k̂ estimation
-    k_hat = estimate_k(e_tilde.numpy())
+    # ensure 2D shape (H,W)
+    e_tilde_np = e_tilde.cpu().numpy()
+    while e_tilde_np.ndim > 2:
+        e_tilde_np = e_tilde_np[0] #elimina dimensioni extra create da pytorch
+
+    k_hat = estimate_k(e_tilde_np)
 
     # filtered map
     filtered = gaussian_filter_paper(e_tilde, k_hat)
