@@ -1,0 +1,49 @@
+\section{Training Strategy}
+
+L’addestramento di AE--XAD segue una strategia semi-supervisionata che
+combina data augmentation mirata e oversampling, con l’obiettivo di
+compensare la scarsità e l’eterogeneità delle anomalie nel dataset. Come
+proposto in \cite{AE_XAD_Arrays}, la pipeline di training si articola in due
+componenti principali.
+
+\subsection{Data augmentation sulle anomalie}
+
+Poiché gli esempi anomali sono poco rappresentati e spesso molto diversi
+tra loro, AE--XAD applica un potenziamento artificiale dei campioni
+anomalie prima dell’addestramento. In particolare, per ogni immagine
+anomala $x$ nel training set:
+
+\begin{itemize}
+    \item essa viene replicata 5 volte senza modifiche;
+    \item ulteriori 10 copie vengono generate tramite una procedura di
+    \textit{copy--paste}: la regione anomala viene ritagliata e incollata su
+    immagini normali, dopo trasformazioni geometriche standard
+    (zoom, rotazioni, traslazioni, ecc.).
+\end{itemize}
+
+Questa strategia migliora la diversità delle anomalie osservate dal modello
+e rafforza la sua capacità di generalizzare a difetti di forma e dimensione
+variabili.
+
+\subsection{Oversampling all'interno del batch}
+
+Dopo l’augmentation, ogni batch $B$ viene bilanciato imponendo la
+seguente proporzione:
+
+\[
+\frac{1}{3}|B| \quad \text{anomalie}, \qquad
+\frac{2}{3}|B| \quad \text{inlier}.
+\]
+
+Questa scelta contrasta l’effetto predominante dei pixel normali nella loss
+e garantisce che il modello riceva un segnale supervisionato sufficiente
+durante l’ottimizzazione, senza sovraccaricare il training con esempi
+anomali artificiali.
+
+\subsection{Ottimizzazione}
+
+AE--XAD viene addestrato per 200 epoche utilizzando l’ottimizzatore Adam
+con learning rate pari a $10^{-3}$ e weight decay pari a $10^{-4}$, come
+riportato in \cite{AE_XAD_Arrays}. La ResNet dell’encoder è mantenuta
+congelata durante tutto l’addestramento, mentre solo i livelli convoluzionali
+del decoder vengono aggiornati.

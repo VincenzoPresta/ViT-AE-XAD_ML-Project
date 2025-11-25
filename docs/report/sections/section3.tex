@@ -1,0 +1,71 @@
+
+
+\section{Architettura del modello}
+
+L'architettura di AE--XAD è composta da un encoder convoluzionale
+pre-addestrato, da un decoder con struttura biforcata e da un modulo finale
+che combina le due ricostruzioni per ottenere un'immagine finale
+$\tilde{x}$. Come descritto in \cite{AE_XAD_Arrays}, la rete è progettata per
+guidare l'Autoencoder verso una ricostruzione accurata dei pixel normali e,
+al contempo, una ricostruzione intenzionalmente distante dei pixel anomali,
+secondo quanto imposto dalla loss semi-supervisionata.
+
+\subsection{Encoder}
+
+L'encoder è costruito selezionando i primi tre blocchi residuali di una rete
+ResNet pre-addestrata su ImageNet. Tale scelta consente di sfruttare un
+estrattore di feature robusto ed efficiente, capace di catturare strutture di
+basso e medio livello utili per la fase di ricostruzione. L’output della
+ResNet viene poi passato attraverso un ulteriore strato convoluzionale che
+riduce il numero di canali, producendo una rappresentazione latente di
+dimensione $28 \times 28 \times 64$. Come specificato nel paper, i pesi del
+modello ResNet rimangono congelati durante l’addestramento, al fine di
+ridurre il costo computazionale e preservare le capacità generalizzative
+dell’encoder pre-addestrato.
+
+\subsection{Decoder}
+
+Il decoder di AE--XAD è articolato in due rami paralleli, ciascuno con un
+ruolo distinto nel processo di ricostruzione dell’immagine.
+
+\paragraph{Branch 1 (non-trainable).}
+Questo ramo effettua un semplice upsampling della rappresentazione
+latente, da $28 \times 28 \times 64$ fino a $224 \times 224 \times 64$. Viene quindi
+applicata una funzione \texttt{tanh}, e successivamente i 64 canali vengono
+compressi tramite somma in gruppi da 8, producendo un tensore
+$b_1 \in \mathbb{R}^{224 \times 224 \times 8}$. Tale ramo funge da ``maschera morbida''
+(\emph{soft mask}) che enfatizza o attenua regioni specifiche della
+ricostruzione finale.
+
+\paragraph{Branch 2 (trainable).}
+Questo ramo comprende tre blocchi convoluzionali, ciascuno costituito da
+una convoluzione seguita da una trasposed convolution con attivazione SeLU.
+L’obiettivo è ricostruire progressivamente dettagli strutturali e texture
+dell’immagine, generando un tensore $b_2 \in \mathbb{R}^{224 \times 224 \times 8}$.
+
+\subsection{Combinazione dei due rami}
+
+Come riportato in \cite{AE_XAD_Arrays}, i due rami vengono combinati tramite
+la seguente operazione per-pixel:
+\[
+b = b_1 \cdot b_2 + b_2.
+\]
+Il termine $b_1$ agisce come una maschera adattiva che amplifica o sopprime
+particolari regioni di $b_2$. Questo meccanismo consente al decoder di
+focalizzare la ricostruzione nelle aree più informative, favorendo un errore
+di ricostruzione più marcato nelle regioni anomale durante l’addestramento.
+
+Due ulteriori strati convoluzionali affiancati a valle di questa combinazione
+rifiniscono l’immagine ricostruita e convertono il tensore risultante in un
+output finale $\tilde{x} \in \mathbb{R}^{224 \times 224 \times 3}$, con la stessa
+dimensione dell’immagine di input.
+
+\subsection{Considerazioni architetturali}
+
+L’utilizzo di un encoder pre-addestrato e congelato riduce il costo
+computazionale e stabilizza l’addestramento, mentre la struttura biforcata
+del decoder permette di controllare con precisione la ricostruzione delle
+regioni anomale attraverso la loss specifica. Questa architettura rappresenta
+un compromesso efficiente tra capacità espressiva, interpretabilità e
+sostenibilità computazionale, come evidenziato dagli esperimenti presentati
+nel paper.
