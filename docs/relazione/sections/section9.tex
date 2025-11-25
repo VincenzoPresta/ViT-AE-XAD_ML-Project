@@ -1,0 +1,75 @@
+\section{Integrazione del Vision Transformer in AE--XAD}
+
+\subsection{Obiettivo}
+
+L’obiettivo del progetto è integrare un encoder basato su Vision Transformer
+(ViT) all’interno del framework AE--XAD mantenendo invariata la struttura del
+decoder e l’intera pipeline di generazione delle heatmap. L’idea centrale
+consiste nel sostituire l’estrattore di feature convoluzionale originale con
+un backbone Transformer pre-addestrato, lasciando inalterati tutti i
+meccanismi ricostruttivi e il processo di scoring.
+
+\subsection{Sostituzione dell’encoder}
+
+L’encoder convoluzionale viene rimpiazzato da un modello ViT-B/16
+pre-addestrato su ImageNet, sfruttandone la proiezione a patch e i blocchi
+Transformer. L’immagine di input ($224 \times 224$) viene suddivisa in patch
+$16 \times 16$, proiettata in uno spazio latente di dimensione 768, e
+successivamente elaborata dai blocchi di attenzione. Il risultato è una
+sequenza di 196 token, rimappata in una struttura spaziale
+$14 \times 14 \times 768$, coerente con la griglia prodotta dal ViT.
+
+\subsection{Ricostruzione della griglia spaziale}
+
+Poiché il decoder originale di AE--XAD richiede una mappa latente di
+dimensione $28 \times 28 \times 64$, è stato introdotto un modulo di
+ricostruzione spaziale che si occupa di:
+
+\begin{enumerate}
+    \item \textbf{ridurre} la dimensionalità dei 768 canali tramite una
+    sequenza di convoluzioni che preservano la risoluzione $14 \times 14$;
+    \item \textbf{ricostruire} la griglia $28 \times 28$ tramite una
+    trasposed convolution che porta i canali a 64, ottenendo una
+    rappresentazione perfettamente compatibile con il decoder.
+\end{enumerate}
+
+Questa fase consente di integrare il ViT senza alterare l’architettura
+ricostruttiva del modello originale.
+
+\subsection{Decoder}
+
+Il decoder di AE--XAD è stato mantenuto integralmente identico alla
+formulazione del paper. Esso comprende:
+
+\begin{itemize}
+    \item un primo ramo non addestrabile, basato su upsampling diretto,
+    attivazione \texttt{tanh} e riduzione dei canali;
+    \item un secondo ramo addestrabile composto da tre blocchi convoluzionali
+    con trasposed convolutions;
+    \item una fase di modulazione finale che combina i due rami tramite
+    un'operazione per-pixel;
+    \item un modulo finale che produce l’immagine ricostruita tramite una
+    sigmoide.
+\end{itemize}
+
+L’intero processo ricostruttivo rimane quindi invariato, garantendo che
+qualsiasi differenza nelle heatmap o nelle metriche sia imputabile
+unicamente al cambiamento dell’encoder.
+
+\subsection{Pipeline finale}
+
+La pipeline complessiva del modello può essere descritta come:
+
+\[
+x \rightarrow \text{Encoder ViT}
+\rightarrow \text{Proiezione CNN}
+\rightarrow \text{Decoder AE--XAD}
+\rightarrow \tilde{x},
+\]
+
+dove il Transformer assume il ruolo di estrattore di feature, mentre la
+ricostruzione e la generazione dell’errore seguono esattamente la logica
+originale del framework AE--XAD. Questo approccio permette di valutare in
+modo isolato il contributo delle rappresentazioni prodotte dal ViT alla
+qualità della ricostruzione e alla capacità di individuare e localizzare
+le anomalie.

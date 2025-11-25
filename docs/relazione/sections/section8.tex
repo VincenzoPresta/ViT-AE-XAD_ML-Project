@@ -1,0 +1,82 @@
+\section{Vision Transformer come encoder}
+
+Negli ultimi anni, i Vision Transformer (ViT) hanno introdotto un cambio
+di paradigma nell’elaborazione delle immagini, mostrando prestazioni
+rilevanti in numerosi compiti di visione artificiale rispetto ai modelli
+convoluzionali tradizionali. L’idea centrale, introdotta in \cite{ViT}, è
+trattare un’immagine come una sequenza di patch e applicare il meccanismo
+di \emph{self-attention} tipico dei Transformer originariamente sviluppati
+per l’elaborazione del linguaggio naturale.
+
+Questa strategia consente al modello di catturare relazioni globali tra
+regioni dell’immagine, rendendo la rappresentazione latente più ricca e
+potenzialmente più adatta ai compiti di ricostruzione e localizzazione
+delle anomalie.
+
+\subsection{Patch embedding}
+
+Un’immagine $x \in \mathbb{R}^{H \times W \times 3}$ viene suddivisa in
+patch non sovrapposti di dimensione $P \times P$. Ogni patch è poi
+linearizzato e proiettato in uno spazio latente di dimensione $D$ tramite
+una trasformazione lineare:
+
+\[
+z_0^i = E(x_i), \qquad i = 1,\ldots,N,
+\]
+
+dove $N = \frac{HW}{P^2}$ è il numero di patch e $E$ è una proiezione
+lineare. Il risultato è una sequenza di embedding che rappresenta
+un'immagine come una struttura simile a una frase.
+
+\subsection{Positional encoding}
+
+Poiché i Transformer non possiedono una nozione intrinseca di struttura
+spaziale, è necessario aggiungere informazioni sulla posizione delle
+patch. Ad ogni embedding $z_0^i$ viene aggiunto un positional encoding
+$f_{\text{pos}}(i)$:
+
+\[
+\tilde{z}_0^i = z_0^i + f_{\text{pos}}(i).
+\]
+
+In questo modo, il modello può distinguere patch identiche in posizioni
+diverse e apprendere relazioni strutturali tra di esse.
+
+\subsection{Self-attention}
+
+Il cuore del Transformer è il meccanismo di \emph{multi-head self-attention}
+(MHSA), che permette a ogni patch di comunicare con tutte le altre:
+
+\[
+\text{Attention}(Q,K,V) =
+\text{softmax}\left( \frac{QK^\top}{\sqrt{d_k}} \right) V.
+\]
+
+Applicando questo meccanismo su più teste parallele, il modello apprende
+simultaneamente più tipi di relazioni tra patch distanti, ottenendo una
+rappresentazione globale dell’immagine più espressiva rispetto alle CNN,
+che si basano su operazioni locali.
+
+\subsection{Benefici attesi come encoder in AE--XAD}
+
+L’integrazione di un encoder ViT all’interno del framework AE--XAD è
+motivata da tre proprietà fondamentali:
+
+\begin{enumerate}
+    \item \textbf{Cattura di dipendenze globali}: il self-attention consente di
+    modellare relazioni tra regioni distanti, migliorando la coerenza globale
+    della ricostruzione.
+
+    \item \textbf{Rappresentazioni semantiche più ricche}: ViT tende a produrre
+    embedding più discriminativi delle CNN pre-addestrate,
+    favorendo la separazione tra regioni normali e anomalie.
+
+    \item \textbf{Generalità e adattabilità}: l’encoder ViT può essere
+    sostituito senza modificare il decoder di AE--XAD, mantenendo la pipeline
+    invariata e rendendo l’approccio compatibile sia con modelli pre-addestrati
+    sia con tecniche auto-supervisionate come MAE \cite{MAE}.
+\end{enumerate}
+
+Queste considerazioni forniscono le basi per l’integrazione di un encoder
+Transformer all’interno di AE--XAD, con l’obiettivo di valutarne l’impatto
+sulla ricostruzione e sulla generazione delle heatmap.

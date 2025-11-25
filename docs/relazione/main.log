@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.11.24)  24 NOV 2025 12:19
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.11.24)  25 NOV 2025 11:58
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -183,6 +183,10 @@ LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
 ) (C:\Users\Utente\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
 Package: amssymb 2013/01/14 v3.01 AMS font symbols
+) (C:\Users\Utente\AppData\Local\Programs\MiKTeX\tex/latex/cite\cite.sty
+LaTeX Info: Redefining \cite on input line 302.
+LaTeX Info: Redefining \nocite on input line 332.
+Package: cite 2015/02/27  v 5.5
 ) (C:\Users\Utente\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-pdftex.def
 File: l3backend-pdftex.def 2024-01-04 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count282
@@ -190,20 +194,20 @@ File: l3backend-pdftex.def 2024-01-04 L3 backend support: PDF output (pdfTeX)
 ) (main.aux)
 \openout1 = `main.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 23.
-LaTeX Font Info:    ... okay on input line 23.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 23.
-LaTeX Font Info:    ... okay on input line 23.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 23.
-LaTeX Font Info:    ... okay on input line 23.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 23.
-LaTeX Font Info:    ... okay on input line 23.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 23.
-LaTeX Font Info:    ... okay on input line 23.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 23.
-LaTeX Font Info:    ... okay on input line 23.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 23.
-LaTeX Font Info:    ... okay on input line 23.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 26.
+LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 26.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 26.
+LaTeX Font Info:    ... okay on input line 26.
  (C:\Users\Utente\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count283
@@ -228,102 +232,87 @@ Package caption Info: End \AtBeginDocument code.
 <images/logo.png, id=1, 459.7175pt x 110.4125pt>
 File: images/logo.png Graphic file (type png)
 <use images/logo.png>
-Package pdftex.def Info: images/logo.png  used on input line 30.
+Package pdftex.def Info: images/logo.png  used on input line 33.
 (pdftex.def)             Requested size: 276.00105pt x 66.2918pt.
  [1
 
 {C:/Users/Utente/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map} <./images/logo.png>]
-LaTeX Font Info:    Trying to load font information for U+msa on input line 67.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 70.
  (C:\Users\Utente\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 67.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 70.
  (C:\Users\Utente\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) (main.toc)
+) (main.toc [1]
+Package marginnote Info: Using workaround for absolute page number on input line 29.
+)
 \tf@toc=\write3
 \openout3 = `main.toc'.
 
- (sections/section1.tex [1]
-Package marginnote Info: Using workaround for absolute page number on input line 3.
-
+ (sections/section1.tex [2]
 Overfull \hbox (4.47292pt too wide) in paragraph at lines 5--12
 \OT1/cmr/m/n/10 L'anomaly de-tec-tion su im-mag-ini ^^Re un com-pito par-ti-co-lar-mente com-p-lesso, poich^^Se
  []
 
-
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 2 undefined on input line 17.
-
-[2]) (sections/section2.tex
-
-LaTeX Warning: Citation `papers/AE_XAD_Arrays' on page 3 undefined on input line 10.
-
-
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 3 undefined on input line 34.
-
-) (sections/section3.tex
-
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 3 undefined on input line 8.
-
-
+[3]) (sections/section2.tex) (sections/section3.tex
 Overfull \hbox (16.77734pt too wide) in paragraph at lines 5--12
 \OT1/cmr/m/n/10 L'architettura di AE--XAD ^^Re com-posta da un en-coder con-voluzionale pre-addestrato,
  []
 
-[3]
-
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 4 undefined on input line 48.
-
-[4]) (sections/section4.tex
+[4] [5]) (sections/section4.tex
 Overfull \hbox (2.30615pt too wide) in paragraph at lines 65--1
 \OT1/cmr/m/n/10 L'utilizzo di un en-coder pre-addestrato e con-ge-lato riduce il costo com-putazionale
  []
 
+[6]) (sections/section5.tex [7]) (sections/section6.tex [8]) (sections/section7.tex [9]
+Overfull \hbox (14.07182pt too wide) in paragraph at lines 38--40
+[]\OT1/cmr/bx/n/10 Valutare sper-i-men-tal-mente l'impatto della sos-ti-tuzione dell'encoder
+ []
 
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 5 undefined on input line 7.
+) (sections/section8.tex
+Overfull \hbox (2.77847pt too wide) in paragraph at lines 3--10
+\OT1/cmr/m/n/10 nu-merosi com-piti di vi-sione ar-ti-fi-ciale rispetto ai mod-elli con-voluzion-ali tradizion-
+ []
 
-[5]
+[10]
+Overfull \hbox (0.63948pt too wide) in paragraph at lines 33--37
+\OT1/cmr/m/n/10 Poich^^Se i Trans-former non possiedono una nozione in-trin-seca di strut-tura spaziale,
+ []
 
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 6 undefined on input line 58.
+[11]) (sections/section9.tex
+Overfull \hbox (14.33403pt too wide) in paragraph at lines 14--21
+\OT1/cmr/m/n/10 L'encoder con-voluzionale viene rimpiaz-zato da un mod-ello ViT-B/16 pre-addestrato
+ []
 
-) (sections/section5.tex
 
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 6 undefined on input line 6.
+Overfull \hbox (17.51918pt too wide) in paragraph at lines 14--21
+\OT1/cmr/m/n/10 su Im-a-geNet, sfrut-tan-done la proiezione a patch e i bloc-chi Trans-former. L'immagine
+ []
 
-[6]
+[12]
+Overfull \hbox (4.86176pt too wide) in paragraph at lines 49--51
+[]\OT1/cmr/m/n/10 una fase di mod-u-lazione fi-nale che com-bina i due rami tramite un'operazione
+ []
 
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 7 undefined on input line 47.
-
-) (sections/section6.tex
-
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 7 undefined on input line 5.
-
-[7]
-
-LaTeX Warning: Citation `AE_XAD_Arrays' on page 8 undefined on input line 40.
-
-) [8] [9] (main.aux)
+) [13] (main.bbl) [14] (main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
  ***********
-
-
-LaTeX Warning: There were undefined references.
-
  ) 
 Here is how much of TeX's memory you used:
- 4448 strings out of 474486
- 73548 string characters out of 5743282
+ 4584 strings out of 474486
+ 76043 string characters out of 5743282
  1934542 words of memory out of 5000000
- 26672 multiletter control sequences out of 15000+600000
+ 26793 multiletter control sequences out of 15000+600000
  566887 words of font info for 71 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  57i,9n,65p,315b,317s stack positions out of 10000i,1000n,20000p,200000b,200000s
- <C:\Users\Utente\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm1000.pk><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr17.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on main.pdf (10 pages, 233546 bytes).
+ <C:\Users\Utente\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm1000.pk><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr17.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr5.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
+Output written on main.pdf (15 pages, 266045 bytes).
 PDF statistics:
- 122 PDF objects out of 1000 (max. 8388607)
+ 143 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  6 words of extra memory for PDF output out of 10000 (max. 10000000)
 
