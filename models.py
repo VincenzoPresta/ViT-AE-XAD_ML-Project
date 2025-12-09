@@ -97,32 +97,47 @@ class AEXAD_Decoder(nn.Module):
 
 
 
-
 class ViT_Encoder(nn.Module):
     """
-    Encoder ViT corretto per AE-XAD:
-    - usa la patch embedding e i blocchi ViT
+    Encoder ViT per AE-XAD con stem convoluzionale:
+    - stem conv prima del ViT (cattura bordi/texture fini)
+    - usa patch embedding e blocchi ViT
     - ricostruisce struttura spaziale via CNN
     - genera feature map 28×28×64 compatibili col decoder AE-XAD
     """
 
-    def __init__(self, freeze_vit=True):
+    def __init__(self, freeze_vit: bool = True):
         super().__init__()
 
+        # ===== STEM CONVOLUZIONALE PRIMA DEL VIT =====
+        # mantiene la risoluzione 224×224 e torna a 3 canali
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(3),
+            nn.ReLU(inplace=True),
+        )
+
+        # ===== VIT ORIGINALE =====
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
-        self.hidden_dim = vit.hidden_dim  # 768
-        self.conv_proj  = vit.conv_proj   # patch embed
-        self.encoder_vit = vit.encoder
-        self.class_token = vit.class_token
+        self.hidden_dim   = vit.hidden_dim  # 768
+        self.conv_proj    = vit.conv_proj   # patch embedding
+        self.encoder_vit  = vit.encoder
+        self.class_token  = vit.class_token
 
-        # ===== FREEZE VIT (opzionale) =====
+        # ===== FREEZE SOLO IL VIT (OPZIONALE) =====
         if freeze_vit:
-            for p in vit.parameters():
+            for p in self.conv_proj.parameters():
                 p.requires_grad = False
+            for p in self.encoder_vit.parameters():
+                p.requires_grad = False
+            if isinstance(self.class_token, nn.Parameter):
+                self.class_token.requires_grad = False
 
         # ======= RICOSTRUZIONE SPAZIALE =========
-        # tokens → spatial map (14×14×hidden_dim)
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
             nn.SELU(),
@@ -139,28 +154,28 @@ class ViT_Encoder(nn.Module):
     def _patchify(self, x):
         # x: (B,3,224,224)
         B = x.size(0)
-        x = self.conv_proj(x)                # (B,768,14,14)
-        x = x.reshape(B, self.hidden_dim, -1) # (B,768,196)
-        x = x.permute(0, 2, 1)                # (B,196,768)
+        x = self.conv_proj(x)                  # (B,768,14,14)
+        x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
+        x = x.permute(0, 2, 1)                 # (B,196,768)
         return x
 
     def forward(self, x):
         B = x.size(0)
 
-        # ====== ViT ======
-        tokens = self._patchify(x)
+        # ===== STEM + VIT =====
+        x = self.stem(x)        # (B,3,224,224) -> (B,3,224,224) arricchita di dettagli
 
-        cls = self.class_token.expand(B, -1, -1)
-        tokens = torch.cat([cls, tokens], dim=1)
+        tokens = self._patchify(x)  # (B,196,768)
 
-        encoded = self.encoder_vit(tokens)[:, 1:]  # remove CLS
+        cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1)  # (B,197,768)
+
+        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768), rimuovi CLS
         encoded = encoded.view(B, 14, 14, self.hidden_dim)
-        encoded = encoded.permute(0, 3, 1, 2)  # (B,768,14,14)
+        encoded = encoded.permute(0, 3, 1, 2)      # (B,768,14,14)
 
-        # ====== CNN RECONSTRUCTION ======
-        spatial = self.to_spatial(encoded)   # (B,128,14,14)
-        out = self.to_28(spatial)            # (B,64,28,28)
+        # ===== CNN RECONSTRUCTION =====
+        spatial = self.to_spatial(encoded)         # (B,128,14,14)
+        out = self.to_28(spatial)                  # (B,64,28,28)
 
         return out
-
- 
