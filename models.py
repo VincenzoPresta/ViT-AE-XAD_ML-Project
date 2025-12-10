@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder()
+        self.encoder = ViT_Encoder_8x8()
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -96,7 +96,6 @@ class AEXAD_Decoder(nn.Module):
         return out
 
 
-
 class ViT_Encoder(nn.Module):
     """
     Encoder ViT per AE-XAD con stem convoluzionale:
@@ -179,3 +178,97 @@ class ViT_Encoder(nn.Module):
         out = self.to_28(spatial)                  # (B,64,28,28)
 
         return out
+    
+    
+class ViT_Encoder_8x8(nn.Module):
+    """
+    AE-XAD ViT Encoder con patch embedding 8×8 (TEST B)
+    """
+    def __init__(self, freeze_vit=True):
+        super().__init__()
+
+        # ====== STEM (dal Test A, lo lasciamo invariato) ======
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(3),
+            nn.ReLU(inplace=True),
+        )
+
+        # ====== CARICO IL ViT-B/16 (ma useremo solo encoder + cls token) ======
+        vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        self.encoder_vit = vit.encoder          # blocchi Transformer
+        self.class_token = vit.class_token      # CLS token
+        self.hidden_dim = vit.hidden_dim        # =768
+
+        # ====== FREEZE VIT (tranne patch embedding, che NON useremo) ======
+        if freeze_vit:
+            for p in self.encoder_vit.parameters():
+                p.requires_grad = False
+            self.class_token.requires_grad = False
+
+        # ============================================================
+        #              PATCH EMBEDDING 8×8 PERSONALIZZATO
+        # ============================================================
+        self.conv_proj = nn.Conv2d(
+            in_channels=3,
+            out_channels=self.hidden_dim,
+            kernel_size=8,
+            stride=8,
+            padding=0,
+            bias=False
+        )
+        # conv_proj è inizializzato randomly → perfetto per Test B
+
+        # ============================================================
+        #   CNN POST-ViT PER RICOSTRUIRE LA FEATURE MAP 28×28×64
+        # ============================================================
+        self.to_spatial = nn.Sequential(
+            nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
+            nn.SELU(),
+            nn.Conv2d(256, 128, kernel_size=3, padding=1),
+            nn.SELU()
+        )
+
+        # upsample da 28x28
+        self.to_28 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=1, stride=1),
+            nn.SELU()
+        )
+
+    # ====== PATCHIFY 8×8 ======
+    def _patchify(self, x):
+        # output: (B, hidden_dim, 28, 28)
+        x = self.conv_proj(x)
+        B, C, H, W = x.shape   # H=W=28
+        x = x.reshape(B, C, H * W)   # (B,768,784)
+        x = x.permute(0, 2, 1)       # (B,784,768)
+        return x
+
+    def forward(self, x):
+        B = x.size(0)
+
+        # STEM
+        x = self.stem(x)
+
+        # PATCHIFY 8×8
+        tokens = self._patchify(x)     # (B,784,768)
+
+        # prepend CLS
+        cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1)  # (B,785,768)
+
+        # PASSA NEI BLOCCHI TRANSFORMER
+        encoded = self.encoder_vit(tokens)[:, 1:]  # rimuovo CLS → (B,784,768)
+
+        # reshape in griglia 28×28
+        encoded = encoded.view(B, 28, 28, self.hidden_dim).permute(0, 3, 1, 2)
+
+        # CNN RECONSTRUCTION
+        spatial = self.to_spatial(encoded)    # (B,128,28,28)
+        out     = self.to_28(spatial)         # (B,64,28,28)
+
+        return out
+
