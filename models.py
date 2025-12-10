@@ -183,17 +183,17 @@ class ViT_Encoder(nn.Module):
 class ViT_Encoder_8x8(nn.Module):
     """
     AE-XAD Vision Transformer Encoder con:
-    - stem convoluzionale (TEST A)
-    - patch embedding 8×8 (TEST B)
-    - positional embedding corretto (785 token)
-    - output finale 28×28×64 compatibile col decoder AE-XAD
+    - STEM convoluzionale (Test A)
+    - PATCH EMBEDDING 8×8 (Test B)
+    - Transformer blocks diretti (senza pos_embedding)
+    - Output finale 28×28×64
     """
 
     def __init__(self, freeze_vit=True):
         super().__init__()
 
         # ============================================================
-        # 1) STEM CONVOLUZIONALE (migliora i dettagli locali)
+        # 1) STEM CONVOLUZIONALE
         # ============================================================
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
@@ -205,28 +205,23 @@ class ViT_Encoder_8x8(nn.Module):
         )
 
         # ============================================================
-        # 2) CARICO IL ViT-B/16 (useremo encoder + class_token)
+        # 2) CARICO ViT-B/16 E PRENDO SOLO I BLOCCHI
         # ============================================================
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
-        self.hidden_dim = vit.hidden_dim              # 768
-        self.encoder_vit = vit.encoder                # blocchi Transformer
-        self.class_token = vit.class_token            # (1,1,768)
+        self.hidden_dim = vit.hidden_dim          # 768
+        self.transformer_blocks = vit.encoder.layers
+        self.class_token = vit.class_token        # (1,1,768)
+
+        # Freeza i transformer blocks
+        if freeze_vit:
+            for blk in self.transformer_blocks:
+                for p in blk.parameters():
+                    p.requires_grad = False
+            self.class_token.requires_grad = False
 
         # ============================================================
-        # 3) CREIAMO I POSITIONAL EMBEDDING PER 785 TOKEN
-        #    1 CLS + 28×28 patch = 785 token
-        # ============================================================
-        num_tokens = 1 + (28 * 28)  # = 785
-
-        self.pos_embedding = nn.Parameter(
-            torch.zeros(1, num_tokens, self.hidden_dim)
-        )
-        nn.init.trunc_normal_(self.pos_embedding, std=0.02)
-
-        # ============================================================
-        # 4) PATCH EMBEDDING PERSONALIZZATO 8×8
-        #    (sostituisce conv_proj del ViT originale)
+        # 3) PATCH EMBEDDING 8×8 (REPLACE conv_proj)
         # ============================================================
         self.conv_proj = nn.Conv2d(
             in_channels=3,
@@ -238,17 +233,7 @@ class ViT_Encoder_8x8(nn.Module):
         )
 
         # ============================================================
-        # 5) FREEZE DEL VIT (tranne patch embedding e stem)
-        # ============================================================
-        if freeze_vit:
-            for p in self.encoder_vit.parameters():
-                p.requires_grad = False
-            self.class_token.requires_grad = False
-            # self.pos_embedding rimane trainabile
-            # conv_proj + stem + to_spatial + to_28 rimangono trainabili
-
-        # ============================================================
-        # 6) RICOSTRUZIONE SPAZIALE
+        # 4) RICOSTRUZIONE SPAZIALE
         # ============================================================
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
@@ -257,52 +242,50 @@ class ViT_Encoder_8x8(nn.Module):
             nn.SELU()
         )
 
-        # ============================================================
-        # 7) UPSAMPLE FINALE A 28×28×64
-        # ============================================================
         self.to_28 = nn.Sequential(
             nn.ConvTranspose2d(128, 64, kernel_size=1, stride=1),
             nn.SELU()
         )
 
     # ============================================================
-    # PATCHIFY: 8×8 → 28×28 patch → 784 token
+    # PATCHIFY 8×8: (B,3,224,224) → (B,784,768)
     # ============================================================
     def _patchify(self, x):
-        x = self.conv_proj(x)                      # (B,768,28,28)
-        B, C, H, W = x.shape                       # H=W=28
-        x = x.reshape(B, C, H * W)                 # (B,768,784)
-        x = x.permute(0, 2, 1)                     # (B,784,768)
+        x = self.conv_proj(x)                    # (B,768,28,28)
+        B, C, H, W = x.shape                     # H=W=28
+        x = x.reshape(B, C, H * W)               # (B,768,784)
+        x = x.permute(0, 2, 1)                   # (B,784,768)
         return x
 
     # ============================================================
-    # FORWARD
+    # FORWARD COMPLETO
     # ============================================================
     def forward(self, x):
         B = x.size(0)
 
-        # 1) STEM
+        # ---- STEM ----
         x = self.stem(x)
 
-        # 2) PATCHIFY 8×8 → 784 token
-        tokens = self._patchify(x)
+        # ---- PATCHIFY (8×8) ----
+        tokens = self._patchify(x)               # (B,784,768)
 
-        # 3) PREPEND CLS TOKEN → 785 token
-        cls = self.class_token.expand(B, -1, -1)
-        tokens = torch.cat([cls, tokens], dim=1)    # (B,785,768)
+        # ---- PREPEND CLS ----
+        cls = self.class_token.expand(B, -1, -1) # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1) # (B,785,768)
 
-        # 4) ADD POSITIONAL EMBEDDING
-        tokens = tokens + self.pos_embedding         # (B,785,768)
+        # ---- PASSA NELLA CATENA DI TRANSFORMER BLOCKS ----
+        for blk in self.transformer_blocks:
+            tokens = blk(tokens)
 
-        # 5) PASSA NEI BLOCCHI TRANSFORMER
-        encoded = self.encoder_vit(tokens)[:, 1:]    # rimuove CLS → (B,784,768)
+        # ---- RIMUOVO CLS ----
+        encoded = tokens[:, 1:]                  # (B,784,768)
 
-        # 6) RISHAPE IN GRID 28×28
+        # ---- RISHAPE IN GRID 28×28 ----
         encoded = encoded.view(B, 28, 28, self.hidden_dim)
-        encoded = encoded.permute(0, 3, 1, 2)        # (B,768,28,28)
+        encoded = encoded.permute(0, 3, 1, 2)    # (B,768,28,28)
 
-        # 7) CNN RECONSTRUCTION
-        spatial = self.to_spatial(encoded)           # (B,128,28,28)
-        out     = self.to_28(spatial)                # (B,64,28,28)
+        # ---- CNN SPATIAL RECONSTRUCTION ----
+        spatial = self.to_spatial(encoded)       # (B,128,28,28)
+        out = self.to_28(spatial)                # (B,64,28,28)
 
         return out
