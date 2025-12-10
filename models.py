@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder_8x8()
+        self.encoder = ViT_Encoder()
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -149,6 +149,13 @@ class ViT_Encoder(nn.Module):
             nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
             nn.SELU()
         )
+        
+        self.refine = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU()
+        )
 
     def _patchify(self, x):
         # x: (B,3,224,224)
@@ -176,116 +183,7 @@ class ViT_Encoder(nn.Module):
         # ===== CNN RECONSTRUCTION =====
         spatial = self.to_spatial(encoded)         # (B,128,14,14)
         out = self.to_28(spatial)                  # (B,64,28,28)
+        out = self.refine(out)                     # (B,64,28,28)
 
         return out
     
-    
-class ViT_Encoder_8x8(nn.Module):
-    """
-    AE-XAD Vision Transformer Encoder con:
-    - STEM convoluzionale (Test A)
-    - PATCH EMBEDDING 8×8 (Test B)
-    - Transformer blocks diretti (senza pos_embedding)
-    - Output finale 28×28×64
-    """
-
-    def __init__(self, freeze_vit=True):
-        super().__init__()
-
-        # ============================================================
-        # 1) STEM CONVOLUZIONALE
-        # ============================================================
-        self.stem = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(3),
-            nn.ReLU(inplace=True),
-        )
-
-        # ============================================================
-        # 2) CARICO ViT-B/16 E PRENDO SOLO I BLOCCHI
-        # ============================================================
-        vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-
-        self.hidden_dim = vit.hidden_dim          # 768
-        self.transformer_blocks = vit.encoder.layers
-        self.class_token = vit.class_token        # (1,1,768)
-
-        # Freeza i transformer blocks
-        if freeze_vit:
-            for blk in self.transformer_blocks:
-                for p in blk.parameters():
-                    p.requires_grad = False
-            self.class_token.requires_grad = False
-
-        # ============================================================
-        # 3) PATCH EMBEDDING 8×8 (REPLACE conv_proj)
-        # ============================================================
-        self.conv_proj = nn.Conv2d(
-            in_channels=3,
-            out_channels=self.hidden_dim,  # 768
-            kernel_size=8,
-            stride=8,
-            padding=0,
-            bias=False
-        )
-
-        # ============================================================
-        # 4) RICOSTRUZIONE SPAZIALE
-        # ============================================================
-        self.to_spatial = nn.Sequential(
-            nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
-            nn.SELU(),
-            nn.Conv2d(256, 128, kernel_size=3, padding=1),
-            nn.SELU()
-        )
-
-        self.to_28 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=1, stride=1),
-            nn.SELU()
-        )
-
-    # ============================================================
-    # PATCHIFY 8×8: (B,3,224,224) → (B,784,768)
-    # ============================================================
-    def _patchify(self, x):
-        x = self.conv_proj(x)                    # (B,768,28,28)
-        B, C, H, W = x.shape                     # H=W=28
-        x = x.reshape(B, C, H * W)               # (B,768,784)
-        x = x.permute(0, 2, 1)                   # (B,784,768)
-        return x
-
-    # ============================================================
-    # FORWARD COMPLETO
-    # ============================================================
-    def forward(self, x):
-        B = x.size(0)
-
-        # ---- STEM ----
-        x = self.stem(x)
-
-        # ---- PATCHIFY (8×8) ----
-        tokens = self._patchify(x)               # (B,784,768)
-
-        # ---- PREPEND CLS ----
-        cls = self.class_token.expand(B, -1, -1) # (B,1,768)
-        tokens = torch.cat([cls, tokens], dim=1) # (B,785,768)
-
-        # ---- PASSA NELLA CATENA DI TRANSFORMER BLOCKS ----
-        for blk in self.transformer_blocks:
-            tokens = blk(tokens)
-
-        # ---- RIMUOVO CLS ----
-        encoded = tokens[:, 1:]                  # (B,784,768)
-
-        # ---- RISHAPE IN GRID 28×28 ----
-        encoded = encoded.view(B, 28, 28, self.hidden_dim)
-        encoded = encoded.permute(0, 3, 1, 2)    # (B,768,28,28)
-
-        # ---- CNN SPATIAL RECONSTRUCTION ----
-        spatial = self.to_spatial(encoded)       # (B,128,28,28)
-        out = self.to_28(spatial)                # (B,64,28,28)
-
-        return out
