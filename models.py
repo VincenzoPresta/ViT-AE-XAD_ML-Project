@@ -202,6 +202,8 @@ class ViT_Encoder_8x8(nn.Module):
         self.encoder_vit = vit.encoder          # blocchi Transformer
         self.class_token = vit.class_token      # CLS token
         self.hidden_dim = vit.hidden_dim        # =768
+        vit.pos_embedding = None
+        self.pos_embedding = None
 
         # ====== FREEZE VIT (tranne patch embedding, che NON useremo) ======
         if freeze_vit:
@@ -261,7 +263,7 @@ class ViT_Encoder_8x8(nn.Module):
         tokens = torch.cat([cls, tokens], dim=1)  # (B,785,768)
 
         # PASSA NEI BLOCCHI TRANSFORMER
-        encoded = self.encoder_vit(tokens)[:, 1:]  # rimuovo CLS → (B,784,768)
+        encoded = self.encoder_vit(tokens, pos_embedding=None)  # rimuovo CLS → (B,784,768)
 
         # reshape in griglia 28×28
         encoded = encoded.view(B, 28, 28, self.hidden_dim).permute(0, 3, 1, 2)
