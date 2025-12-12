@@ -30,39 +30,14 @@ class Trainer:
         if self.cuda:
             self.criterion = self.criterion.cuda()
         
-        
-        # ---- PARAMETRI VIT (ultimi blocchi sbloccati) ----
-        vit_params = []
-        for blk in self.model.encoder.encoder_vit.layers[-2:]:  # ultimi 2 blocchi
-            for p in blk.parameters():
-                if p.requires_grad:
-                    vit_params.append(p)
-
-        # ---- TUTTI GLI ALTRI PARAMETRI TRAINABILI ----
-        vit_param_ids = set(id(p) for p in vit_params)
-
-        other_params = [
-            p for p in self.model.parameters()
-            if p.requires_grad and id(p) not in vit_param_ids
-        ]
 
         # ----------------------
         # OPTIMIZER
         # ----------------------
-        self.optimizer = torch.optim.Adam(
-            [
-                {
-                    "params": other_params,
-                    "lr": 5e-4,
-                    "weight_decay": 1e-5,
-                },
-                {
-                    "params": vit_params,
-                    "lr": 1e-5,      # << MOLTO PIÙ BASSO
-                    "weight_decay": 0.0,
-                },
-            ]
-        )
+        trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+        self.optimizer = torch.optim.Adam(trainable_params, lr=5e-4, weight_decay=1e-5)
+        
+        
         # ----------------------
         # SCHEDULER: Cosine
         # ----------------------
