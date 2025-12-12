@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder()
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2)
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -98,18 +98,17 @@ class AEXAD_Decoder(nn.Module):
 
 class ViT_Encoder(nn.Module):
     """
-    Encoder ViT per AE-XAD con stem convoluzionale:
-    - stem conv prima del ViT (cattura bordi/texture fini)
-    - usa patch embedding e blocchi ViT
-    - ricostruisce struttura spaziale via CNN
-    - genera feature map 28×28×64 compatibili col decoder AE-XAD
+    Encoder ViT per AE-XAD con:
+    - stem conv prima del ViT
+    - patch embedding conv_proj (16×16)
+    - encoder ViT (torchvision) con unfreeze selettivo ultimi blocchi
+    - ricostruzione spaziale CNN → (B,64,28,28)
     """
 
-    def __init__(self, freeze_vit: bool = True):
+    def __init__(self, freeze_vit: bool = True, unfreeze_last_n: int = 0):
         super().__init__()
 
-        # ===== STEM CONVOLUZIONALE PRIMA DEL VIT =====
-        # mantiene la risoluzione 224×224 e torna a 3 canali
+        # ===== STEM CONVOLUZIONALE =====
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64),
@@ -122,12 +121,12 @@ class ViT_Encoder(nn.Module):
         # ===== VIT ORIGINALE =====
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
-        self.hidden_dim   = vit.hidden_dim  # 768
-        self.conv_proj    = vit.conv_proj   # patch embedding
-        self.encoder_vit  = vit.encoder
-        self.class_token  = vit.class_token
+        self.hidden_dim  = vit.hidden_dim   # 768
+        self.conv_proj   = vit.conv_proj    # patch embedding
+        self.encoder_vit = vit.encoder      # Encoder(...) con .layers
+        self.class_token = vit.class_token
 
-        # ===== FREEZE SOLO IL VIT (OPZIONALE) =====
+        # ===== DEFAULT: congela tutto il ViT =====
         if freeze_vit:
             for p in self.conv_proj.parameters():
                 p.requires_grad = False
@@ -135,6 +134,15 @@ class ViT_Encoder(nn.Module):
                 p.requires_grad = False
             if isinstance(self.class_token, nn.Parameter):
                 self.class_token.requires_grad = False
+
+        # ===== UNFREEZE SELETTIVO ULTIMI N BLOCCHI =====
+        # (vale solo se freeze_vit=True o se vuoi controllare esplicitamente)
+        if unfreeze_last_n > 0:
+            assert hasattr(self.encoder_vit, "layers"), "encoder_vit non ha attributo .layers (API torchvision diversa?)"
+            # sblocca gli ultimi N blocchi transformer
+            for blk in self.encoder_vit.layers[-unfreeze_last_n:]:
+                for p in blk.parameters():
+                    p.requires_grad = True
 
         # ======= RICOSTRUZIONE SPAZIALE =========
         self.to_spatial = nn.Sequential(
@@ -144,12 +152,12 @@ class ViT_Encoder(nn.Module):
             nn.SELU()
         )
 
-        # ======= UPSAMPLE A 28×28 =========
         self.to_28 = nn.Sequential(
             nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
             nn.SELU()
         )
-        
+
+        # refine (come il tuo)
         self.refine = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
@@ -158,7 +166,6 @@ class ViT_Encoder(nn.Module):
         )
 
     def _patchify(self, x):
-        # x: (B,3,224,224)
         B = x.size(0)
         x = self.conv_proj(x)                  # (B,768,14,14)
         x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
@@ -168,22 +175,20 @@ class ViT_Encoder(nn.Module):
     def forward(self, x):
         B = x.size(0)
 
-        # ===== STEM + VIT =====
-        x = self.stem(x)        # (B,3,224,224) -> (B,3,224,224) arricchita di dettagli
+        x = self.stem(x)
 
-        tokens = self._patchify(x)  # (B,196,768)
+        tokens = self._patchify(x)                         # (B,196,768)
+        cls = self.class_token.expand(B, -1, -1)           # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1)           # (B,197,768)
 
-        cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
-        tokens = torch.cat([cls, tokens], dim=1)  # (B,197,768)
-
-        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768), rimuovi CLS
+        encoded = self.encoder_vit(tokens)[:, 1:]          # (B,196,768)
         encoded = encoded.view(B, 14, 14, self.hidden_dim)
-        encoded = encoded.permute(0, 3, 1, 2)      # (B,768,14,14)
+        encoded = encoded.permute(0, 3, 1, 2)              # (B,768,14,14)
 
-        # ===== CNN RECONSTRUCTION =====
-        spatial = self.to_spatial(encoded)         # (B,128,14,14)
-        out = self.to_28(spatial)                  # (B,64,28,28)
-        out = self.refine(out)                     # (B,64,28,28)
+        spatial = self.to_spatial(encoded)                 # (B,128,14,14)
+        out = self.to_28(spatial)                          # (B,64,28,28)
+        out = self.refine(out)                             # (B,64,28,28)
 
         return out
+
     
