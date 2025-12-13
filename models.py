@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=4) # fine-tuning ultimi 4 blocchi
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0) # fine-tuning ultimi 3 blocchi
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
