@@ -117,7 +117,7 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
         # ========================================================
 
         if use_copy_paste:
-            for _ in range(10):
+            for _ in range(5):
                 idx_n = np.random.randint(len(normal_files_tr))
                 normal_file = normal_files_tr[idx_n]
 

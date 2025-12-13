@@ -3,7 +3,6 @@ import os
 import numpy as np
 import torch
 from codecarbon import EmissionsTracker
-from dataloaders.balanced_batch_sampler import BalancedBatchSampler
 from datasets.mvtec_vit import mvtec_ViT
 from dataloaders.tensor_loader import TensorDatasetAD
 from models import ViT_CNN_Attn
@@ -70,21 +69,9 @@ if __name__ == "__main__":
     train_set = TensorDatasetAD(data_path, train=True)
     test_set = TensorDatasetAD(data_path, train=False)
 
-    batch_sampler = BalancedBatchSampler(
-    labels=train_set.labels,
-    batch_size=args.batch_size,
-    anom_frac=1/3,
-    seed=args.s
-    )
-
     train_loader = torch.utils.data.DataLoader(
-        train_set,
-        batch_sampler=batch_sampler
+        train_set, batch_size=args.batch_size, shuffle=True
     )
-    
-    b = next(iter(train_loader))
-    print("Batch size:", b["label"].shape[0])
-    print("Anomalie nel batch:", int(b["label"].sum()))
 
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False)
 
