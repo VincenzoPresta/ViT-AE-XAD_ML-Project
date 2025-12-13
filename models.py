@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=1)
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2)
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -21,21 +21,15 @@ class AEXAD_Decoder(nn.Module):
     def __init__(self, out_channels=3):
         super().__init__()
 
-        # ============================================================
         # BRANCH 1 — NON TRAINABLE (paper)
-        # ============================================================
-
-        # Un unico upsample 28 → 224, NON tre consecutivi
+        # unico upsample 28 → 224 -> sarebbero: (nearest) + tanh + somma canali 
         self.up = nn.Upsample(size=(224, 224), mode="nearest")
         for p in self.up.parameters():
             p.requires_grad = False
 
         self.tanh = nn.Tanh()
 
-        # ============================================================
         # BRANCH 2 — TRAINABLE (paper)
-        # ============================================================
-
         # 28×28×64 → 56×56×32
         self.dec1 = nn.Sequential(
             nn.Conv2d(64, 32, kernel_size=3, padding=1),
@@ -60,7 +54,7 @@ class AEXAD_Decoder(nn.Module):
             nn.SELU(),
         )
 
-        # FINAL 8 → 3
+        # FINALE 8 → 3
         self.final = nn.Sequential(
             nn.Conv2d(8, 8, kernel_size=3, padding=1),
             nn.SELU(),
@@ -71,28 +65,20 @@ class AEXAD_Decoder(nn.Module):
     def forward(self, x):
         B, C, H, W = x.shape  # (B,64,28,28)
 
-        # ===========================
-        # BRANCH 1 (paper)
-        # ===========================
+        # BRANCH 1 
         b1 = self.up(x)  # → (B,64,224,224)
         b1 = self.tanh(b1)
         b1 = b1.view(B, 8, 8, 224, 224).sum(dim=2)  # 64→8
 
-        # ===========================
         # BRANCH 2 (paper)
-        # ===========================
         b2 = self.dec1(x)
         b2 = self.dec2(b2)
         b2 = self.dec3(b2)
 
-        # ===========================
         # MODULATION
-        # ===========================
         fused = b2 + b1 * b2
 
-        # ===========================
         # FINAL
-        # ===========================
         out = self.final(fused)
         return out
 
@@ -109,7 +95,7 @@ class ViT_Encoder(nn.Module):
     def __init__(self, freeze_vit: bool = True, unfreeze_last_n: int = 0):
         super().__init__()
 
-        # ===== STEM CONVOLUZIONALE =====
+        # STEM CONV
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64),
@@ -119,15 +105,15 @@ class ViT_Encoder(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        # ===== VIT ORIGINALE =====
+        # Visual transformer (originale torchvision)
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
-        self.hidden_dim = vit.hidden_dim  # 768
-        self.conv_proj = vit.conv_proj  # patch embedding
-        self.encoder_vit = vit.encoder  # Encoder(...) con .layers
+        self.hidden_dim = vit.hidden_dim  #768 (controllare questo)
+        self.conv_proj = vit.conv_proj  
+        self.encoder_vit = vit.encoder  
         self.class_token = vit.class_token
 
-        # ===== DEFAULT: congela tutto il ViT =====
+        #  DEFAULT: congela tutto il ViT 
         if freeze_vit:
             for p in self.conv_proj.parameters():
                 p.requires_grad = False
@@ -136,8 +122,7 @@ class ViT_Encoder(nn.Module):
             if isinstance(self.class_token, nn.Parameter):
                 self.class_token.requires_grad = False
 
-        # ===== UNFREEZE SELETTIVO ULTIMI N BLOCCHI =====
-        # (vale solo se freeze_vit=True o se vuoi controllare esplicitamente)
+        # sblocca ultimi N blocchi 
         if unfreeze_last_n > 0:
             assert hasattr(
                 self.encoder_vit, "layers"
@@ -147,12 +132,12 @@ class ViT_Encoder(nn.Module):
                 for p in blk.parameters():
                     p.requires_grad = True
 
-        # sblocca anche la LayerNorm finale dell'encoder (importante per fine-tuning leggero)
+        # sblocca anche la LayerNorm finale dell'encoder -> serve in caso di fine tuning leggero bro
         if unfreeze_last_n > 0 and hasattr(self.encoder_vit, "ln"):
             for p in self.encoder_vit.ln.parameters():
                 p.requires_grad = True
 
-        # ======= RICOSTRUZIONE SPAZIALE =========
+        # RICOSTRUZIONE SPAZIALE 
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
             nn.SELU(),
@@ -164,7 +149,7 @@ class ViT_Encoder(nn.Module):
             nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2), nn.SELU()
         )
 
-        # refine (come il tuo)
+        # refine 
         self.refine = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
