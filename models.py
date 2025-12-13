@@ -4,18 +4,19 @@ import numpy as np
 from torchvision.models import vit_b_16, ViT_B_16_Weights
 import torch.nn.functional as F
 
+
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0)
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=1)
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
         encoded = self.encoder(x)
         out = self.decoder(encoded)
         return out
-    
-    
+
+
 class AEXAD_Decoder(nn.Module):
     def __init__(self, out_channels=3):
         super().__init__()
@@ -25,7 +26,7 @@ class AEXAD_Decoder(nn.Module):
         # ============================================================
 
         # Un unico upsample 28 → 224, NON tre consecutivi
-        self.up = nn.Upsample(size=(224,224), mode="nearest")
+        self.up = nn.Upsample(size=(224, 224), mode="nearest")
         for p in self.up.parameters():
             p.requires_grad = False
 
@@ -64,7 +65,7 @@ class AEXAD_Decoder(nn.Module):
             nn.Conv2d(8, 8, kernel_size=3, padding=1),
             nn.SELU(),
             nn.Conv2d(8, out_channels, kernel_size=3, padding=1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -73,7 +74,7 @@ class AEXAD_Decoder(nn.Module):
         # ===========================
         # BRANCH 1 (paper)
         # ===========================
-        b1 = self.up(x)               # → (B,64,224,224)
+        b1 = self.up(x)  # → (B,64,224,224)
         b1 = self.tanh(b1)
         b1 = b1.view(B, 8, 8, 224, 224).sum(dim=2)  # 64→8
 
@@ -121,9 +122,9 @@ class ViT_Encoder(nn.Module):
         # ===== VIT ORIGINALE =====
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
-        self.hidden_dim  = vit.hidden_dim   # 768
-        self.conv_proj   = vit.conv_proj    # patch embedding
-        self.encoder_vit = vit.encoder      # Encoder(...) con .layers
+        self.hidden_dim = vit.hidden_dim  # 768
+        self.conv_proj = vit.conv_proj  # patch embedding
+        self.encoder_vit = vit.encoder  # Encoder(...) con .layers
         self.class_token = vit.class_token
 
         # ===== DEFAULT: congela tutto il ViT =====
@@ -138,12 +139,14 @@ class ViT_Encoder(nn.Module):
         # ===== UNFREEZE SELETTIVO ULTIMI N BLOCCHI =====
         # (vale solo se freeze_vit=True o se vuoi controllare esplicitamente)
         if unfreeze_last_n > 0:
-            assert hasattr(self.encoder_vit, "layers"), "encoder_vit non ha attributo .layers (API torchvision diversa?)"
+            assert hasattr(
+                self.encoder_vit, "layers"
+            ), "encoder_vit non ha attributo .layers (API torchvision diversa?)"
             # sblocca gli ultimi N blocchi transformer
             for blk in self.encoder_vit.layers[-unfreeze_last_n:]:
                 for p in blk.parameters():
                     p.requires_grad = True
-                    
+
         # sblocca anche la LayerNorm finale dell'encoder (importante per fine-tuning leggero)
         if unfreeze_last_n > 0 and hasattr(self.encoder_vit, "ln"):
             for p in self.encoder_vit.ln.parameters():
@@ -154,12 +157,11 @@ class ViT_Encoder(nn.Module):
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
             nn.SELU(),
             nn.Conv2d(256, 128, kernel_size=3, padding=1),
-            nn.SELU()
+            nn.SELU(),
         )
 
         self.to_28 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
-            nn.SELU()
+            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2), nn.SELU()
         )
 
         # refine (come il tuo)
@@ -167,14 +169,14 @@ class ViT_Encoder(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.SELU()
+            nn.SELU(),
         )
 
     def _patchify(self, x):
         B = x.size(0)
-        x = self.conv_proj(x)                  # (B,768,14,14)
+        x = self.conv_proj(x)  # (B,768,14,14)
         x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
-        x = x.permute(0, 2, 1)                 # (B,196,768)
+        x = x.permute(0, 2, 1)  # (B,196,768)
         return x
 
     def forward(self, x):
@@ -182,16 +184,16 @@ class ViT_Encoder(nn.Module):
 
         x = self.stem(x)
 
-        tokens = self._patchify(x)                         # (B,196,768)
-        cls = self.class_token.expand(B, -1, -1)           # (B,1,768)
-        tokens = torch.cat([cls, tokens], dim=1)           # (B,197,768)
+        tokens = self._patchify(x)  # (B,196,768)
+        cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1)  # (B,197,768)
 
-        encoded = self.encoder_vit(tokens)[:, 1:]          # (B,196,768)
+        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
         encoded = encoded.view(B, 14, 14, self.hidden_dim)
-        encoded = encoded.permute(0, 3, 1, 2)              # (B,768,14,14)
+        encoded = encoded.permute(0, 3, 1, 2)  # (B,768,14,14)
 
-        spatial = self.to_spatial(encoded)                 # (B,128,14,14)
-        out = self.to_28(spatial)                          # (B,64,28,28)
-        out = self.refine(out)                             # (B,64,28,28)
+        spatial = self.to_spatial(encoded)  # (B,128,14,14)
+        out = self.to_28(spatial)  # (B,64,28,28)
+        out = self.refine(out)  # (B,64,28,28)
 
         return out
