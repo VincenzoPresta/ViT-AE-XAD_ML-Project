@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0)
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2)
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -143,6 +143,11 @@ class ViT_Encoder(nn.Module):
             for blk in self.encoder_vit.layers[-unfreeze_last_n:]:
                 for p in blk.parameters():
                     p.requires_grad = True
+                    
+        # sblocca anche la LayerNorm finale dell'encoder (importante per fine-tuning leggero)
+        if unfreeze_last_n > 0 and hasattr(self.encoder_vit, "ln"):
+            for p in self.encoder_vit.ln.parameters():
+                p.requires_grad = True
 
         # ======= RICOSTRUZIONE SPAZIALE =========
         self.to_spatial = nn.Sequential(

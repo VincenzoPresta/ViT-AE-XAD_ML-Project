@@ -34,22 +34,41 @@ class Trainer:
         # ----------------------
         # OPTIMIZER
         # ----------------------
-        trainable_params = [p for p in self.model.parameters() if p.requires_grad]
-        self.optimizer = torch.optim.Adam(trainable_params, lr=5e-4, weight_decay=1e-5)
+        '''trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+        self.optimizer = torch.optim.Adam(trainable_params, lr=5e-4, weight_decay=1e-5)'''
+        
+        vit_params = []
+        other_params = []
+
+        for name, p in self.model.named_parameters():
+            if not p.requires_grad:
+                continue
+
+            # tutto ciò che sta nel ViT encoder (blocchi e LN finale)
+            if "encoder.encoder_vit" in name:
+                vit_params.append(p)
+            else:
+                other_params.append(p)
+
+        self.optimizer = torch.optim.AdamW(
+            [
+                {"params": other_params, "lr": 5e-4, "weight_decay": 1e-5},
+                {"params": vit_params,   "lr": 1e-5, "weight_decay": 0.05},
+            ],
+            betas=(0.9, 0.999)
+        )
+
+        print(f"[OPT] other_params={len(other_params)} | vit_params={len(vit_params)}")
         
         
-        # ----------------------
         # SCHEDULER: Cosine
-        # ----------------------
         self.scheduler = CosineAnnealingLR(
             self.optimizer,
             T_max=200,   # epoche
             eta_min=1e-6
         )
 
-    # ============================================
-    #                   TRAIN
-    # ============================================
+    # TRAIN
     def train(self, epochs=200):
 
         step = 0
