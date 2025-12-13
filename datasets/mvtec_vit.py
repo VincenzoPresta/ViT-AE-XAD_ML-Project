@@ -110,6 +110,13 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
 
         X_train.append(img_aug)
         GT_train.append(np.array(mask, dtype=np.uint8)[..., None])
+        
+        # +5 copie dirette (senza copy-paste)
+        for _ in range(5):
+            img_aug = aug_train(img)
+            img_aug = (img_aug.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+            X_train.append(img_aug)
+            GT_train.append(np.array(mask, dtype=np.uint8)[..., None])
 
 
         # ========================================================
