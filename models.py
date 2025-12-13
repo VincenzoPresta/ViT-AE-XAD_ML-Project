@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2)
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0)
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -193,100 +193,5 @@ class ViT_Encoder(nn.Module):
         spatial = self.to_spatial(encoded)                 # (B,128,14,14)
         out = self.to_28(spatial)                          # (B,64,28,28)
         out = self.refine(out)                             # (B,64,28,28)
-
-        return out
-
-
-class HybridViT_Encoder(nn.Module):
-    """
-    Encoder ibrido CNN→ViT per AE-XAD:
-    - CNN downsampling fino a 14×14
-    - proiezione a hidden_dim=768 (token ViT)
-    - ViT encoder (torchvision) frozen
-    - CNN reconstruction → (B,64,28,28) compatibile con decoder AE-XAD
-    """
-
-    def __init__(self, freeze_vit: bool = True, use_refine: bool = True):
-        super().__init__()
-
-        vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
-
-        self.hidden_dim  = vit.hidden_dim   # 768
-        self.encoder_vit = vit.encoder
-        self.class_token = vit.class_token
-
-        # ===== CNN FEATURE EXTRACTOR: (B,3,224,224) -> (B,768,14,14)
-        # Strided conv "resnet-like" leggera
-        self.cnn = nn.Sequential(
-            nn.Conv2d(3, 64, 3, stride=2, padding=1, bias=False),   # 112
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(64, 128, 3, stride=2, padding=1, bias=False), # 56
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(128, 256, 3, stride=2, padding=1, bias=False),# 28
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-
-            nn.Conv2d(256, self.hidden_dim, 3, stride=2, padding=1, bias=False), # 14
-            nn.BatchNorm2d(self.hidden_dim),
-            nn.ReLU(inplace=True),
-        )
-
-        # ===== Freeze ViT (opzionale)
-        if freeze_vit:
-            for p in self.encoder_vit.parameters():
-                p.requires_grad = False
-            if isinstance(self.class_token, nn.Parameter):
-                self.class_token.requires_grad = False
-
-        # ===== Reconstruction: (B,768,14,14) -> (B,64,28,28)
-        self.to_spatial = nn.Sequential(
-            nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
-            nn.SELU(),
-            nn.Conv2d(256, 128, kernel_size=3, padding=1),
-            nn.SELU(),
-        )
-
-        self.to_28 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
-            nn.SELU()
-        )
-
-        self.use_refine = use_refine
-        self.refine = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.SELU(),
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            nn.SELU(),
-        )
-
-    def forward(self, x):
-        B = x.size(0)
-
-        # 1) CNN -> (B,768,14,14)
-        feat = self.cnn(x)
-
-        # 2) tokenizza: (B,768,14,14) -> (B,196,768)
-        tokens = feat.flatten(2).transpose(1, 2)
-
-        # 3) prepend CLS: (B,197,768)
-        cls = self.class_token.expand(B, -1, -1)
-        tokens = torch.cat([cls, tokens], dim=1)
-
-        # 4) ViT encoder: ritorna (B,197,768) -> tolgo CLS -> (B,196,768)
-        encoded = self.encoder_vit(tokens)[:, 1:]
-
-        # 5) reshape -> (B,768,14,14)
-        encoded = encoded.view(B, 14, 14, self.hidden_dim).permute(0, 3, 1, 2)
-
-        # 6) CNN reconstruction -> (B,64,28,28)
-        spatial = self.to_spatial(encoded)
-        out = self.to_28(spatial)
-
-        if self.use_refine:
-            out = self.refine(out)
 
         return out
