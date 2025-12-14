@@ -34,8 +34,6 @@ class Trainer:
         # ----------------------
         # OPTIMIZER
         # ----------------------
-        
-        #BASELINE OPTIMIZER
         trainable_params = [p for p in self.model.parameters() if p.requires_grad]
 
         self.optimizer = torch.optim.AdamW(
@@ -45,30 +43,6 @@ class Trainer:
             betas=(0.9, 0.999)
         )
         print(f"[OPT-BASELINE] trainable_params={len(trainable_params)}")
-
-        '''# FINE-TUNING OPTIMIZER
-        vit_params = []
-        other_params = []
-
-        for name, p in self.model.named_parameters():
-            if not p.requires_grad:
-                continue
-            if "encoder.encoder_vit" in name:  # include i blocchi sbloccati + ln finale
-                vit_params.append(p)
-            else:
-                other_params.append(p)
-
-        self.optimizer = torch.optim.AdamW(
-            [
-                {"params": other_params, "lr": 5e-4, "weight_decay": 1e-5},
-                {"params": vit_params, "lr": 5e-6, "weight_decay": 0.0},
-            ],
-            betas=(0.9, 0.999),
-        )
-
-        print(
-            f"[OPT-FT] other_params={len(other_params)} | vit_params={len(vit_params)}"
-        )'''
 
         self.scheduler = CosineAnnealingLR(self.optimizer, T_max=50, eta_min=1e-6)
 
