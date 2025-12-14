@@ -84,14 +84,6 @@ class AEXAD_Decoder(nn.Module):
 
 
 class ViT_Encoder(nn.Module):
-    """
-    Encoder ViT per AE-XAD con:
-    - stem conv prima del ViT
-    - patch embedding conv_proj (16×16)
-    - encoder ViT (torchvision) con unfreeze selettivo ultimi blocchi
-    - ricostruzione spaziale CNN → (B,64,28,28)
-    """
-
     def __init__(self, freeze_vit: bool = True, unfreeze_last_n: int = 0):
         super().__init__()
 
@@ -108,12 +100,19 @@ class ViT_Encoder(nn.Module):
         # Visual transformer (originale torchvision)
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
-        self.hidden_dim = vit.hidden_dim  #768 (controllare questo)
-        self.conv_proj = vit.conv_proj  
-        self.encoder_vit = vit.encoder  
+        self.hidden_dim = vit.hidden_dim  # 768
+        self.conv_proj = vit.conv_proj
+        self.encoder_vit = vit.encoder
         self.class_token = vit.class_token
 
-        #  DEFAULT: congela tutto il ViT 
+        # --- Locality injector (DWConv) ---
+        self.local_dw = nn.Conv2d(
+            self.hidden_dim, self.hidden_dim, kernel_size=3,
+            padding=1, groups=self.hidden_dim, bias=False
+        )
+        self.local_act = nn.SELU()
+
+        # FREEZE / UNFREEZE come prima
         if freeze_vit:
             for p in self.conv_proj.parameters():
                 p.requires_grad = False
@@ -122,47 +121,31 @@ class ViT_Encoder(nn.Module):
             if isinstance(self.class_token, nn.Parameter):
                 self.class_token.requires_grad = False
 
-        # sblocca ultimi N blocchi 
         if unfreeze_last_n > 0:
-            assert hasattr(
-                self.encoder_vit, "layers"
-            ), "encoder_vit non ha attributo .layers (API torchvision diversa?)"
-            # sblocca gli ultimi N blocchi transformer
             for blk in self.encoder_vit.layers[-unfreeze_last_n:]:
                 for p in blk.parameters():
                     p.requires_grad = True
+            if hasattr(self.encoder_vit, "ln"):
+                for p in self.encoder_vit.ln.parameters():
+                    p.requires_grad = True
 
-        # sblocca anche la LayerNorm finale dell'encoder -> serve in caso di fine tuning leggero bro
-        if unfreeze_last_n > 0 and hasattr(self.encoder_vit, "ln"):
-            for p in self.encoder_vit.ln.parameters():
-                p.requires_grad = True
-
-        # RICOSTRUZIONE SPAZIALE 
+        # RICOSTRUZIONE SPAZIALE (uguale)
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
             nn.SELU(),
             nn.Conv2d(256, 128, kernel_size=3, padding=1),
             nn.SELU(),
         )
-
         self.to_28 = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2), nn.SELU()
+            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
+            nn.SELU(),
         )
-
-        # refine 
         self.refine = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
         )
-
-    def _patchify(self, x):
-        B = x.size(0)
-        x = self.conv_proj(x)  # (B,768,14,14)
-        x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
-        x = x.permute(0, 2, 1)  # (B,196,768)
-        return x
 
     def forward(self, x):
         B = x.size(0)
@@ -176,6 +159,8 @@ class ViT_Encoder(nn.Module):
         encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
         encoded = encoded.view(B, 14, 14, self.hidden_dim)
         encoded = encoded.permute(0, 3, 1, 2)  # (B,768,14,14)
+        
+        encoded = self.local_act(self.local_dw(encoded))
 
         spatial = self.to_spatial(encoded)  # (B,128,14,14)
         out = self.to_28(spatial)  # (B,64,28,28)
