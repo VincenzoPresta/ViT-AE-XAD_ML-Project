@@ -78,7 +78,6 @@ class AEXAD_Loss(nn.Module):
         # ============================================================
         loss_pixel = (1 - gt) * rec_normal + lambda_y * gt * rec_anom
         loss = loss_pixel.sum(dim=(1, 2, 3)).mean()
-        print("Loss baseline AE-XAD attiva")
 
         # ============================================================
         #                         DEBUG

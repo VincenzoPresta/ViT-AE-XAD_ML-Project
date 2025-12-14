@@ -37,6 +37,9 @@ class Trainer:
 
         #BASELINE OPTIMIZER
         trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+        
+        print("N_trainable:", len(trainable_params))
+        print("\n".join(trainable_params[:50]))
 
         self.optimizer = torch.optim.AdamW(
             trainable_params,
@@ -71,6 +74,9 @@ class Trainer:
         )'''
 
         self.scheduler = CosineAnnealingLR(self.optimizer, T_max=50, eta_min=1e-6)
+        
+        p = next(self.model.parameters()).detach().cpu().view(-1)[:10]
+        print("param head:", p)
 
     # TRAIN
     def train(self, epochs=200):
@@ -86,6 +92,12 @@ class Trainer:
                 img = batch["image"]
                 gt = batch["gt_label"]
                 y = batch["label"]
+                
+                print("y unique:", torch.unique(y))
+                print("gt unique:", torch.unique(gt))
+                print("anom imgs in batch:", int((y==1).sum()))
+                print("anom pixels in batch:", float(gt.sum()))
+                break
 
                 if self.cuda:
                     img = img.cuda()
