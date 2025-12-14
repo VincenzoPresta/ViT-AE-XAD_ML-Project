@@ -27,7 +27,7 @@ class Trainer:
         # ----------------------
         # LOSS AE-XAD (paper)
         # ----------------------
-        self.criterion = AEXAD_Loss(debug=False)
+        self.criterion = AEXAD_Loss(debug=False, alpha=3.0)
         if self.cuda:
             self.criterion = self.criterion.cuda()
 
@@ -96,7 +96,7 @@ class Trainer:
                 out = self.model(img)
 
                 # loss
-                loss = self.criterion(out, img, gt, y, alpha=3.0)
+                loss = self.criterion(out, img, gt, y)
 
                 self.optimizer.zero_grad()
                 loss.backward()
