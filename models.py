@@ -9,7 +9,7 @@ class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0) # fine-tuning ultimi n blocchi
-        self.pre_dec_refine = ResidualRefine(ch=64)   # <-- AGGIUNTO
+        self.pre_dec_refine = ResidualRefineGated(ch=64)   # <-- AGGIUNTO
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -185,7 +185,7 @@ class ViT_Encoder(nn.Module):
 
         return out
 
-class ResidualRefine(nn.Module):
+class ResidualRefineGated(nn.Module):
     def __init__(self, ch=64):
         super().__init__()
         self.block = nn.Sequential(
@@ -193,12 +193,8 @@ class ResidualRefine(nn.Module):
             nn.SELU(),
             nn.Conv2d(ch, ch, 3, padding=1),
         )
-        # init vicino a identità: parte neutro, non rompe subito la baseline
-        for m in self.block.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.zeros_(m.weight)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
+        self.gate = nn.Parameter(torch.tensor(0.0))  # parte spento
 
     def forward(self, x):
-        return x + self.block(x)
+        g = torch.sigmoid(self.gate)  # in (0,1)
+        return x + g * self.block(x)
