@@ -34,16 +34,27 @@ class Trainer:
         # ----------------------
         # OPTIMIZER
         # ----------------------
+        
+        
+        #DEBUG
+        trainable_names = [n for n, p in self.model.named_parameters() if p.requires_grad]
+
+        print("N_trainable:", len(trainable_names))
+        print("\n".join(trainable_names[:50]))
+
+        n_vit = sum(("encoder.encoder_vit" in n) for n in trainable_names)
+        n_convproj = sum(("encoder.conv_proj" in n) for n in trainable_names)
+
+        print("Trainable in ViT blocks:", n_vit)
+        print("Trainable conv_proj:", n_convproj)
+                
+        
 
         #BASELINE OPTIMIZER
-        trainable_params = [n for n, p in self.model.parameters() if p.requires_grad]
+        trainable_params = [p for p in self.model.parameters() if p.requires_grad]
         
         print("N_trainable:", len(trainable_params))
         print("\n".join(trainable_params[:50]))
-        
-        n_vit = sum(("encoder.encoder_vit" in n) for n in trainable_params)
-        n_convproj = sum(("encoder.conv_proj" in n) for n in trainable_params)
-        print("Trainable in ViT blocks:", n_vit, "| Trainable conv_proj:", n_convproj)
 
         self.optimizer = torch.optim.AdamW(
             trainable_params,
