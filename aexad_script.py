@@ -96,7 +96,7 @@ class Trainer:
                 out = self.model(img)
 
                 # loss
-                loss = self.criterion(out, img, gt, y)
+                loss = self.criterion(out, img, gt, y, alpha=3.0)
 
                 self.optimizer.zero_grad()
                 loss.backward()
