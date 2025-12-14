@@ -9,10 +9,12 @@ class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0) # fine-tuning ultimi n blocchi
+        self.pre_dec_refine = ResidualRefine(ch=64)   # <-- AGGIUNTO
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
         encoded = self.encoder(x)
+        encoded = self.pre_dec_refine(encoded)        # <-- AGGIUNTO
         out = self.decoder(encoded)
         return out
 
@@ -182,3 +184,21 @@ class ViT_Encoder(nn.Module):
         out = self.refine(out)  # (B,64,28,28)
 
         return out
+
+class ResidualRefine(nn.Module):
+    def __init__(self, ch=64):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Conv2d(ch, ch, 3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(ch, ch, 3, padding=1),
+        )
+        # init vicino a identità: parte neutro, non rompe subito la baseline
+        for m in self.block.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.zeros_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        return x + self.block(x)
