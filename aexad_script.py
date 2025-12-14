@@ -90,6 +90,7 @@ class Trainer:
                 if self.cuda:
                     img = img.cuda()
                     gt = gt.cuda()
+                    y = y.cuda()
 
                 # AE-XAD reconstruction
                 out = self.model(img)
