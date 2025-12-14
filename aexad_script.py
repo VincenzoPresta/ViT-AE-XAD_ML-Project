@@ -27,7 +27,7 @@ class Trainer:
         # ----------------------
         # LOSS AE-XAD (paper)
         # ----------------------
-        self.criterion = AEXAD_Loss(debug=False, alpha=2.0)
+        self.criterion = AEXAD_Loss(debug=False)
         if self.cuda:
             self.criterion = self.criterion.cuda()
 

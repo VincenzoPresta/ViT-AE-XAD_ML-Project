@@ -8,10 +8,9 @@ class AEXAD_Loss(nn.Module):
     Compatibile con RGB, GT monocanale, F(x)=2, lambda_y corretta.
     """
 
-    def __init__(self, debug=False, alpha=3.0):
+    def __init__(self, debug=False):
         super().__init__()
         self.debug = debug
-        self.alpha = alpha
 
     def forward(self, rec_img, target, gt, y=None):
         """
@@ -74,21 +73,12 @@ class AEXAD_Loss(nn.Module):
         anomaly_pixels = torch.clamp(gt.sum(dim=(1, 2, 3)), min=1.0)
         lambda_y = (D / anomaly_pixels).view(B, 1, 1, 1)
         
-        
-        
-        if y is None:
-            y_img = torch.ones((B, 1, 1, 1), device=device)
-        else:
-            y_img = y.float().to(device).view(B, 1, 1, 1)
-
-        # peso extra solo su pixel anomali (gt=1) e solo su immagini anomale (y=1)
-        w = 1.0 + self.alpha * gt * y_img
-                
         # ============================================================
         #                    LOSS FINALE
         # ============================================================
-        loss_pixel = w * ((1 - gt) * rec_normal + lambda_y * gt * rec_anom)
+        loss_pixel = (1 - gt) * rec_normal + lambda_y * gt * rec_anom
         loss = loss_pixel.sum(dim=(1, 2, 3)).mean()
+        print("Loss baseline AE-XAD attiva")
 
         # ============================================================
         #                         DEBUG
