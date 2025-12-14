@@ -146,6 +146,12 @@ class ViT_Encoder(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
         )
+    def _patchify(self, x):
+        B = x.size(0)
+        x = self.conv_proj(x)  # (B,768,14,14)
+        x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
+        x = x.permute(0, 2, 1)  # (B,196,768)
+        return x
 
     def forward(self, x):
         B = x.size(0)
@@ -160,7 +166,7 @@ class ViT_Encoder(nn.Module):
         encoded = encoded.view(B, 14, 14, self.hidden_dim)
         encoded = encoded.permute(0, 3, 1, 2)  # (B,768,14,14)
         
-        encoded = self.local_act(self.local_dw(encoded))
+        
 
         spatial = self.to_spatial(encoded)  # (B,128,14,14)
         out = self.to_28(spatial)  # (B,64,28,28)
