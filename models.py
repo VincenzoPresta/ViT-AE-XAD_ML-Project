@@ -104,6 +104,9 @@ class ViT_Encoder(nn.Module):
             nn.BatchNorm2d(3),
             nn.ReLU(inplace=True),
         )
+        
+        for p in self.stem.parameters():
+            p.requires_grad = False # test -> freeze parametri stem 
 
         # Visual transformer (originale torchvision)
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)

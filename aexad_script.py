@@ -35,21 +35,6 @@ class Trainer:
         # OPTIMIZER
         # ----------------------
         
-        
-        #DEBUG
-        trainable_names = [n for n, p in self.model.named_parameters() if p.requires_grad]
-
-        print("N_trainable:", len(trainable_names))
-        print("\n".join(trainable_names[:50]))
-
-        n_vit = sum(("encoder.encoder_vit" in n) for n in trainable_names)
-        n_convproj = sum(("encoder.conv_proj" in n) for n in trainable_names)
-
-        print("Trainable in ViT blocks:", n_vit)
-        print("Trainable conv_proj:", n_convproj)
-                
-        
-
         #BASELINE OPTIMIZER
         trainable_params = [p for p in self.model.parameters() if p.requires_grad]
         
@@ -89,9 +74,6 @@ class Trainer:
         )'''
 
         self.scheduler = CosineAnnealingLR(self.optimizer, T_max=50, eta_min=1e-6)
-        
-        p = next(self.model.parameters()).detach().cpu().view(-1)[:10]
-        print("param head:", p)
 
     # TRAIN
     def train(self, epochs=200):
