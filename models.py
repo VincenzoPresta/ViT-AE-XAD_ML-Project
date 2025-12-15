@@ -110,6 +110,9 @@ class ViT_Encoder(nn.Module):
             self.hidden_dim, self.hidden_dim, kernel_size=3,
             padding=1, groups=self.hidden_dim, bias=False
         )
+        
+        nn.init.dirac_(self.local_dw.weight) # -> Dirac initialization
+        
         self.local_act = nn.SELU()
 
         # FREEZE / UNFREEZE come prima
