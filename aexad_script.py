@@ -69,43 +69,45 @@ class Trainer:
 
         self.scheduler = CosineAnnealingLR(self.optimizer, T_max=50, eta_min=1e-6)
 
+    
     # TRAIN
     def train(self, epochs=200):
-
-        step = 0
-        self.model.train()
         
-        best_f1 = -1.0
-        best_epoch = -1
-        best_metrics = None
+        # scheduler coerente con il numero di epoche
+        self.scheduler = CosineAnnealingLR(
+            self.optimizer,
+            T_max=epochs,
+            eta_min=1e-6
+        )
+
+        self.model.train()
 
         for epoch in range(epochs):
             tbar = tqdm(self.train_loader)
-            epoch_loss = 0
+            epoch_loss = 0.0
 
             for batch in tbar:
                 img = batch["image"]
-                gt = batch["gt_label"]
-                y = batch["label"]
+                gt  = batch["gt_label"]
+                y   = batch["label"]
 
                 if self.cuda:
                     img = img.cuda()
-                    gt = gt.cuda()
-                    y = y.cuda()
+                    gt  = gt.cuda()
+                    y   = y.cuda()
 
-                # AE-XAD reconstruction
+                # forward
                 out = self.model(img)
 
                 # loss
                 loss = self.criterion(out, img, gt, y)
-                
+
                 self.optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 self.optimizer.step()
 
-                epoch_loss += loss.item()
-                step += 1
+                epoch_loss += float(loss.item())
 
             # scheduler update
             self.scheduler.step()
@@ -116,33 +118,17 @@ class Trainer:
                 f"[Epoch {epoch}] Loss={avg_loss:.4f} LR={self.scheduler.get_last_lr()[0]:.6f}"
             )
             print(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
-            
-            # --- periodic evaluation + best checkpoint (by F1) ---
+
+            # --- periodic evaluation (logging only) ---
             if (epoch + 1) % 10 == 0:
                 self.model.eval()
                 metrics = self.evaluate_metrics()
-
-                f1 = float(metrics.get("F1_max", -1.0))
-                if f1 > best_f1:
-                    best_f1 = f1
-                    best_epoch = epoch + 1
-                    best_metrics = metrics
-
-                    torch.save(
-                        {
-                            "epoch": best_epoch,
-                            "state_dict": self.model.state_dict(),
-                            "metrics": best_metrics
-                        },
-                        os.path.join(self.save_path, "vit_best_f1.pt")
-                    )
-
-                print(f"[Eval @ {epoch+1}] {metrics} | best_F1={best_f1:.4f} @ epoch {best_epoch}")
-
+                print(f"[Eval @ {epoch+1}] {metrics}")
                 self.model.train()
-            
+
         torch.save(self.model.state_dict(), os.path.join(self.save_path, "vit_final.pt"))
-        print(f"[Training done] best_F1={best_f1:.4f} @ epoch {best_epoch} | best_metrics={best_metrics}")
+        print("[Training done] saved vit_final.pt")
+
 
 
     # ============================================
