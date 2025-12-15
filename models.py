@@ -111,9 +111,11 @@ class ViT_Encoder(nn.Module):
             padding=1, groups=self.hidden_dim, bias=False
         )
         
-        nn.init.dirac_(self.local_dw.weight) # -> Dirac initialization
         
         self.local_act = nn.SELU()
+        
+        self.local_dw28 = nn.Conv2d(64, 64, kernel_size=3, padding=1, groups=64, bias=False)
+        self.local_act28 = nn.SELU()
 
         # FREEZE / UNFREEZE come prima
         if freeze_vit:
@@ -168,11 +170,11 @@ class ViT_Encoder(nn.Module):
         encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
         encoded = encoded.view(B, 14, 14, self.hidden_dim)
         encoded = encoded.permute(0, 3, 1, 2)  # (B,768,14,14)
+        encoded = self.local_act(self.local_dw(encoded))  
         
-        
-
         spatial = self.to_spatial(encoded)  # (B,128,14,14)
         out = self.to_28(spatial)  # (B,64,28,28)
+        out = self.local_act28(self.local_dw28(out)) # <-- nuovo
         out = self.refine(out)  # (B,64,28,28)
 
         return out
