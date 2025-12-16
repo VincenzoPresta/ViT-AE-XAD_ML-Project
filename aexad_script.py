@@ -57,7 +57,7 @@ class Trainer:
         # ----------------------
         # OPTIMIZER
         # ----------------------
-        trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+        '''trainable_params = [p for p in self.model.parameters() if p.requires_grad]
 
         self.optimizer = torch.optim.AdamW(
             trainable_params,
@@ -65,8 +65,42 @@ class Trainer:
             weight_decay=1e-5,
             betas=(0.9, 0.999)
         )
-        print(f"[OPT-BASELINE] trainable_params={len(trainable_params)}")
-    
+        print(f"[OPT-BASELINE] trainable_params={len(trainable_params)}")'''
+        
+        # --- param groups: base vs vit_ln ---
+        vit_ln_params = []
+        base_params = []
+
+        for name, p in self.model.named_parameters():
+            if not p.requires_grad:
+                continue
+
+            # parametri che appartengono al ViT (encoder_vit / conv_proj / class_token)
+            is_vit = (
+                "encoder.encoder_vit" in name
+                or "encoder.conv_proj" in name
+                or "encoder.class_token" in name
+            )
+
+            if is_vit:
+                vit_ln_params.append(p)
+            else:
+                base_params.append(p)
+
+        print(f"[OPT] base={len(base_params)} vit_ln={len(vit_ln_params)}")
+
+        self.optimizer = torch.optim.AdamW(
+            [
+                {"params": base_params, "lr": 5e-4, "weight_decay": 1e-5},
+                {"params": vit_ln_params, "lr": 1e-5, "weight_decay": 0.0},
+            ],
+            betas=(0.9, 0.999),
+        )
+        
+        for name, p in self.model.named_parameters():
+            if p.requires_grad and ("encoder.encoder_vit" in name or "encoder.conv_proj" in name):
+                print("[TRAINABLE VIT]", name, p.shape)
+            
     # TRAIN
     def train(self, epochs=200):
         

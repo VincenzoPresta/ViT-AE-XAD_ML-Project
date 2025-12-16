@@ -8,7 +8,7 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0) # fine-tuning ultimi n blocchi
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2) # fine-tuning ultimi n blocchi
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -120,14 +120,17 @@ class ViT_Encoder(nn.Module):
                 p.requires_grad = False
             if isinstance(self.class_token, nn.Parameter):
                 self.class_token.requires_grad = False
+                
+        def _unfreeze_ln(module: nn.Module):
+            for name, p in module.named_parameters():
+                if ("norm" in name.lower()) or ("ln" in name.lower()):
+                    p.requires_grad = True
 
         if unfreeze_last_n > 0:
             for blk in self.encoder_vit.layers[-unfreeze_last_n:]:
-                for p in blk.parameters():
-                    p.requires_grad = True
+                _unfreeze_ln(blk)
             if hasattr(self.encoder_vit, "ln"):
-                for p in self.encoder_vit.ln.parameters():
-                    p.requires_grad = True
+                _unfreeze_ln(self.encoder_vit.ln)
 
         # RICOSTRUZIONE SPAZIALE (uguale)
         self.to_spatial = nn.Sequential(
