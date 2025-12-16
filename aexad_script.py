@@ -92,7 +92,7 @@ class Trainer:
         self.optimizer = torch.optim.AdamW(
             [
                 {"params": base_params, "lr": 5e-4, "weight_decay": 1e-5},
-                {"params": vit_ln_params, "lr": 2e-6, "weight_decay": 0.0},
+                {"params": vit_ln_params, "lr": 1e-5, "weight_decay": 0.0},
             ],
             betas=(0.9, 0.999),
         )
