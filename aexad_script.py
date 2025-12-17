@@ -67,39 +67,41 @@ class Trainer:
         )
         print(f"[OPT-BASELINE] trainable_params={len(trainable_params)}")'''
         
-        # --- param groups: base vs vit_ln ---
-        vit_ln_params = []
+        # --- param groups: base vs vit_ln (LN-only) ---
         base_params = []
+        vit_ln_params = []
 
         for name, p in self.model.named_parameters():
             if not p.requires_grad:
                 continue
 
-            # parametri che appartengono al ViT (encoder_vit / conv_proj / class_token)
-            is_vit = (
-                "encoder.encoder_vit" in name
-                or "encoder.conv_proj" in name
-                or "encoder.class_token" in name
-            )
+            name_l = name.lower()
 
-            if is_vit:
+            # metti nel gruppo ViT SOLO le LayerNorm/Norm del transformer encoder
+            is_vit_ln = ("encoder.encoder_vit" in name) and (("ln" in name_l) or ("norm" in name_l))
+
+            if is_vit_ln:
                 vit_ln_params.append(p)
             else:
                 base_params.append(p)
 
         print(f"[OPT] base={len(base_params)} vit_ln={len(vit_ln_params)}")
 
-        self.optimizer = torch.optim.AdamW(
-            [
-                {"params": base_params, "lr": 5e-4, "weight_decay": 1e-5},
-                {"params": vit_ln_params, "lr": 1e-5, "weight_decay": 0.0},
-            ],
-            betas=(0.9, 0.999),
-        )
-        
+        param_groups = [
+            {"params": base_params, "lr": 5e-4, "weight_decay": 1e-5},
+        ]
+        if len(vit_ln_params) > 0:
+            param_groups.append({"params": vit_ln_params, "lr": 1e-5, "weight_decay": 0.0})
+
+        self.optimizer = torch.optim.AdamW(param_groups, betas=(0.9, 0.999))
+
+        # debug: stampa SOLO i parametri ViT trainabili (LN-only)
         for name, p in self.model.named_parameters():
-            if p.requires_grad and ("encoder.encoder_vit" in name or "encoder.conv_proj" in name):
-                print("[TRAINABLE VIT]", name, p.shape)
+            if p.requires_grad:
+                name_l = name.lower()
+                if ("encoder.encoder_vit" in name) and (("ln" in name_l) or ("norm" in name_l)):
+                    print("[TRAINABLE VIT-LN]", name, tuple(p.shape))
+
             
     # TRAIN
     def train(self, epochs=200):
