@@ -106,11 +106,10 @@ class ViT_Encoder(nn.Module):
         self.class_token = vit.class_token
 
         # --- Locality injector (DWConv) ---
-        self.local_dw = nn.Conv2d(
-            self.hidden_dim, self.hidden_dim, kernel_size=3,
-            padding=1, groups=self.hidden_dim, bias=False
-        )
+        self.local_dw = nn.Conv2d(self.hidden_dim, self.hidden_dim, 3, padding=1,
+                          groups=self.hidden_dim, bias=False)
         self.local_act = nn.SELU()
+        self.local_alpha = nn.Parameter(torch.tensor(0.1))  # piccolo all’inizio
 
         # FREEZE / UNFREEZE come prima
         if freeze_vit:
@@ -149,6 +148,8 @@ class ViT_Encoder(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
         )
+        
+        
     def _patchify(self, x):
         B = x.size(0)
         x = self.conv_proj(x)  # (B,768,14,14)
@@ -164,11 +165,11 @@ class ViT_Encoder(nn.Module):
         tokens = self._patchify(x)  # (B,196,768)
         cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
         tokens = torch.cat([cls, tokens], dim=1)  # (B,197,768)
-
+        
         encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
-        encoded = encoded.view(B, 14, 14, self.hidden_dim)
-        encoded = encoded.permute(0, 3, 1, 2)  # (B,768,14,14)
-        encoded = self.local_act(self.local_dw(encoded))
+        encoded = encoded.view(B, 14, 14, self.hidden_dim).permute(0, 3, 1, 2)  # (B,768,14,14)
+        local = self.local_act(self.local_dw(encoded))
+        encoded = encoded + self.local_alpha * local
         
         spatial = self.to_spatial(encoded)  # (B,128,14,14)
         out = self.to_28(spatial)  # (B,64,28,28)
