@@ -144,6 +144,7 @@ class Trainer:
             # raggiungi l'encoder anche se il modello è wrappato (DataParallel/DDP)
             m = self.model.module if hasattr(self.model, "module") else self.model
             m.encoder.set_local_alpha(alpha)
+            print(f"local_alpha = {float(m.encoder.local_alpha):.6f}")
 
 
             # log leggero
@@ -177,6 +178,8 @@ class Trainer:
 
             avg_loss = epoch_loss / len(self.train_loader)
             print(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
+            
+           
 
             # --- periodic evaluation (logging only) ---
             if (epoch + 1) % 10 == 0:
@@ -184,6 +187,8 @@ class Trainer:
                 metrics = self.evaluate_metrics()
                 print(f"[Eval @ {epoch+1}] {metrics}")
                 self.model.train()
+                
+                
 
         torch.save(self.model.state_dict(), os.path.join(self.save_path, "vit_final.pt"))
         print("[Training done] saved vit_final.pt")
