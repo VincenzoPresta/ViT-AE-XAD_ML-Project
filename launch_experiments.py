@@ -2,7 +2,6 @@ import argparse
 import os
 import numpy as np
 import torch
-from codecarbon import EmissionsTracker
 from datasets.mvtec_vit import mvtec_ViT
 from dataloaders.tensor_loader import TensorDatasetAD
 from models import ViT_CNN_Attn
