@@ -171,10 +171,6 @@ class Trainer:
                 self.optimizer.step()
 
                 epoch_loss += float(loss.item())
-                
-                tbar.set_description(
-                f"[Epoch {epoch}] Loss={avg_loss:.4f} LR={self.scheduler.get_last_lr()[0]:.6f}"
-            )
 
             # scheduler update
             self.scheduler.step()
