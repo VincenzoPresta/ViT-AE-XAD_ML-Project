@@ -109,8 +109,8 @@ class ViT_Encoder(nn.Module):
         self.local_dw = nn.Conv2d(self.hidden_dim, self.hidden_dim, 3, padding=1,
                           groups=self.hidden_dim, bias=False)
         self.local_act = nn.SELU()
-        self.local_alpha = nn.Parameter(torch.tensor(0.1))  # piccolo all’inizio
-
+        self.register_buffer("local_alpha", torch.tensor(0.1))
+        
         # FREEZE / UNFREEZE come prima
         if freeze_vit:
             for p in self.conv_proj.parameters():
@@ -148,8 +148,13 @@ class ViT_Encoder(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.SELU(),
         )
-        
-        
+    
+    def set_local_alpha(self, alpha: float):
+        # clamp difensivo
+        a = max(0.0, float(alpha))
+        # mantiene dtype/device del buffer
+        self.local_alpha.fill_(a)
+    
     def _patchify(self, x):
         B = x.size(0)
         x = self.conv_proj(x)  # (B,768,14,14)

@@ -106,6 +106,19 @@ class Trainer:
     # TRAIN
     def train(self, epochs=200):
         
+        
+        # --- SANITY CHECK (una volta sola) ---
+        m = self.model.module if hasattr(self.model, "module") else self.model
+
+        assert hasattr(m, "encoder"), "Model has no .encoder"
+        assert hasattr(m.encoder, "set_local_alpha"), "Encoder has no set_local_alpha()"
+        assert not any(n == "local_alpha" for n, _ in m.encoder.named_parameters()), \
+            "local_alpha must be a buffer, not a parameter"
+
+        print("[OK] local_alpha scheduling sanity checks passed")
+        
+        
+        
         # scheduler coerente con il numero di epoche
         self.scheduler = CosineAnnealingLR(
             self.optimizer,
@@ -118,6 +131,23 @@ class Trainer:
         for epoch in range(epochs):
             tbar = tqdm(self.train_loader)
             epoch_loss = 0.0
+            
+            # --- locality alpha scheduling (deterministico, non learnable) ---
+            alpha = self._alpha_schedule(
+                epoch=epoch,
+                epochs=epochs,
+                alpha_max=0.10,     # run 1: 0.10; run 2: 0.15 (stress)
+                start_frac=0.50,    # 25/50
+                end_frac=0.90       # 45/50
+            )
+
+            # raggiungi l'encoder anche se il modello è wrappato (DataParallel/DDP)
+            m = self.model.module if hasattr(self.model, "module") else self.model
+            m.encoder.set_local_alpha(alpha)
+
+
+            # log leggero
+            print(f"[Epoch {epoch}] local_alpha={alpha:.4f}")
 
             for batch in tbar:
                 img = batch["image"]
@@ -141,15 +171,15 @@ class Trainer:
                 self.optimizer.step()
 
                 epoch_loss += float(loss.item())
+                
+                tbar.set_description(
+                f"[Epoch {epoch}] Loss={avg_loss:.4f} LR={self.scheduler.get_last_lr()[0]:.6f}"
+            )
 
             # scheduler update
             self.scheduler.step()
 
             avg_loss = epoch_loss / len(self.train_loader)
-
-            tbar.set_description(
-                f"[Epoch {epoch}] Loss={avg_loss:.4f} LR={self.scheduler.get_last_lr()[0]:.6f}"
-            )
             print(f"[Epoch {epoch}] Loss={avg_loss:.4f}")
 
             # --- periodic evaluation (logging only) ---
@@ -314,6 +344,28 @@ class Trainer:
         F1_max  = float(np.mean(F1s))  if len(F1s) > 0 else 0.0
 
         return {"X_AUC": X_AUC, "IoU_max": IoU_max, "F1_max": F1_max}
+    
+    def _alpha_schedule(self, epoch: int, epochs: int,
+                    alpha_max: float = 0.10,
+                    start_frac: float = 0.50,
+                    end_frac: float = 0.90) -> float:
+        """
+        Lineare:
+        - alpha=0 fino a start
+        - ramp lineare fino a end
+        - alpha=alpha_max dopo end
+        """
+        E_start = int(start_frac * epochs)
+        E_end   = int(end_frac * epochs)
+
+        if epoch < E_start:
+            return 0.0
+        if epoch >= E_end:
+            return float(alpha_max)
+
+        t = (epoch - E_start) / max(1, (E_end - E_start))
+        return float(alpha_max) * float(t)
+
 
 
 
