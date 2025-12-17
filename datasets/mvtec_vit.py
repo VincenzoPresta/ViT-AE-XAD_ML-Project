@@ -177,10 +177,15 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
 
 def copy_paste_defect_clean(base_img, anomaly_img, anomaly_mask):
     """
-    Versione pulita del copy-paste per AE-XAD.
-    Nessuna rotazione, nessun flip, nessun jitter.
-    Mantiene coerenza pixel-wise.
+    Copy-paste AE-XAD compliant:
+    - no rotation
+    - no jitter
+    - no scaling
+    - RANDOM spatial relocation
+    - pixel-wise mask consistency
     """
+
+    base_w, base_h = base_img.size
 
     mask_np = np.array(anomaly_mask) > 127
     if mask_np.sum() == 0:
@@ -190,14 +195,24 @@ def copy_paste_defect_clean(base_img, anomaly_img, anomaly_mask):
     y1, y2 = ys.min(), ys.max()
     x1, x2 = xs.min(), xs.max()
 
-    defect = anomaly_img.crop((x1, y1, x2, y2))
-    defect_mask = anomaly_mask.crop((x1, y1, x2, y2))
+    defect = anomaly_img.crop((x1, y1, x2 + 1, y2 + 1))
+    defect_mask = anomaly_mask.crop((x1, y1, x2 + 1, y2 + 1))
 
-    # riposiziona al suo posto, senza distorsioni
+    dh, dw = defect.size[1], defect.size[0]
+
+    # --- random valid placement ---
+    max_x = base_w - dw
+    max_y = base_h - dh
+    if max_x <= 0 or max_y <= 0:
+        return None, None
+
+    rx = np.random.randint(0, max_x + 1)
+    ry = np.random.randint(0, max_y + 1)
+
     base_img = base_img.copy()
-    base_img.paste(defect, (x1, y1), defect_mask)
+    base_img.paste(defect, (rx, ry), defect_mask)
 
-    new_mask = Image.new('L', (224,224), 0)
-    new_mask.paste(defect_mask, (x1, y1))
+    new_mask = Image.new("L", (base_w, base_h), 0)
+    new_mask.paste(defect_mask, (rx, ry))
 
     return base_img, new_mask
