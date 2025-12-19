@@ -57,18 +57,14 @@ class Trainer:
         # ----------------------
         # OPTIMIZER
         # ----------------------
-        '''trainable_params = [p for p in self.model.parameters() if p.requires_grad]
-
         self.optimizer = torch.optim.AdamW(
-            trainable_params,
+            self.model.parameters(),
             lr=5e-4,
-            weight_decay=1e-5,
-            betas=(0.9, 0.999)
+            weight_decay=1e-5
         )
-        print(f"[OPT-BASELINE] trainable_params={len(trainable_params)}")'''
         
         # --- param groups: base vs vit_ln (LN-only) ---
-        base_params = []
+        '''base_params = []
         vit_ln_params = []
 
         for name, p in self.model.named_parameters():
@@ -100,7 +96,18 @@ class Trainer:
             if p.requires_grad:
                 name_l = name.lower()
                 if ("encoder.encoder_vit" in name) and (("ln" in name_l) or ("norm" in name_l)):
-                    print("[TRAINABLE VIT-LN]", name, tuple(p.shape))
+                    print("[TRAINABLE VIT-LN]", name, tuple(p.shape))'''
+                    
+        m = self.model.module if hasattr(self.model, "module") else self.model
+
+        # conta parametri trainabili
+        n_trainable = sum(p.requires_grad for p in m.parameters())
+        n_total = sum(1 for _ in m.parameters())
+        print(f"[SCRATCH CHECK] trainable params: {n_trainable}/{n_total}")
+
+        # check specifico: conv_proj e blocchi vit devono essere trainabili
+        print("[SCRATCH CHECK] conv_proj trainable:", any(p.requires_grad for p in m.encoder.conv_proj.parameters()))
+        print("[SCRATCH CHECK] encoder_vit trainable:", any(p.requires_grad for p in m.encoder.encoder_vit.parameters()))
 
             
     # TRAIN
@@ -118,8 +125,6 @@ class Trainer:
         print("[OK] local_alpha scheduling sanity checks passed")
         
         
-        
-        # scheduler coerente con il numero di epoche
         self.scheduler = CosineAnnealingLR(
             self.optimizer,
             T_max=epochs,

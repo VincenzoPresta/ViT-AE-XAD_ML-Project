@@ -8,7 +8,9 @@ import torch.nn.functional as F
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2) # fine-tuning ultimi n blocchi
+        #self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2) # fine-tuning ultimi n blocchi
+
+        self.encoder = ViT_Encoder_Scratch()
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -180,4 +182,81 @@ class ViT_Encoder(nn.Module):
         out = self.to_28(spatial)  # (B,64,28,28)
         out = self.refine(out)  # (B,64,28,28)
 
+        return out
+
+class ViT_Encoder_Scratch(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        # STEM CONV (la lasci uguale)
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(3),
+            nn.ReLU(inplace=True),
+        )
+
+        # ViT FROM SCRATCH
+        vit = vit_b_16(weights=None)
+
+        self.hidden_dim = vit.hidden_dim  # 768
+        self.conv_proj = vit.conv_proj
+        self.encoder_vit = vit.encoder
+        self.class_token = vit.class_token
+
+        # Locality injector (DWConv) - identico
+        self.local_dw = nn.Conv2d(
+            self.hidden_dim, self.hidden_dim, kernel_size=3, padding=1,
+            groups=self.hidden_dim, bias=False
+        )
+        self.local_act = nn.SELU()
+        self.register_buffer("local_alpha", torch.tensor(0.1))
+
+        # Ricostruzione spaziale (identica)
+        self.to_spatial = nn.Sequential(
+            nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
+            nn.SELU(),
+            nn.Conv2d(256, 128, kernel_size=3, padding=1),
+            nn.SELU(),
+        )
+        self.to_28 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
+            nn.SELU(),
+        )
+        self.refine = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU(),
+        )
+
+    def set_local_alpha(self, alpha: float):
+        self.local_alpha.fill_(max(0.0, float(alpha)))
+
+    def _patchify(self, x):
+        B = x.size(0)
+        x = self.conv_proj(x)                # (B,768,14,14)
+        x = x.reshape(B, self.hidden_dim, -1) # (B,768,196)
+        x = x.permute(0, 2, 1)               # (B,196,768)
+        return x
+
+    def forward(self, x):
+        B = x.size(0)
+        x = self.stem(x)
+
+        tokens = self._patchify(x)  # (B,196,768)
+        cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1)  # (B,197,768)
+
+        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
+        encoded = encoded.view(B, 14, 14, self.hidden_dim).permute(0, 3, 1, 2)  # (B,768,14,14)
+
+        local = self.local_act(self.local_dw(encoded))
+        encoded = encoded + self.local_alpha * local
+
+        spatial = self.to_spatial(encoded)  # (B,128,14,14)
+        out = self.to_28(spatial)           # (B,64,28,28)
+        out = self.refine(out)              # (B,64,28,28)
         return out
