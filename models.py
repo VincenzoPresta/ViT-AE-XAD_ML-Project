@@ -22,13 +22,8 @@ class AEXAD_Decoder(nn.Module):
         super().__init__()
 
         # BRANCH 1 — NON TRAINABLE (paper)
-<<<<<<< HEAD
-        # Un unico upsample 28 → 224, NON tre consecutivi
-        self.up = nn.Upsample(size=(224,224), mode="nearest")
-=======
         # unico upsample 28 → 224 -> sarebbero: (nearest) + tanh + somma canali 
         self.up = nn.Upsample(size=(224, 224), mode="nearest")
->>>>>>> d31f3524b6e0fea712fde75930a52b57bca69ba7
         for p in self.up.parameters():
             p.requires_grad = False
 
@@ -70,21 +65,12 @@ class AEXAD_Decoder(nn.Module):
     def forward(self, x):
         B, C, H, W = x.shape  # (B,64,28,28)
 
-<<<<<<< HEAD
-        # BRANCH 1 (paper)
-        b1 = self.up(x)               # → (B,64,224,224)
-=======
         # BRANCH 1 
         b1 = self.up(x)  # → (B,64,224,224)
->>>>>>> d31f3524b6e0fea712fde75930a52b57bca69ba7
         b1 = self.tanh(b1)
         b1 = b1.view(B, 8, 8, 224, 224).sum(dim=2)  # 64→8
 
         # BRANCH 2 (paper)
-<<<<<<< HEAD
-        
-=======
->>>>>>> d31f3524b6e0fea712fde75930a52b57bca69ba7
         b2 = self.dec1(x)
         b2 = self.dec2(b2)
         b2 = self.dec3(b2)
