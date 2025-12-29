@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
-import numpy as np
 from torchvision.models import vit_b_16, ViT_B_16_Weights
-import torch.nn.functional as F
 
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
@@ -20,10 +18,7 @@ class AEXAD_Decoder(nn.Module):
     def __init__(self, out_channels=3):
         super().__init__()
 
-        # ============================================================
         # BRANCH 1 — NON TRAINABLE (paper)
-        # ============================================================
-
         # Un unico upsample 28 → 224, NON tre consecutivi
         self.up = nn.Upsample(size=(224,224), mode="nearest")
         for p in self.up.parameters():
@@ -31,10 +26,7 @@ class AEXAD_Decoder(nn.Module):
 
         self.tanh = nn.Tanh()
 
-        # ============================================================
         # BRANCH 2 — TRAINABLE (paper)
-        # ============================================================
-
         # 28×28×64 → 56×56×32
         self.dec1 = nn.Sequential(
             nn.Conv2d(64, 32, kernel_size=3, padding=1),
@@ -70,32 +62,23 @@ class AEXAD_Decoder(nn.Module):
     def forward(self, x):
         B, C, H, W = x.shape  # (B,64,28,28)
 
-        # ===========================
         # BRANCH 1 (paper)
-        # ===========================
         b1 = self.up(x)               # → (B,64,224,224)
         b1 = self.tanh(b1)
         b1 = b1.view(B, 8, 8, 224, 224).sum(dim=2)  # 64→8
 
-        # ===========================
         # BRANCH 2 (paper)
-        # ===========================
+        
         b2 = self.dec1(x)
         b2 = self.dec2(b2)
         b2 = self.dec3(b2)
 
-        # ===========================
         # MODULATION
-        # ===========================
         fused = b2 + b1 * b2
 
-        # ===========================
         # FINAL
-        # ===========================
         out = self.final(fused)
         return out
-
-
 
 
 class ViT_Encoder(nn.Module):

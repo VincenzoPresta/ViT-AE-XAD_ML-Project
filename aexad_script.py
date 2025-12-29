@@ -133,6 +133,17 @@ class Trainer:
                 # --------------------------------------------
                 #      AE-XAD HEATMAP & SCORE UFFICIALI
                 # --------------------------------------------
+                
+                # ------------------ DEBUG RANGE (1 sola immagine) ------------------
+                if i == 0:  # solo prima immagine, altrimenti spam
+                    print("\n[DEBUG RANGE CHECK]")
+                    print("img_np dtype:", img_np.dtype, "min/max:", float(img_np.min()), float(img_np.max()),
+                        "mean/std:", float(img_np.mean()), float(img_np.std()))
+                    print("out_np dtype:", out.dtype, "min/max:", float(out.min()), float(out.max()),
+                        "mean/std:", float(out.mean()), float(out.std()))
+                    print("gt_np unique:", np.unique(gt_np)[:10], "min/max:", float(gt_np.min()), float(gt_np.max()))
+                # -------------------------------------------------------------------
+                
                 e_raw, h_filtered, h_bin, score, k_hat = aexad_heatmap_and_score(
                     img_np, out
                 )

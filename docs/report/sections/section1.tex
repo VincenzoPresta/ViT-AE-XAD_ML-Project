@@ -1,55 +1,67 @@
-
-
 \newpage
+
 \section{Introduzione}
-L'anomaly detection su immagini è un compito particolarmente complesso, poiché richiede
-non solo l'identificazione di osservazioni che deviano dal comportamento normale, ma
-anche la capacità di spiegare quali componenti dell'immagine giustifichino tale devianza.
-In numerosi contesti applicativi --- come ispezione industriale, manutenzione predittiva o
-monitoraggio di qualità --- non è sufficiente stabilire se un'immagine sia anomala: è
-necessario produrre una spiegazione interpretabile e coerente che evidenzi le regioni
-responsabili dell'anomalia.
 
-La letteratura tradizionale sull'Explainable Artificial Intelligence (xAI) si è concentrata
-principalmente su modelli di classificazione o regressione, mentre una minore attenzione è
-stata dedicata al problema dell'Explainable Anomaly Detection (xAD). Tuttavia, le
-peculiarità del rilevamento di anomalie rendono i metodi post-hoc scarsamente efficaci in
-questo scenario \cite{AE_XAD_Arrays}. In particolare, tre criticità strutturali ostacolano
-l'applicazione diretta delle tecniche di spiegabilità classiche:
-\begin{itemize}
-    \item \textbf{Rarità delle anomalie:} i difetti sono poco rappresentati e non esiste un
-    processo affidabile per generarli artificialmente in modo realistico; ciò limita l'uso
-    di metodi post-hoc basati sull'abbondanza di esempi anomali.
-    \item \textbf{Eterogeneità delle anomalie:} forme, estensioni e intensità possono variare
-    significativamente rendendo difficile definire un modello universale.
-    \item \textbf{Bassa fedeltà delle spiegazioni post-hoc:} tali metodi operano su modelli
-    già addestrati, non progettati per essere esplicabili, producendo mappe che spesso non
-    riflettono accuratamente le regioni realmente responsabili dell'anomalia.
-\end{itemize}
+L’Anomaly Detection in ambito industriale rappresenta un problema di grande rilevanza applicativa,
+poiché consente l’individuazione automatica di difetti e anomalie su superfici e componenti prodotti
+in serie. In molti scenari reali, le anomalie risultano rare, eterogenee e difficilmente annotabili
+in modo esaustivo, rendendo complessa l’applicazione di approcci supervisionati tradizionali.
+Per questo motivo, si sono affermati metodi basati su Autoencoder, capaci di apprendere una
+rappresentazione delle sole istanze normali e di identificare le anomalie come deviazioni rispetto
+al comportamento appreso.
 
-A fronte di questi limiti, è cresciuto l'interesse verso approcci \textit{explainability-by-design},
-ossia modelli che integrano il meccanismo di spiegazione all'interno del processo
-di addestramento. In questo contesto si colloca \textbf{AE--XAD}, un metodo basato su
-Autoencoder che ha come obiettivo non solo il rilevamento dell'anomalia, ma anche la
-produzione di una \textit{heatmap} interpretabile in grado di evidenziare le regioni che più
-contribuiscono al comportamento anomalo.
+All’interno di questo paradigma, i metodi di anomaly detection basati su ricostruzione hanno
+dimostrato particolare efficacia in contesti industriali, soprattutto quando è richiesta una
+localizzazione spaziale dei difetti. In tale direzione si colloca il framework AE-XAD, che introduce
+una pipeline strutturata per la rilevazione e la localizzazione delle anomalie attraverso l’analisi
+dell’errore di ricostruzione \cite{angiulli2025aexad}. Il metodo combina un encoder convoluzionale,
+un decoder progettato per enfatizzare le discrepanze rispetto alla normalità e un meccanismo di
+decisione basato su statistiche globali pixel-wise, ottenendo risultati competitivi sia a livello
+di immagine che a livello di localizzazione.
 
-Il problema affrontato da AE--XAD può essere formulato come segue:
+Negli ultimi anni, l’evoluzione delle architetture di visione ha portato all’emergere di modelli
+basati su meccanismi di attenzione globale, come i Vision Transformer, che hanno mostrato elevate
+capacità di rappresentazione in numerosi compiti di visione artificiale. Questo progresso solleva
+naturalmente l’interrogativo se tali architetture possano sostituire efficacemente le reti
+convoluzionali anche all’interno di pipeline di anomaly detection basate su ricostruzione.
+
+Tuttavia, l’integrazione di un Vision Transformer all’interno del framework AE-XAD non è immediata.
+AE-XAD non è un autoencoder generico, ma un metodo che fa affidamento su specifiche assunzioni
+strutturali riguardanti la distribuzione spaziale dell’errore di ricostruzione e sulla sua
+separabilità statistica dal rumore di fondo. In questo contesto, la sostituzione dell’encoder
+convoluzionale con un’architettura caratterizzata da un diverso tipo di rappresentazione solleva
+interrogativi fondamentali sulla compatibilità tra il modello di features apprese e il meccanismo
+decisionale adottato.
+
+L’obiettivo di questa tesi è quindi analizzare in modo sistematico se, e in quali condizioni,
+un Vision Transformer possa sostituire l’encoder convoluzionale originale di AE-XAD mantenendo
+inalterati il decoder, la funzione di loss, le metriche di valutazione e l’intera pipeline di test,
+al fine di garantire un confronto equo e scientificamente rigoroso.
+
+\subsection{Definizione del Problema e Ipotesi di Ricerca}
+
+Il framework AE-XAD assume implicitamente che le anomalie producano errori di ricostruzione
+\emph{spazialmente localizzati e compatti}, tali da poter essere distinti dal rumore di fondo mediante
+una soglia statistica globale basata su media e deviazione standard ($\mu + \sigma$). Questa
+assunzione risulta naturalmente coerente con le proprietà delle architetture convoluzionali, che
+favoriscono una rappresentazione gerarchica e localmente strutturata delle informazioni spaziali.
+
+Le architetture basate su attenzione globale, come i Vision Transformer, presentano invece un
+comportamento rappresentazionale differente, orientato alla modellazione di relazioni globali tra
+regioni dell’immagine. Sebbene tale caratteristica possa risultare vantaggiosa in compiti di natura
+semantica, non è immediatamente evidente se essa sia compatibile con un paradigma di anomaly
+detection basato su errori di ricostruzione pixel-wise e su una sogliatura statistica globale.
+
+La domanda di ricerca che guida questo lavoro può pertanto essere formulata come segue:
+
 \begin{quote}
-    \textit{Data un'immagine potenzialmente anomala, determinare non solo se essa contenga
-    difetti, ma anche quali regioni dell'immagine siano responsabili della deviazione rispetto
-    al comportamento normale.}
+\emph{Un Vision Transformer può sostituire efficacemente l’encoder convoluzionale di AE-XAD,
+mantenendo inalterata la pipeline decisionale, in un contesto di anomaly detection few-shot
+supervisionato?}
 \end{quote}
 
-I metodi ricostruttivi convenzionali, come gli Autoencoder standard, non sono sufficienti
-per questo scopo: tendono infatti a ricostruire anche le regioni anomale e a produrre mappe
-di errore poco informative e rumorose. AE--XAD supera tali limitazioni introducendo una
-strategia di addestramento semi-supervisionata progettata per:
-\begin{itemize}
-    \item ricostruire accuratamente i pixel normali;
-    \item ricostruire intenzionalmente \emph{in modo errato} i pixel anomali;
-    \item generare una heatmap stabile, coerente e interpretabile basata sull'errore di ricostruzione.
-\end{itemize}
-
-Nelle sezioni successive si analizzeranno i principi operativi del metodo, la formulazione
-matematica della loss, la struttura dell'architettura e il processo di generazione della heatmap.
+L’ipotesi investigata in questa tesi è che, pur essendo in grado di apprendere rappresentazioni utili
+per il ranking delle anomalie, i Vision Transformer tendano a produrre errori di ricostruzione più
+diffusi e meno localizzati rispetto alle architetture convoluzionali. Di conseguenza, il meccanismo
+di binarizzazione basato su $\mu + \sigma$ risulterebbe intrinsecamente meno efficace, portando a un
+degrado delle prestazioni di localizzazione in specifiche classi del dataset considerato.

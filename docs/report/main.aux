@@ -1,59 +1,19 @@
 \relax 
-\citation{AE_XAD_Arrays}
+\citation{angiulli2025aexad}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduzione}{2}{}\protected@file@percent }
-\citation{AE_XAD_Arrays}
-\citation{AE_XAD_Arrays}
-\citation{AE_XAD_Arrays}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Formulazione del problema}{3}{}\protected@file@percent }
-\citation{AE_XAD_Arrays}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Architettura del modello}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Encoder}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Decoder}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Branch 1 (non-trainable).}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Branch 2 (trainable).}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Combinazione dei due rami}{4}{}\protected@file@percent }
-\citation{AE_XAD_Arrays}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Considerazioni architetturali}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Loss Function}{5}{}\protected@file@percent }
-\newlabel{eq:pixel_loss}{{1}{5}{}{}{}}
-\newlabel{eq:global_loss}{{2}{5}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Interpretazione dei termini}{5}{}\protected@file@percent }
-\citation{AE_XAD_Arrays}
-\citation{AE_XAD_Arrays}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Ruolo della trasformazione $F$}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Peso di bilanciamento $\lambda _y$}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Effetto complessivo della loss}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Training Strategy}{6}{}\protected@file@percent }
-\citation{AE_XAD_Arrays}
-\citation{AE_XAD_Arrays}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Data augmentation sulle anomalie}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Oversampling all'interno del batch}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Ottimizzazione}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Inference e generazione delle heatmap}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Errore di ricostruzione}{7}{}\protected@file@percent }
-\citation{AE_XAD_Arrays}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Normalizzazione}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Selezione automatica del filtro gaussiano}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Heatmap filtrata e binarizzazione}{8}{}\protected@file@percent }
-\citation{AE_XAD_Arrays}
-\citation{ViT}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Anomaly score}{9}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Motivazioni e obiettivi del progetto}{9}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Vision Transformer come encoder}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Patch embedding}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Positional encoding}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Self-attention}{10}{}\protected@file@percent }
-\citation{MAE}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Benefici attesi come encoder in AE--XAD}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}Integrazione del Vision Transformer in AE--XAD}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Obiettivo}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Sostituzione dell’encoder}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Ricostruzione della griglia spaziale}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Decoder}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.5}Pipeline finale}{12}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Definizione del Problema e Ipotesi di Ricerca}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Fondamenti teorici}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Anomaly Detection basata su ricostruzione}{3}{}\protected@file@percent }
+\citation{angiulli2025aexad}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Il framework AE-XAD}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Inductive bias nelle architetture di visione}{4}{}\protected@file@percent }
+\citation{angiulli2025aexad}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Setup sperimentale}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Dataset e preprocessing}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Architettura del modello e funzione di loss}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Metriche di valutazione}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Protocollo sperimentale}{6}{}\protected@file@percent }
 \bibstyle{IEEEtran}
 \bibdata{bibliography}
-\bibcite{AE_XAD_Arrays}{1}
-\bibcite{ViT}{2}
-\bibcite{MAE}{3}
-\gdef \@abspage@last{14}
+\bibcite{angiulli2025aexad}{1}
+\gdef \@abspage@last{8}

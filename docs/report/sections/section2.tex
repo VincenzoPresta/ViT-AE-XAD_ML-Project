@@ -1,55 +1,65 @@
+\section{Fondamenti teorici}
 
-\section{Formulazione del problema}
+In questa sezione vengono introdotti i concetti teorici necessari a inquadrare il contesto
+metodologico di questo lavoro e a chiarire le assunzioni implicite alla base del framework
+utilizzato. In particolare, viene discusso il paradigma di anomaly detection basato su
+ricostruzione, viene descritto il framework AE-XAD dal punto di vista concettuale e viene
+analizzato il ruolo dell’inductive bias nelle architetture di visione, in relazione al
+meccanismo di decisione adottato.
 
-Sia un insieme di training
-$X = \{x_1, \dots, x_n\}$, dove ciascuna osservazione
-$x_i \in [0,1]^D$ rappresenta un'immagine normalizzata.
-Per ogni immagine è inoltre disponibile una heatmap
-binaria $y_i \in \{0,1\}^D$, che specifica per ciascun
-pixel se esso sia normale ($y_{i,j}=0$) oppure anomalo
-($y_{i,j}=1$). Come indicato in \cite{AE_XAD_Arrays},
-una heatmap assume valore zero ovunque per gli esempi
-\textit{inlier}, mentre presenta almeno un pixel attivo
-per gli esempi \textit{outlier}.
+\subsection{Anomaly Detection basata su ricostruzione}
 
-La quantità $\|y_i\|_1$ (somma degli elementi della heatmap)
-permette di distinguere formalmente:
-\begin{itemize}
-    \item gli \textbf{inlier}, caratterizzati da $\|y_i\|_1 = 0$;
-    \item gli \textbf{outlier}, per cui $\|y_i\|_1 > 0$.
-\end{itemize}
-Sia inoltre $I$ l'insieme degli indici degli inlier e $O$ quello
-degli outlier, come definito nel paper.
+Gli approcci di anomaly detection basati su ricostruzione si fondano sull’idea di apprendere
+un modello delle sole istanze normali, in modo tale che le anomalie possano essere identificate
+come deviazioni rispetto al comportamento appreso. In questo paradigma, un autoencoder viene
+addestrato a ricostruire immagini prive di difetti, minimizzando un errore di ricostruzione
+calcolato a livello pixel-wise.
 
-Il compito del modello, dato un insieme di immagini di test
-$T = \{t_1, \dots, t_m\}$, consiste nel generare per ciascuna
-immagine una heatmap $h_i$ che stimi il contributo di ogni
-pixel all’anomalia complessiva. La heatmap può essere:
-\begin{itemize}
-    \item \textbf{binaria}, con $h_{i,j} \in \{0,1\}$;
-    \item \textbf{continua}, tipicamente $h_{i,j} \in [0,1]$,
-          indicando il grado di outlierness del pixel.
-\end{itemize}
+In fase di test, la presenza di anomalie si traduce tipicamente in un aumento dell’errore di
+ricostruzione nelle regioni difettose, rendendo possibile l’individuazione delle anomalie sia
+a livello di immagine sia a livello pixel-wise. L’efficacia di tali approcci dipende pertanto
+non solo dalla capacità del modello di rappresentare correttamente la normalità, ma anche
+dalla struttura spaziale dell’errore di ricostruzione prodotto.
 
-Come descritto in \cite{AE_XAD_Arrays}, la dimensione del
-dato $D$ coincide con $H \times W \times C$, ovvero le
-dimensioni spaziali e il numero di canali dell'immagine.
-L'obiettivo finale è definire per ogni immagine un valore
-di \emph{anomaly score} $S(t_i)$, idealmente proporzionale
-alla presenza e all'estensione delle regioni anomale.
+\subsection{Il framework AE-XAD}
 
-Il problema posto da AE--XAD può quindi essere formalizzato
-come segue:
-\begin{quote}
-    dato un insieme limitato di esempi anomali annotati a livello pixel,
-    addestrare un modello capace di ricostruire fedelmente le regioni
-    normali e di enfatizzare, attraverso la ricostruzione, le regioni
-    anomale, così da ottenere una heatmap interpretabile che evidenzi
-    i pixel maggiormente responsabili della devianza.
-\end{quote}
+Il framework AE-XAD (AutoEncoder for eXplainable Anomaly Detection) rappresenta un’evoluzione
+degli approcci classici basati su autoencoder, introducendo una pipeline progettata
+specificamente per la localizzazione delle anomalie in contesti industriali
+\cite{angiulli2025aexad}. Il metodo è composto da un encoder convoluzionale, un decoder con una
+struttura a rami e un meccanismo di decisione basato su statistiche globali dell’errore di
+ricostruzione.
 
-Questo scenario rientra nel paradigma della
-\textit{semi-supervised anomaly detection}, poiché il modello sfrutta
-informazioni supervisionate limitate (le heatmap anomale sparse) e,
-al tempo stesso, apprende la distribuzione dei pixel normali da
-grandi quantità di dati privi di difetti.
+Un elemento centrale di AE-XAD è la costruzione di una \emph{reconstruction error map},
+ottenuta confrontando l’immagine di input con la ricostruzione prodotta dal decoder. Tale mappa
+rappresenta la distribuzione spaziale dell’errore di ricostruzione ed è utilizzata come base
+per la localizzazione delle anomalie. Per ridurre il rumore ad alta frequenza, la mappa viene
+sottoposta a un’operazione di filtraggio, seguita da una binarizzazione mediante una soglia
+statistica globale definita come $\mu + \sigma$, dove $\mu$ e $\sigma$ indicano rispettivamente
+la media e la deviazione standard dei valori di errore.
+
+Questo meccanismo di sogliatura implica che le anomalie siano caratterizzate da errori di
+ricostruzione significativamente superiori al rumore di fondo e concentrati in regioni
+spazialmente limitate. Di conseguenza, l’efficacia della pipeline AE-XAD dipende in modo
+critico dalla distribuzione spaziale dell’errore di ricostruzione prodotto dall’encoder–decoder.
+
+\subsection{Inductive bias nelle architetture di visione}
+
+Con il termine \emph{inductive bias} si intende l’insieme di assunzioni strutturali che un
+modello incorpora a priori, influenzando il modo in cui generalizza a partire da un numero
+limitato di esempi. Nel contesto della visione artificiale, l’inductive bias riveste un ruolo
+particolarmente rilevante in scenari few-shot, dove la quantità di dati disponibili non è
+sufficiente a guidare completamente l’apprendimento.
+
+Le architetture convoluzionali, come quelle impiegate in AE-XAD, incorporano un forte inductive
+bias locale, che favorisce la modellazione di pattern spaziali e la produzione di
+rappresentazioni gerarchiche sensibili alla localizzazione. Tale caratteristica risulta
+naturalmente coerente con un paradigma di anomaly detection basato su errori di ricostruzione
+pixel-wise e su una sogliatura statistica globale.
+
+Architetture caratterizzate da un diverso tipo di rappresentazione, orientate alla modellazione
+di relazioni globali tra regioni dell’immagine, possono invece produrre distribuzioni
+dell’errore di ricostruzione più diffuse e meno concentrate. In un framework come AE-XAD, in
+cui la decisione finale dipende dall’applicazione di una soglia globale a una mappa di errore
+spaziale, tale differenza rappresentazionale può tradursi in un disallineamento tra le
+assunzioni della pipeline di decisione e le proprietà dell’encoder utilizzato.
