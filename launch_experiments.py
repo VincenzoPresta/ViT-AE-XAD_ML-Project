@@ -2,7 +2,6 @@ import argparse
 import os
 import numpy as np
 import torch
-from codecarbon import EmissionsTracker
 from datasets.mvtec_vit import mvtec_ViT
 from dataloaders.tensor_loader import TensorDatasetAD
 from models import ViT_CNN_Attn
@@ -40,7 +39,7 @@ if __name__ == "__main__":
     if args.ds == "mvtec":
 
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_ViT(
-            args.c, "datasets/mvtec", n_anom_per_cls=args.na, seed=args.s
+            args.c, "datasets/mvtec", n_anom_per_cls=args.na, seed=args.s , use_copy_paste=True
         )
 
         data_path = os.path.join("datasets/mvtec", str(args.c), str(args.s))

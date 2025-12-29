@@ -63,84 +63,95 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
             GT_test.append(np.zeros((224, 224, 1), dtype=np.uint8))
 
     # ============================================================
-    #                        ANOMALIE
+    #                 ANOMALIE (SELEZIONE GLOBALE CORRETTA)
     # ============================================================
     outlier_path = os.path.join(root, 'test')
     outlier_classes = sorted(os.listdir(outlier_path))
+
+    anom_pool = []  # lista di (cl_a, filename)
 
     for cl_a in outlier_classes:
         if cl_a == 'good':
             continue
 
-        # file difettosi
         outlier_files = [
             f for f in os.listdir(os.path.join(outlier_path, cl_a))
             if f.lower().endswith(('png', 'jpg', 'jpeg'))
         ]
         outlier_files.sort()
-        idxs = np.random.permutation(len(outlier_files))
+
+        for f in outlier_files:
+            anom_pool.append((cl_a, f))
+
+    # shuffle deterministico
+    rng = np.random.RandomState(seed)
+    rng.shuffle(anom_pool)
+
+    # n_anom_per_cls anomalie TOTALI per training
+    train_anoms = anom_pool[:n_anom_per_cls]
+    test_anoms  = anom_pool[n_anom_per_cls:]
+
+
+    # ========================================================
+    #        TRAIN ANOMALIES (leggero noise, no rotazioni)
+    # ========================================================
+
+    for (cl_a, file) in train_anoms:
+        img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
+        mask = Image.open(
+            os.path.join(root, 'ground_truth', cl_a, file.replace('.png', '_mask.png'))
+        ).convert('L')
+
+        img = img.resize((224, 224), Image.NEAREST)
+        mask = mask.resize((224, 224), Image.NEAREST)
+
+        img_aug = aug_train(img)  # -> Tensor [0,1]
+        img_aug = (img_aug.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+
+        X_train.append(img_aug)
+        GT_train.append(np.array(mask, dtype=np.uint8)[..., None])
+
 
         # ========================================================
-        #        TRAIN ANOMALIES (leggero noise, no rotazioni)
+        #                COPY-PASTE (versione corretta)
         # ========================================================
 
-        for file in [outlier_files[i] for i in idxs[:n_anom_per_cls]]:
+        if use_copy_paste:
+            for _ in range(10):
+                idx_n = np.random.randint(len(normal_files_tr))
+                normal_file = normal_files_tr[idx_n]
 
-            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
-            mask = Image.open(
-                os.path.join(root, 'ground_truth', cl_a, file.replace('.png', '_mask.png'))
-            ).convert('L')
+                base = Image.open(os.path.join(root, 'train', 'good', normal_file)).convert('RGB')
+                base = base.resize((224, 224), Image.NEAREST)
 
-            img = img.resize((224, 224), Image.NEAREST)
-            mask = mask.resize((224, 224), Image.NEAREST)
+                # versione corretta del copy-paste (nessuna rotate, nessun jitter)
+                new_img, new_mask = copy_paste_defect_clean(base, img, mask)
 
-            # --- AE-XAD augmentation: leggero Gaussian noise e basta ---
-            img_aug = aug_train(img)           # -> Tensor [0,1]
-            img_aug = (img_aug.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+                if new_img is None:
+                    continue
 
-            X_train.append(img_aug)
-            GT_train.append(np.array(mask, dtype=np.uint8)[..., None])
+                # leggero rumore
+                t_img = aug_train(new_img)
+                t_img = (t_img.permute(1,2,0).cpu().numpy() * 255).astype(np.uint8)
 
-            # ========================================================
-            #                COPY-PASTE (versione corretta)
-            # ========================================================
+                X_train.append(t_img)
+                GT_train.append(np.array(new_mask, dtype=np.uint8)[..., None])
 
-            if use_copy_paste:
-                for _ in range(10):
-                    idx_n = np.random.randint(len(normal_files_tr))
-                    normal_file = normal_files_tr[idx_n]
+    # ========================================================
+    #                     TEST ANOMALIES
+    # ========================================================
 
-                    base = Image.open(os.path.join(root, 'train', 'good', normal_file)).convert('RGB')
-                    base = base.resize((224, 224), Image.NEAREST)
+    for (cl_a, file) in test_anoms:
+        img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
+        mask = Image.open(
+            os.path.join(root, 'ground_truth', cl_a, file.replace('.png', '_mask.png'))
+        ).convert('L')
 
-                    # versione corretta del copy-paste (nessuna rotate, nessun jitter)
-                    new_img, new_mask = copy_paste_defect_clean(base, img, mask)
+        img = img.resize((224,224), Image.NEAREST)
+        mask = mask.resize((224,224), Image.NEAREST)
 
-                    if new_img is None:
-                        continue
-
-                    # leggero rumore
-                    t_img = aug_train(new_img)
-                    t_img = (t_img.permute(1,2,0).cpu().numpy() * 255).astype(np.uint8)
-
-                    X_train.append(t_img)
-                    GT_train.append(np.array(new_mask, dtype=np.uint8)[..., None])
-
-        # ========================================================
-        #                     TEST ANOMALIES
-        # ========================================================
-
-        for file in [outlier_files[i] for i in idxs[n_anom_per_cls:]]:
-            img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
-            mask = Image.open(
-                os.path.join(root, 'ground_truth', cl_a, file.replace('.png', '_mask.png'))
-            ).convert('L')
-
-            img = img.resize((224,224), Image.NEAREST)
-            mask = mask.resize((224,224), Image.NEAREST)
-
-            X_test.append(np.array(img, dtype=np.uint8))
-            GT_test.append(np.array(mask, dtype=np.uint8)[..., None])
+        X_test.append(np.array(img, dtype=np.uint8))
+        GT_test.append(np.array(mask, dtype=np.uint8)[..., None])
 
     # ========================================================
     #               CONVERSIONE FINALE
@@ -166,10 +177,15 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
 
 def copy_paste_defect_clean(base_img, anomaly_img, anomaly_mask):
     """
-    Versione pulita del copy-paste per AE-XAD.
-    Nessuna rotazione, nessun flip, nessun jitter.
-    Mantiene coerenza pixel-wise.
+    Copy-paste AE-XAD compliant:
+    - no rotation
+    - no jitter
+    - no scaling
+    - RANDOM spatial relocation
+    - pixel-wise mask consistency
     """
+
+    base_w, base_h = base_img.size
 
     mask_np = np.array(anomaly_mask) > 127
     if mask_np.sum() == 0:
@@ -179,14 +195,24 @@ def copy_paste_defect_clean(base_img, anomaly_img, anomaly_mask):
     y1, y2 = ys.min(), ys.max()
     x1, x2 = xs.min(), xs.max()
 
-    defect = anomaly_img.crop((x1, y1, x2, y2))
-    defect_mask = anomaly_mask.crop((x1, y1, x2, y2))
+    defect = anomaly_img.crop((x1, y1, x2 + 1, y2 + 1))
+    defect_mask = anomaly_mask.crop((x1, y1, x2 + 1, y2 + 1))
 
-    # riposiziona al suo posto, senza distorsioni
+    dh, dw = defect.size[1], defect.size[0]
+
+    # --- random valid placement ---
+    max_x = base_w - dw
+    max_y = base_h - dh
+    if max_x <= 0 or max_y <= 0:
+        return None, None
+
+    rx = np.random.randint(0, max_x + 1)
+    ry = np.random.randint(0, max_y + 1)
+
     base_img = base_img.copy()
-    base_img.paste(defect, (x1, y1), defect_mask)
+    base_img.paste(defect, (rx, ry), defect_mask)
 
-    new_mask = Image.new('L', (224,224), 0)
-    new_mask.paste(defect_mask, (x1, y1))
+    new_mask = Image.new("L", (base_w, base_h), 0)
+    new_mask.paste(defect_mask, (rx, ry))
 
     return base_img, new_mask

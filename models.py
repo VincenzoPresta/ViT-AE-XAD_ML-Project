@@ -2,25 +2,33 @@ import torch
 import torch.nn as nn
 from torchvision.models import vit_b_16, ViT_B_16_Weights
 
+
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.encoder = ViT_Encoder()
+        #self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2) # fine-tuning ultimi n blocchi
+
+        self.encoder = ViT_Encoder_Scratch()
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
         encoded = self.encoder(x)
         out = self.decoder(encoded)
         return out
-    
-    
+
+
 class AEXAD_Decoder(nn.Module):
     def __init__(self, out_channels=3):
         super().__init__()
 
         # BRANCH 1 — NON TRAINABLE (paper)
+<<<<<<< HEAD
         # Un unico upsample 28 → 224, NON tre consecutivi
         self.up = nn.Upsample(size=(224,224), mode="nearest")
+=======
+        # unico upsample 28 → 224 -> sarebbero: (nearest) + tanh + somma canali 
+        self.up = nn.Upsample(size=(224, 224), mode="nearest")
+>>>>>>> d31f3524b6e0fea712fde75930a52b57bca69ba7
         for p in self.up.parameters():
             p.requires_grad = False
 
@@ -51,24 +59,32 @@ class AEXAD_Decoder(nn.Module):
             nn.SELU(),
         )
 
-        # FINAL 8 → 3
+        # FINALE 8 → 3
         self.final = nn.Sequential(
             nn.Conv2d(8, 8, kernel_size=3, padding=1),
             nn.SELU(),
             nn.Conv2d(8, out_channels, kernel_size=3, padding=1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
         B, C, H, W = x.shape  # (B,64,28,28)
 
+<<<<<<< HEAD
         # BRANCH 1 (paper)
         b1 = self.up(x)               # → (B,64,224,224)
+=======
+        # BRANCH 1 
+        b1 = self.up(x)  # → (B,64,224,224)
+>>>>>>> d31f3524b6e0fea712fde75930a52b57bca69ba7
         b1 = self.tanh(b1)
         b1 = b1.view(B, 8, 8, 224, 224).sum(dim=2)  # 64→8
 
         # BRANCH 2 (paper)
+<<<<<<< HEAD
         
+=======
+>>>>>>> d31f3524b6e0fea712fde75930a52b57bca69ba7
         b2 = self.dec1(x)
         b2 = self.dec2(b2)
         b2 = self.dec3(b2)
@@ -82,68 +98,177 @@ class AEXAD_Decoder(nn.Module):
 
 
 class ViT_Encoder(nn.Module):
-    """
-    Encoder ViT corretto per AE-XAD:
-    - usa la patch embedding e i blocchi ViT
-    - ricostruisce struttura spaziale via CNN
-    - genera feature map 28×28×64 compatibili col decoder AE-XAD
-    """
-
-    def __init__(self, freeze_vit=True):
+    def __init__(self, freeze_vit: bool = True, unfreeze_last_n: int = 0):
         super().__init__()
 
+        # STEM CONV
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(3),
+            nn.ReLU(inplace=True),
+        )
+
+        # Visual transformer (originale torchvision)
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
         self.hidden_dim = vit.hidden_dim  # 768
-        self.conv_proj  = vit.conv_proj   # patch embed
+        self.conv_proj = vit.conv_proj
         self.encoder_vit = vit.encoder
         self.class_token = vit.class_token
 
-        # ===== FREEZE VIT (opzionale) =====
+        # --- Locality injector (DWConv) ---
+        self.local_dw = nn.Conv2d(self.hidden_dim, self.hidden_dim, 3, padding=1,
+                          groups=self.hidden_dim, bias=False)
+        self.local_act = nn.SELU()
+        self.register_buffer("local_alpha", torch.tensor(0.1))
+        
+        # FREEZE / UNFREEZE come prima
         if freeze_vit:
-            for p in vit.parameters():
+            for p in self.conv_proj.parameters():
                 p.requires_grad = False
+            for p in self.encoder_vit.parameters():
+                p.requires_grad = False
+            if isinstance(self.class_token, nn.Parameter):
+                self.class_token.requires_grad = False
+                
+        def _unfreeze_ln(module: nn.Module):
+            for name, p in module.named_parameters():
+                if ("norm" in name.lower()) or ("ln" in name.lower()):
+                    p.requires_grad = True
 
-        # ======= RICOSTRUZIONE SPAZIALE =========
-        # tokens → spatial map (14×14×hidden_dim)
+        if unfreeze_last_n > 0:
+            for blk in self.encoder_vit.layers[-unfreeze_last_n:]:
+                _unfreeze_ln(blk)
+            if hasattr(self.encoder_vit, "ln"):
+                _unfreeze_ln(self.encoder_vit.ln)
+
+        # RICOSTRUZIONE SPAZIALE (uguale)
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
             nn.SELU(),
             nn.Conv2d(256, 128, kernel_size=3, padding=1),
-            nn.SELU()
+            nn.SELU(),
         )
-
-        # ======= UPSAMPLE A 28×28 =========
         self.to_28 = nn.Sequential(
             nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
-            nn.SELU()
+            nn.SELU(),
         )
-
+        self.refine = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU(),
+        )
+    
+    def set_local_alpha(self, alpha: float):
+        # clamp difensivo
+        a = max(0.0, float(alpha))
+        # mantiene dtype/device del buffer
+        self.local_alpha.fill_(a)
+    
     def _patchify(self, x):
-        # x: (B,3,224,224)
         B = x.size(0)
-        x = self.conv_proj(x)                # (B,768,14,14)
-        x = x.reshape(B, self.hidden_dim, -1) # (B,768,196)
-        x = x.permute(0, 2, 1)                # (B,196,768)
+        x = self.conv_proj(x)  # (B,768,14,14)
+        x = x.reshape(B, self.hidden_dim, -1)  # (B,768,196)
+        x = x.permute(0, 2, 1)  # (B,196,768)
         return x
 
     def forward(self, x):
         B = x.size(0)
 
-        # ====== ViT ======
-        tokens = self._patchify(x)
+        x = self.stem(x)
 
-        cls = self.class_token.expand(B, -1, -1)
-        tokens = torch.cat([cls, tokens], dim=1)
-
-        encoded = self.encoder_vit(tokens)[:, 1:]  # remove CLS
-        encoded = encoded.view(B, 14, 14, self.hidden_dim)
-        encoded = encoded.permute(0, 3, 1, 2)  # (B,768,14,14)
-
-        # ====== CNN RECONSTRUCTION ======
-        spatial = self.to_spatial(encoded)   # (B,128,14,14)
-        out = self.to_28(spatial)            # (B,64,28,28)
+        tokens = self._patchify(x)  # (B,196,768)
+        cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1)  # (B,197,768)
+        
+        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
+        encoded = encoded.view(B, 14, 14, self.hidden_dim).permute(0, 3, 1, 2)  # (B,768,14,14)
+        local = self.local_act(self.local_dw(encoded))
+        encoded = encoded + self.local_alpha * local
+        
+        spatial = self.to_spatial(encoded)  # (B,128,14,14)
+        out = self.to_28(spatial)  # (B,64,28,28)
+        out = self.refine(out)  # (B,64,28,28)
 
         return out
 
- 
+class ViT_Encoder_Scratch(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        # STEM CONV (la lasci uguale)
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(3),
+            nn.ReLU(inplace=True),
+        )
+
+        # ViT FROM SCRATCH
+        vit = vit_b_16(weights=None)
+
+        self.hidden_dim = vit.hidden_dim  # 768
+        self.conv_proj = vit.conv_proj
+        self.encoder_vit = vit.encoder
+        self.class_token = vit.class_token
+
+        # Locality injector (DWConv) - identico
+        self.local_dw = nn.Conv2d(
+            self.hidden_dim, self.hidden_dim, kernel_size=3, padding=1,
+            groups=self.hidden_dim, bias=False
+        )
+        self.local_act = nn.SELU()
+        self.register_buffer("local_alpha", torch.tensor(0.1))
+
+        # Ricostruzione spaziale (identica)
+        self.to_spatial = nn.Sequential(
+            nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
+            nn.SELU(),
+            nn.Conv2d(256, 128, kernel_size=3, padding=1),
+            nn.SELU(),
+        )
+        self.to_28 = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2),
+            nn.SELU(),
+        )
+        self.refine = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.SELU(),
+        )
+
+    def set_local_alpha(self, alpha: float):
+        self.local_alpha.fill_(max(0.0, float(alpha)))
+
+    def _patchify(self, x):
+        B = x.size(0)
+        x = self.conv_proj(x)                # (B,768,14,14)
+        x = x.reshape(B, self.hidden_dim, -1) # (B,768,196)
+        x = x.permute(0, 2, 1)               # (B,196,768)
+        return x
+
+    def forward(self, x):
+        B = x.size(0)
+        x = self.stem(x)
+
+        tokens = self._patchify(x)  # (B,196,768)
+        cls = self.class_token.expand(B, -1, -1)  # (B,1,768)
+        tokens = torch.cat([cls, tokens], dim=1)  # (B,197,768)
+
+        encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
+        encoded = encoded.view(B, 14, 14, self.hidden_dim).permute(0, 3, 1, 2)  # (B,768,14,14)
+
+        local = self.local_act(self.local_dw(encoded))
+        encoded = encoded + self.local_alpha * local
+
+        spatial = self.to_spatial(encoded)  # (B,128,14,14)
+        out = self.to_28(spatial)           # (B,64,28,28)
+        out = self.refine(out)              # (B,64,28,28)
+        return out
