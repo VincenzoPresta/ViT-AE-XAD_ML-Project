@@ -137,6 +137,14 @@ class Trainer:
             tbar = tqdm(self.train_loader)
             epoch_loss = 0.0
             
+            if epoch == 0:
+                b = next(iter(self.train_loader))
+                x = b["image"]
+                print("\n[DEBUG TRAIN INPUT]")
+                print("train img min/max:", float(x.min()), float(x.max()), "mean/std:", float(x.mean()), float(x.std()))
+
+            
+            
             # --- locality alpha scheduling (deterministico, non learnable) ---
             alpha = self._alpha_schedule(
                 epoch=epoch,

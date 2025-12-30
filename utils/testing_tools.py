@@ -132,5 +132,24 @@ def aexad_heatmap_and_score(img_np, out_np):
 
     # Score
     score = compute_score(e, filtered)
+    
+    # ------------------ DEBUG HEATMAP PIPELINE ------------------
+    print("\n[DEBUG HEATMAP]")
+    print("e (raw) min/max:", float(e.min()), float(e.max()), "mean/std:", float(e.mean()), float(e.std()))
+
+    # dopo normalize_error
+    print("e_tilde shape:", tuple(e_tilde.shape), "min/max:", float(e_tilde.min()), float(e_tilde.max()),
+        "mean/std:", float(e_tilde.mean()), float(e_tilde.std()))
+
+    print("k_hat:", k_hat)
+
+    print("filtered min/max:", float(filtered.min()), float(filtered.max()),
+        "mean/std:", float(filtered.mean()), float(filtered.std()))
+
+    print("mu_h:", float(mu_h), "sigma_h:", float(sigma_h), "thr:", float(mu_h + sigma_h))
+
+    print("binary unique:", np.unique(binary_h)[:10], "ratio_ones:", float(binary_h.mean()))
+# ------------------------------------------------------------
+
 
     return e.numpy(), filtered_np, binary_h, score, k_hat
