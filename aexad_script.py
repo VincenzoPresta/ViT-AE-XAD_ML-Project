@@ -322,7 +322,7 @@ class Trainer:
                 img_np = img.cpu().numpy()[0]   # (3,224,224)
                 gt_np  = gt.numpy()[0]          # (1,224,224)
 
-                e_raw, h_filtered, h_bin, score, k_hat = aexad_heatmap_and_score(img_np, out)
+                e_raw, h_filtered, h_bin, score, k_hat = aexad_heatmap_and_score(img_np, out,labels)
 
                 heatmaps.append(h_filtered[None, ...])
                 gtmaps.append(gt_np[None, ...])
@@ -330,7 +330,7 @@ class Trainer:
 
         heatmaps = np.concatenate(heatmaps)
         gtmaps   = np.concatenate(gtmaps)
-        labels   = np.concatenate(labels)
+        labels   = np.array(labels)
 
         # X-AUC
         per_img_auc = []
