@@ -9,6 +9,7 @@ from aexad_script import Trainer
 from torch.utils.data import Sampler
 import math
 from collections import Counter
+from sklearn.metrics import roc_auc_score
 
 
 def save_dataset(path, X_train, Y_train, X_test, Y_test, GT_train, GT_test):
@@ -149,8 +150,6 @@ if __name__ == "__main__":
     train_set = TensorDatasetAD(data_path, train=True)
     test_set = TensorDatasetAD(data_path, train=False)
     
-    print("[DBG] train_set len:", len(train_set), "labels sum:", int(np.sum(train_set.labels)))
-
 
     batch_sampler = RatioBatchSampler(train_set.labels, batch_size=args.batch_size, anom_frac=1/3, seed=args.s)
 
@@ -163,25 +162,7 @@ if __name__ == "__main__":
 
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False)
     
-    print_dataset_stats(train_set, "TRAIN_SET")
-    print_dataset_stats(test_set,  "TEST_SET")
     
-    
-    batch = next(iter(train_loader))
-    print(type(batch), batch.keys())
-    for k, v in batch.items():
-        print(k, type(v))
-        if hasattr(v, "shape"):
-            print("  shape", tuple(v.shape), "dtype", v.dtype)
-        elif isinstance(v, (list, tuple)) and len(v) > 0:
-            print("  sample type", type(v[0]))
-        else:
-            print("  example", v)
-
-    
-    
-    check_first_batch_ratio_dict(train_loader, "TRAIN_LOADER")
-
     # ============================================================
     #                         MODELLO
     # ============================================================
@@ -217,5 +198,20 @@ if __name__ == "__main__":
     np.save(os.path.join(save_path, "aexad_scores_vit.npy"), scores)
     np.save(os.path.join(save_path, "aexad_labels.npy"), labels)
     np.save(os.path.join(save_path, "aexad_gt.npy"), gtmaps)
+    
+    scores = np.array(scores, dtype=np.float32)
+    labels = np.array(labels, dtype=np.int64)
+    m0 = scores[labels==0].mean() if np.any(labels==0) else np.nan
+    m1 = scores[labels==1].mean() if np.any(labels==1) else np.nan
+    print(f"[EVAL] mean_score normal={m0:.4f} anom={m1:.4f} gap={m1-m0:.4f}")
+    
+    hm = np.array(heatmaps, dtype=np.float32)   # (N,1,H,W) o (N,H,W)
+    gt = np.array(gtmaps, dtype=np.float32)
+
+    hm_flat = hm.reshape(hm.shape[0], -1).reshape(-1)
+    gt_flat = (gt.reshape(gt.shape[0], -1).reshape(-1) > 0.5).astype(np.uint8)
+
+    auc_px = roc_auc_score(gt_flat, hm_flat)
+    print(f"[FINAL] pixel-AUROC(heatmap)={auc_px:.6f}")
 
     print("\n=== EXPERIMENT COMPLETED ===")
