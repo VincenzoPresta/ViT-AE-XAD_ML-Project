@@ -90,11 +90,13 @@ def print_dataset_stats(ds, name="dataset"):
     print(f"[{name}] N={tot}  normal(0)={n0}  anomal(1)={n1}  anom_ratio={n1/max(1,tot):.4f}")
     
 
-def check_first_batch_ratio(loader, name="train_loader"):
-    x, y, gt = next(iter(loader))  # adattalo se il tuo dataset ritorna tuple diverse
-    # y può essere shape [B] o [B,1] o [B, ...]
-    y_flat = y.view(-1).detach().cpu().numpy()
-    print(f"[{name}] batch_size={len(y_flat)}  y.mean={y_flat.mean():.4f}  #anom={int(y_flat.sum())}")
+
+def check_first_batch_ratio_dict(loader, name="train_loader"):
+    batch = next(iter(loader))  # dict
+    y = batch["label"]          # tensor 0/1
+    y_flat = y.detach().view(-1).cpu().numpy()
+    print(f"[{name}] batch_size={len(y_flat)} y.mean={y_flat.mean():.4f} #anom={int(y_flat.sum())}")
+
 
 
 if __name__ == "__main__":
@@ -159,25 +161,19 @@ if __name__ == "__main__":
     
     
     batch = next(iter(train_loader))
-    print("[BATCH] type:", type(batch))
-    print("[BATCH] len:", len(batch))
-    for i, item in enumerate(batch):
-        print(f"  item[{i}] type={type(item)}")
-        if hasattr(item, "shape"):
-            print(f"    shape={tuple(item.shape)} dtype={item.dtype}")
-        elif isinstance(item, (list, tuple)) and len(item) > 0:
-            print(f"    sample type={type(item[0])}")
+    print(type(batch), batch.keys())
+    for k, v in batch.items():
+        print(k, type(v))
+        if hasattr(v, "shape"):
+            print("  shape", tuple(v.shape), "dtype", v.dtype)
+        elif isinstance(v, (list, tuple)) and len(v) > 0:
+            print("  sample type", type(v[0]))
         else:
-            # stampa un esempio, ma limitato
-            try:
-                print(f"    example={item}")
-            except:
-                pass
+            print("  example", v)
 
     
     
-    #check_first_batch_ratio(train_loader, "TRAIN_LOADER")
-
+    check_first_batch_ratio_dict(train_loader, "TRAIN_LOADER")
 
     # ============================================================
     #                         MODELLO
