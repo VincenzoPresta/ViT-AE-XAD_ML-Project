@@ -64,33 +64,42 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
             GT_test.append(np.zeros((224, 224, 1), dtype=np.uint8))
 
     # ============================================================
-    #                 ANOMALIE (SELEZIONE GLOBALE CORRETTA)
+    #   ANOMALIE: SELEZIONE STRATIFICATA (PAPER) -> 3 PER CATEGORIA
     # ============================================================
-    outlier_path = os.path.join(root, 'test')
+    outlier_path = os.path.join(root, "test")
     outlier_classes = sorted(os.listdir(outlier_path))
 
-    anom_pool = []  # lista di (cl_a, filename)
+    rng = np.random.RandomState(seed)
+
+    train_anoms = []
+    test_anoms  = []
 
     for cl_a in outlier_classes:
-        if cl_a == 'good':
+        if cl_a == "good":
             continue
 
+        cl_dir = os.path.join(outlier_path, cl_a)
         outlier_files = [
-            f for f in os.listdir(os.path.join(outlier_path, cl_a))
-            if f.lower().endswith(('png', 'jpg', 'jpeg'))
+            f for f in os.listdir(cl_dir)
+            if f.lower().endswith(("png", "jpg", "jpeg"))
         ]
         outlier_files.sort()
 
-        for f in outlier_files:
-            anom_pool.append((cl_a, f))
+        # shuffle deterministico per categoria
+        rng.shuffle(outlier_files)
 
-    # shuffle deterministico
-    rng = np.random.RandomState(seed)
-    rng.shuffle(anom_pool)
+        # paper: includi 3 item di ogni categoria di anomalia nel training
+        n_tr = min(n_anom_per_cls, len(outlier_files))
+        tr_files = outlier_files[:n_tr]
+        te_files = outlier_files[n_tr:]
 
-    # n_anom_per_cls anomalie TOTALI per training
-    train_anoms = anom_pool[:n_anom_per_cls]
-    test_anoms  = anom_pool[n_anom_per_cls:]
+        for f in tr_files:
+            train_anoms.append((cl_a, f))
+        for f in te_files:
+            test_anoms.append((cl_a, f))
+
+    print(f"[SPLIT] train_anoms={len(train_anoms)} test_anoms={len(test_anoms)} (n_per_cat={n_anom_per_cls})")
+
 
 
     # ========================================================
