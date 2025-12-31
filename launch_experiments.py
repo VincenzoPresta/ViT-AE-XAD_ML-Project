@@ -156,7 +156,27 @@ if __name__ == "__main__":
     
     print_dataset_stats(train_set, "TRAIN_SET")
     print_dataset_stats(test_set,  "TEST_SET")
-    check_first_batch_ratio(train_loader, "TRAIN_LOADER")
+    
+    
+    batch = next(iter(train_loader))
+    print("[BATCH] type:", type(batch))
+    print("[BATCH] len:", len(batch))
+    for i, item in enumerate(batch):
+        print(f"  item[{i}] type={type(item)}")
+        if hasattr(item, "shape"):
+            print(f"    shape={tuple(item.shape)} dtype={item.dtype}")
+        elif isinstance(item, (list, tuple)) and len(item) > 0:
+            print(f"    sample type={type(item[0])}")
+        else:
+            # stampa un esempio, ma limitato
+            try:
+                print(f"    example={item}")
+            except:
+                pass
+
+    
+    
+    #check_first_batch_ratio(train_loader, "TRAIN_LOADER")
 
 
     # ============================================================
