@@ -242,7 +242,7 @@ class Trainer:
                 gt_sum = float(gt.sum().item())
 
                 e_raw, h_filtered, h_bin, score, k_hat = aexad_heatmap_and_score(
-                    img_np, out
+                    img_np, out, lab_val
                 )
 
                 heatmaps.append(h_filtered[None, ...])

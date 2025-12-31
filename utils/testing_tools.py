@@ -109,7 +109,7 @@ def compute_score(e, e_filt):
 
 
 
-def aexad_heatmap_and_score(img_np, out_np):
+def aexad_heatmap_and_score(img_np, out_np, label):
     img_t = torch.tensor(img_np, dtype=torch.float32)  # (3,H,W) oppure (H,W,3) ? assumo già (3,H,W)
     out_t = torch.tensor(out_np, dtype=torch.float32)
 
