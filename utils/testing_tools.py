@@ -143,6 +143,8 @@ def aexad_heatmap_and_score(img_np, out_np):
 
     # --- DEBUG ---
     print("\n[DEBUG HEATMAP PAPER-COMPAT]")
+    if label is not None:
+        print("LABEL:", int(label))
     print("e (raw) min/max:", float(e.min()), float(e.max()), "mean/std:", float(e.mean()), float(e.std()))
     print("e_tilde (norm) min/max:", float(e_tilde.min()), float(e_tilde.max()), "mean/std:", float(e_tilde.mean()), float(e_tilde.std()))
     print("k_hat:", k_hat)
