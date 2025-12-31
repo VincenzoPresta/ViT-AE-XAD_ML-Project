@@ -238,7 +238,7 @@ class Trainer:
                 # --------------------------------------------
                 
                 
-                lab_val = int(lab.item())  # 0/1, batch_size=1
+                lab_val = int(batch["label"].item())
                 gt_sum = float(gt.sum().item())
 
                 e_raw, h_filtered, h_bin, score, k_hat = aexad_heatmap_and_score(
