@@ -240,7 +240,6 @@ class Trainer:
                 
                 lab_val = int(lab.item())  # 0/1, batch_size=1
                 gt_sum = float(gt.sum().item())
-                print(f"[SAMPLE {i}] LABEL={lab_val} GT_SUM={gt_sum} score={score} k_hat={k_hat}")
 
                 e_raw, h_filtered, h_bin, score, k_hat = aexad_heatmap_and_score(
                     img_np, out, label=lab_val
@@ -250,6 +249,9 @@ class Trainer:
                 scores.append(score)
                 gtmaps.append(gt_np[None, ...])
                 labels.append(lab_val)
+                
+                print(f"[SAMPLE {i}] LABEL={lab_val} GT_SUM={gt_sum} score={score} k_hat={k_hat}")
+
 
                 # =====================================================
                 #           PLOT 6 IMMAGINI (STILE PAPER)
