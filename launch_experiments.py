@@ -211,6 +211,9 @@ if __name__ == "__main__":
     hm_flat = hm.reshape(hm.shape[0], -1).reshape(-1)
     gt_flat = (gt.reshape(gt.shape[0], -1).reshape(-1) > 0.5).astype(np.uint8)
 
+    auc_img = roc_auc_score(labels, scores)
+    print(f"[FINAL] image-AUROC(score)={auc_img:.6f}")
+
     auc_px = roc_auc_score(gt_flat, hm_flat)
     print(f"[FINAL] pixel-AUROC(heatmap)={auc_px:.6f}")
 
