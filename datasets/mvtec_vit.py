@@ -2,6 +2,7 @@ import os
 import numpy as np
 import random
 import torchvision.transforms as T
+import torchvision.transforms.functional as TF
 from PIL import Image, ImageOps
 from datasets.transforms_vit import get_vit_augmentation
 
@@ -105,16 +106,13 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
         img = img.resize((224, 224), Image.NEAREST)
         mask = mask.resize((224, 224), Image.NEAREST)
 
-        img_aug = aug_train(img)  # -> Tensor [0,1]
-        img_aug = (img_aug.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+        # --- replicate "as-is" 5 volte (paper) ---
+        for rep in range(5):
+            img_aug = aug_train(img)  # solo noise leggero come già fai
+            img_aug = (img_aug.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
 
-        X_train.append(img_aug)
-        GT_train.append(np.array(mask, dtype=np.uint8)[..., None])
-
-
-        # ========================================================
-        #                COPY-PASTE (versione corretta)
-        # ========================================================
+            X_train.append(img_aug)
+            GT_train.append(np.array(mask, dtype=np.uint8)[..., None])
 
         if use_copy_paste:
             for _ in range(10):
@@ -124,18 +122,17 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
                 base = Image.open(os.path.join(root, 'train', 'good', normal_file)).convert('RGB')
                 base = base.resize((224, 224), Image.NEAREST)
 
-                # versione corretta del copy-paste (nessuna rotate, nessun jitter)
-                new_img, new_mask = copy_paste_defect_clean(base, img, mask)
+                new_img, new_mask = copy_paste_defect_affine(base, img, mask)
 
                 if new_img is None:
                     continue
 
-                # leggero rumore
                 t_img = aug_train(new_img)
                 t_img = (t_img.permute(1,2,0).cpu().numpy() * 255).astype(np.uint8)
 
                 X_train.append(t_img)
                 GT_train.append(np.array(new_mask, dtype=np.uint8)[..., None])
+
 
     # ========================================================
     #                     TEST ANOMALIES
@@ -175,14 +172,13 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
 
-def copy_paste_defect_clean(base_img, anomaly_img, anomaly_mask):
+def copy_paste_defect_affine(base_img, anomaly_img, anomaly_mask,
+                             rot_deg=20, scale_range=(0.7, 1.3), max_trans_frac=0.10):
     """
-    Copy-paste AE-XAD compliant:
-    - no rotation
-    - no jitter
-    - no scaling
-    - RANDOM spatial relocation
-    - pixel-wise mask consistency
+    AE-XAD Arrays compliant cut-paste:
+    - crop difetto via bbox mask
+    - random affine (rot+scale+translation) su difetto e maschera
+    - paste su immagine normale in posizione random valida
     """
 
     base_w, base_h = base_img.size
@@ -198,9 +194,34 @@ def copy_paste_defect_clean(base_img, anomaly_img, anomaly_mask):
     defect = anomaly_img.crop((x1, y1, x2 + 1, y2 + 1))
     defect_mask = anomaly_mask.crop((x1, y1, x2 + 1, y2 + 1))
 
-    dh, dw = defect.size[1], defect.size[0]
+    # --- random affine params ---
+    angle = float(np.random.uniform(-rot_deg, rot_deg))
+    scale = float(np.random.uniform(scale_range[0], scale_range[1]))
 
-    # --- random valid placement ---
+    pw, ph = defect.size
+    max_dx = int(max_trans_frac * pw)
+    max_dy = int(max_trans_frac * ph)
+    trans = (int(np.random.uniform(-max_dx, max_dx)), int(np.random.uniform(-max_dy, max_dy)))
+
+    # apply same affine to defect & mask (NEAREST for mask)
+    defect_t = TF.affine(defect, angle=angle, translate=trans, scale=scale, shear=[0.0, 0.0], interpolation=Image.BILINEAR)
+    mask_t   = TF.affine(defect_mask, angle=angle, translate=trans, scale=scale, shear=[0.0, 0.0], interpolation=Image.NEAREST)
+
+    # bbox after transform (re-crop tight bbox to avoid huge transparent area)
+    mask_np2 = np.array(mask_t) > 127
+    if mask_np2.sum() == 0:
+        return None, None
+    ys2, xs2 = np.where(mask_np2)
+    y1b, y2b = ys2.min(), ys2.max()
+    x1b, x2b = xs2.min(), xs2.max()
+
+    defect_t = defect_t.crop((x1b, y1b, x2b + 1, y2b + 1))
+    mask_t   = mask_t.crop((x1b, y1b, x2b + 1, y2b + 1))
+
+    dw, dh = defect_t.size
+    if dw <= 0 or dh <= 0:
+        return None, None
+
     max_x = base_w - dw
     max_y = base_h - dh
     if max_x <= 0 or max_y <= 0:
@@ -209,10 +230,10 @@ def copy_paste_defect_clean(base_img, anomaly_img, anomaly_mask):
     rx = np.random.randint(0, max_x + 1)
     ry = np.random.randint(0, max_y + 1)
 
-    base_img = base_img.copy()
-    base_img.paste(defect, (rx, ry), defect_mask)
+    base_img2 = base_img.copy()
+    base_img2.paste(defect_t, (rx, ry), mask_t)
 
     new_mask = Image.new("L", (base_w, base_h), 0)
-    new_mask.paste(defect_mask, (rx, ry))
+    new_mask.paste(mask_t, (rx, ry))
 
-    return base_img, new_mask
+    return base_img2, new_mask

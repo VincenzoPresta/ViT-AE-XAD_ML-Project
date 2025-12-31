@@ -66,8 +66,6 @@ def estimate_k(e_tilde):
     L = max(np.mean(lengths_h), np.mean(lengths_v))
     return max(1, int(L / 2))
 
-
-
 # ============================================
 # GAUSSIAN FILTER (paper)
 # ============================================
