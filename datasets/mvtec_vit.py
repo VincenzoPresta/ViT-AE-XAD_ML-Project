@@ -113,6 +113,9 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
 
             X_train.append(img_aug)
             GT_train.append(np.array(mask, dtype=np.uint8)[..., None])
+        
+        cp_ok = 0
+        cp_fail = 0
 
         if use_copy_paste:
             for _ in range(10):
@@ -125,13 +128,17 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
                 new_img, new_mask = copy_paste_defect_affine(base, img, mask)
 
                 if new_img is None:
+                    cp_fail += 1 
                     continue
+                cp_ok += 1
 
                 t_img = aug_train(new_img)
                 t_img = (t_img.permute(1,2,0).cpu().numpy() * 255).astype(np.uint8)
 
                 X_train.append(t_img)
                 GT_train.append(np.array(new_mask, dtype=np.uint8)[..., None])
+                
+        print(f"[DBG CP] ok={cp_ok} fail={cp_fail}")
 
 
     # ========================================================

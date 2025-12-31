@@ -128,6 +128,10 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Dataset {args.ds} non supportato ancora.")
 
+    print("[DBG] args.na =", args.na, "use_copy_paste=True")
+    print("[DBG] RAW X_train:", X_train.shape, "Y_train sum:", int(Y_train.sum()))
+
+
     # ============================================================
     #               CONVERSIONE IN NCHW FLOAT32
     # ============================================================
@@ -144,6 +148,9 @@ if __name__ == "__main__":
     # ============================================================
     train_set = TensorDatasetAD(data_path, train=True)
     test_set = TensorDatasetAD(data_path, train=False)
+    
+    print("[DBG] train_set len:", len(train_set), "labels sum:", int(np.sum(train_set.labels)))
+
 
     batch_sampler = RatioBatchSampler(train_set.labels, batch_size=args.batch_size, anom_frac=1/3, seed=args.s)
 
