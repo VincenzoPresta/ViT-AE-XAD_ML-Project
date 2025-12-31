@@ -296,7 +296,7 @@ class Trainer:
             np.concatenate(heatmaps),
             np.array(scores),
             np.concatenate(gtmaps),
-            np.concatenate(labels),
+            np.array(labels),
         )
         
         
