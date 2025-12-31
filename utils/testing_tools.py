@@ -10,17 +10,25 @@ from scipy.ndimage import label
 # NORMALIZZAZIONE (paper)
 # ============================================
 
-def normalize_error(e, img, out, mode="2"):
+def normalize_error(img, out, mode="2"):
+    """
+    Return e_tilde as 2D map (H,W), consistent with paper heatmap pipeline.
+    e_tilde = sum_c ( (img-out)^2 / ((F_t - img)^2 + eps) )
+    """
     if mode == "2":
         F_t = 2.0
     elif mode == "1-x":
-        F_t = 1 - img
+        F_t = 1.0 - img
     else:
         raise ValueError("Unknown normalization mode")
 
-    num = (img - out)**2
-    den = (F_t - img)**2 + 1e-8
-    return num / den
+    num = (img - out) ** 2           # (3,H,W)
+    den = (F_t - img) ** 2 + 1e-8    # (3,H,W) if F_t scalar broadcasts, OK
+    e_tilde_c = num / den            # (3,H,W)
+
+    # collapse channels -> (H,W)
+    return e_tilde_c.sum(dim=0)
+
 
 
 # ============================================
@@ -91,63 +99,56 @@ def gaussian_filter_paper(e_tilde, k_hat):
 # SCORE S(t) = || e * h ||
 # ============================================
 
-def compute_score(e, filtered):
-    return float((e * filtered).sum().cpu().numpy())
+def compute_score(e, e_filt):
+    """
+    Paper: S(t) = || e · F_k(e) ||.
+    Use L2 norm (Frobenius) on the 2D map.
+    """
+    m = e * e_filt
+    return float(torch.norm(m, p=2).detach().cpu().numpy())
 
 
-# ============================================
-# AE-XAD PIPELINE COMPLETA (paper)
-# ============================================
 
 def aexad_heatmap_and_score(img_np, out_np):
-    img_t = torch.tensor(img_np, dtype=torch.float32)
+    img_t = torch.tensor(img_np, dtype=torch.float32)  # (3,H,W) oppure (H,W,3) ? assumo già (3,H,W)
     out_t = torch.tensor(out_np, dtype=torch.float32)
 
-    # RAW error
-    e = ((img_t - out_t)**2).sum(dim=0)
+    # se arrivano in HWC, normalizza qui
+    if img_t.ndim == 3 and img_t.shape[0] != 3 and img_t.shape[-1] == 3:
+        img_t = img_t.permute(2, 0, 1)
+        out_t = out_t.permute(2, 0, 1)
 
-    # Normalized error
-    e_tilde = normalize_error(e, img_t, out_t, mode="2")
+    # 1) raw error e (H,W)
+    e = ((img_t - out_t) ** 2).sum(dim=0)
 
-    # FIX: collapse channels if any (paper expects a 2D matrix)
-    if e_tilde.ndim > 2:
-        e_tilde = e_tilde.mean(dim=0)   # (3,H,W) -> (H,W)
+    # 2) normalized error e_tilde (H,W) - Eq.(3)
+    e_tilde = normalize_error(img_t, out_t, mode="2")
 
-    # k̂ estimation
-    e_tilde_np = e_tilde.cpu().numpy()
-    e_tilde_np = np.squeeze(e_tilde_np)  # garantisce (H,W)
+    # 3) k-hat from e_tilde
+    e_tilde_np = np.squeeze(e_tilde.detach().cpu().numpy())
     k_hat = estimate_k(e_tilde_np)
 
+    # 4) score uses F_k(e) (NOT e_tilde)
+    e_filt = gaussian_filter_paper(e, k_hat)
+    score = compute_score(e, e_filt)
 
-    # Filtered map
-    filtered = gaussian_filter_paper(e_tilde, k_hat)
-    filtered_np = filtered.cpu().numpy()
+    # 5) heatmap uses F_k(e_tilde)
+    h = gaussian_filter_paper(e_tilde, k_hat)
+    h_np = h.detach().cpu().numpy()
 
-    # Binarization (paper)
-    mu_h = filtered_np.mean()
-    sigma_h = filtered_np.std()
-    binary_h = (filtered_np > (mu_h + sigma_h)).astype(np.uint8)
+    # 6) binarization on heatmap
+    mu_h = h_np.mean()
+    sigma_h = h_np.std()
+    binary_h = (h_np > (mu_h + sigma_h)).astype(np.uint8)
 
-    # Score
-    score = compute_score(e, filtered)
-    
-    # ------------------ DEBUG HEATMAP PIPELINE ------------------
-    print("\n[DEBUG HEATMAP]")
+    # --- DEBUG ---
+    print("\n[DEBUG HEATMAP PAPER-COMPAT]")
     print("e (raw) min/max:", float(e.min()), float(e.max()), "mean/std:", float(e.mean()), float(e.std()))
-
-    # dopo normalize_error
-    print("e_tilde shape:", tuple(e_tilde.shape), "min/max:", float(e_tilde.min()), float(e_tilde.max()),
-        "mean/std:", float(e_tilde.mean()), float(e_tilde.std()))
-
+    print("e_tilde (norm) min/max:", float(e_tilde.min()), float(e_tilde.max()), "mean/std:", float(e_tilde.mean()), float(e_tilde.std()))
     print("k_hat:", k_hat)
-
-    print("filtered min/max:", float(filtered.min()), float(filtered.max()),
-        "mean/std:", float(filtered.mean()), float(filtered.std()))
-
+    print("e_filt (for score) min/max:", float(e_filt.min()), float(e_filt.max()), "mean/std:", float(e_filt.mean()), float(e_filt.std()))
+    print("h (heatmap) min/max:", float(h.min()), float(h.max()), "mean/std:", float(h.mean()), float(h.std()))
     print("mu_h:", float(mu_h), "sigma_h:", float(sigma_h), "thr:", float(mu_h + sigma_h))
-
     print("binary unique:", np.unique(binary_h)[:10], "ratio_ones:", float(binary_h.mean()))
-# ------------------------------------------------------------
 
-
-    return e.numpy(), filtered_np, binary_h, score, k_hat
+    return e.detach().cpu().numpy(), h_np, binary_h, score, k_hat
