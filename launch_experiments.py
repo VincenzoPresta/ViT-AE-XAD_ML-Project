@@ -129,7 +129,6 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Dataset {args.ds} non supportato ancora.")
 
-    print("[DBG] args.na =", args.na, "use_copy_paste=True")
     print("[DBG] RAW X_train:", X_train.shape, "Y_train sum:", int(Y_train.sum()))
 
 

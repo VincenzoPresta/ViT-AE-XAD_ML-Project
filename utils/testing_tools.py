@@ -141,16 +141,4 @@ def aexad_heatmap_and_score(img_np, out_np, label):
     sigma_h = h_np.std()
     binary_h = (h_np > (mu_h + sigma_h)).astype(np.uint8)
 
-    # --- DEBUG ---
-    print("\n[DEBUG HEATMAP PAPER-COMPAT]")
-    if label is not None:
-        print("LABEL:", label)
-    print("e (raw) min/max:", float(e.min()), float(e.max()), "mean/std:", float(e.mean()), float(e.std()))
-    print("e_tilde (norm) min/max:", float(e_tilde.min()), float(e_tilde.max()), "mean/std:", float(e_tilde.mean()), float(e_tilde.std()))
-    print("k_hat:", k_hat)
-    print("e_filt (for score) min/max:", float(e_filt.min()), float(e_filt.max()), "mean/std:", float(e_filt.mean()), float(e_filt.std()))
-    print("h (heatmap) min/max:", float(h.min()), float(h.max()), "mean/std:", float(h.mean()), float(h.std()))
-    print("mu_h:", float(mu_h), "sigma_h:", float(sigma_h), "thr:", float(mu_h + sigma_h))
-    print("binary unique:", np.unique(binary_h)[:10], "ratio_ones:", float(binary_h.mean()))
-
     return e.detach().cpu().numpy(), h_np, binary_h, score, k_hat
