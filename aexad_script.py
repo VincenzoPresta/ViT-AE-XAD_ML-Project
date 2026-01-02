@@ -57,46 +57,37 @@ class Trainer:
         # ----------------------
         # OPTIMIZER
         # ----------------------
+        
+        #ViT frozen
         self.optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=5e-4,
             weight_decay=1e-5
         )
         
-        # --- param groups: base vs vit_ln (LN-only) ---
-        '''base_params = []
-        vit_ln_params = []
+        #  ViT full trainable
+        '''decoder_params = []
+        vit_params = []
 
         for name, p in self.model.named_parameters():
             if not p.requires_grad:
                 continue
 
-            name_l = name.lower()
-
-            # metti nel gruppo ViT SOLO le LayerNorm/Norm del transformer encoder
-            is_vit_ln = ("encoder.encoder_vit" in name) and (("ln" in name_l) or ("norm" in name_l))
-
-            if is_vit_ln:
-                vit_ln_params.append(p)
+            if "encoder.encoder_vit" in name or "encoder.conv_proj" in name or "encoder.class_token" in name:
+                vit_params.append(p)
             else:
-                base_params.append(p)
-
-        print(f"[OPT] base={len(base_params)} vit_ln={len(vit_ln_params)}")
+                decoder_params.append(p)
 
         param_groups = [
-            {"params": base_params, "lr": 5e-4, "weight_decay": 1e-5},
+            {"params": decoder_params, "lr": 5e-4, "weight_decay": 1e-5},
+            {"params": vit_params,     "lr": 1e-4, "weight_decay": 1e-5},
         ]
-        if len(vit_ln_params) > 0:
-            param_groups.append({"params": vit_ln_params, "lr": 1e-5, "weight_decay": 0.0})
 
-        self.optimizer = torch.optim.AdamW(param_groups, betas=(0.9, 0.999))
+        self.optimizer = torch.optim.AdamW(
+            param_groups,
+            betas=(0.9, 0.999)
+        )
 
-        # debug: stampa SOLO i parametri ViT trainabili (LN-only)
-        for name, p in self.model.named_parameters():
-            if p.requires_grad:
-                name_l = name.lower()
-                if ("encoder.encoder_vit" in name) and (("ln" in name_l) or ("norm" in name_l)):
-                    print("[TRAINABLE VIT-LN]", name, tuple(p.shape))'''
                     
         m = self.model.module if hasattr(self.model, "module") else self.model
 
@@ -107,54 +98,18 @@ class Trainer:
 
         # check specifico: conv_proj e blocchi vit devono essere trainabili
         print("[SCRATCH CHECK] conv_proj trainable:", any(p.requires_grad for p in m.encoder.conv_proj.parameters()))
-        print("[SCRATCH CHECK] encoder_vit trainable:", any(p.requires_grad for p in m.encoder.encoder_vit.parameters()))
+        print("[SCRATCH CHECK] encoder_vit trainable:", any(p.requires_grad for p in m.encoder.encoder_vit.parameters()))'''
 
             
-    # TRAIN
     def train(self, epochs=200):
         
-        
-        # --- SANITY CHECK (una volta sola) ---
-        m = self.model.module if hasattr(self.model, "module") else self.model
-
-        assert hasattr(m, "encoder"), "Model has no .encoder"
-        assert hasattr(m.encoder, "set_local_alpha"), "Encoder has no set_local_alpha()"
-        assert not any(n == "local_alpha" for n, _ in m.encoder.named_parameters()), \
-            "local_alpha must be a buffer, not a parameter"
-
-        print("[OK] local_alpha scheduling sanity checks passed")
-        
-        
-        self.scheduler = CosineAnnealingLR(
-            self.optimizer,
-            T_max=epochs,
-            eta_min=1e-6
-        )
-
+        self.scheduler = CosineAnnealingLR(self.optimizer, T_max=epochs, eta_min=1e-6)
         self.model.train()
 
         for epoch in range(epochs):
             tbar = tqdm(self.train_loader)
             epoch_loss = 0.0
                         
-            # --- locality alpha scheduling (deterministico, non learnable) ---
-            alpha = self._alpha_schedule(
-                epoch=epoch,
-                epochs=epochs,
-                alpha_max=0.10,     # run 1: 0.10; run 2: 0.15 (stress)
-                start_frac=0.50,    # 25/50
-                end_frac=0.90       # 45/50
-            )
-
-            # raggiungi l'encoder anche se il modello è wrappato (DataParallel/DDP)
-            m = self.model.module if hasattr(self.model, "module") else self.model
-            m.encoder.set_local_alpha(alpha)
-            print(f"local_alpha = {float(m.encoder.local_alpha):.6f}")
-
-
-            # log leggero
-            print(f"[Epoch {epoch}] local_alpha={alpha:.4f}")
-
             for batch in tbar:
                 img = batch["image"]
                 gt  = batch["gt_label"]
@@ -358,26 +313,6 @@ class Trainer:
 
         return {"X_AUC": X_AUC, "IoU_max": IoU_max, "F1_max": F1_max}
     
-    def _alpha_schedule(self, epoch: int, epochs: int,
-                    alpha_max: float = 0.10,
-                    start_frac: float = 0.50,
-                    end_frac: float = 0.90) -> float:
-        """
-        Lineare:
-        - alpha=0 fino a start
-        - ramp lineare fino a end
-        - alpha=alpha_max dopo end
-        """
-        E_start = int(start_frac * epochs)
-        E_end   = int(end_frac * epochs)
-
-        if epoch < E_start:
-            return 0.0
-        if epoch >= E_end:
-            return float(alpha_max)
-
-        t = (epoch - E_start) / max(1, (E_end - E_start))
-        return float(alpha_max) * float(t)
 
 
 

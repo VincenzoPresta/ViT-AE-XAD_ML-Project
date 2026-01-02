@@ -1,14 +1,15 @@
 import torch
 import torch.nn as nn
+import numpy as np
 from torchvision.models import vit_b_16, ViT_B_16_Weights
+import torch.nn.functional as F
 
 
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        #self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=2) # fine-tuning ultimi n blocchi
 
-        self.encoder = ViT_Encoder_Scratch()
+        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0)
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):
@@ -104,12 +105,6 @@ class ViT_Encoder(nn.Module):
         self.conv_proj = vit.conv_proj
         self.encoder_vit = vit.encoder
         self.class_token = vit.class_token
-
-        # --- Locality injector (DWConv) ---
-        self.local_dw = nn.Conv2d(self.hidden_dim, self.hidden_dim, 3, padding=1,
-                          groups=self.hidden_dim, bias=False)
-        self.local_act = nn.SELU()
-        self.register_buffer("local_alpha", torch.tensor(0.1))
         
         # FREEZE / UNFREEZE come prima
         if freeze_vit:
@@ -149,12 +144,6 @@ class ViT_Encoder(nn.Module):
             nn.SELU(),
         )
     
-    def set_local_alpha(self, alpha: float):
-        # clamp difensivo
-        a = max(0.0, float(alpha))
-        # mantiene dtype/device del buffer
-        self.local_alpha.fill_(a)
-    
     def _patchify(self, x):
         B = x.size(0)
         x = self.conv_proj(x)  # (B,768,14,14)
@@ -173,8 +162,6 @@ class ViT_Encoder(nn.Module):
         
         encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
         encoded = encoded.view(B, 14, 14, self.hidden_dim).permute(0, 3, 1, 2)  # (B,768,14,14)
-        local = self.local_act(self.local_dw(encoded))
-        encoded = encoded + self.local_alpha * local
         
         spatial = self.to_spatial(encoded)  # (B,128,14,14)
         out = self.to_28(spatial)  # (B,64,28,28)
@@ -204,14 +191,6 @@ class ViT_Encoder_Scratch(nn.Module):
         self.encoder_vit = vit.encoder
         self.class_token = vit.class_token
 
-        # Locality injector (DWConv) - identico
-        self.local_dw = nn.Conv2d(
-            self.hidden_dim, self.hidden_dim, kernel_size=3, padding=1,
-            groups=self.hidden_dim, bias=False
-        )
-        self.local_act = nn.SELU()
-        self.register_buffer("local_alpha", torch.tensor(0.1))
-
         # Ricostruzione spaziale (identica)
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
@@ -230,9 +209,6 @@ class ViT_Encoder_Scratch(nn.Module):
             nn.SELU(),
         )
 
-    def set_local_alpha(self, alpha: float):
-        self.local_alpha.fill_(max(0.0, float(alpha)))
-
     def _patchify(self, x):
         B = x.size(0)
         x = self.conv_proj(x)                # (B,768,14,14)
@@ -250,9 +226,6 @@ class ViT_Encoder_Scratch(nn.Module):
 
         encoded = self.encoder_vit(tokens)[:, 1:]  # (B,196,768)
         encoded = encoded.view(B, 14, 14, self.hidden_dim).permute(0, 3, 1, 2)  # (B,768,14,14)
-
-        local = self.local_act(self.local_dw(encoded))
-        encoded = encoded + self.local_alpha * local
 
         spatial = self.to_spatial(encoded)  # (B,128,14,14)
         out = self.to_28(spatial)           # (B,64,28,28)
