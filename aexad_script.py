@@ -86,19 +86,8 @@ class Trainer:
         self.optimizer = torch.optim.AdamW(
             param_groups,
             betas=(0.9, 0.999)
-        )
+        )'''
 
-                    
-        m = self.model.module if hasattr(self.model, "module") else self.model
-
-        # conta parametri trainabili
-        n_trainable = sum(p.requires_grad for p in m.parameters())
-        n_total = sum(1 for _ in m.parameters())
-        print(f"[SCRATCH CHECK] trainable params: {n_trainable}/{n_total}")
-
-        # check specifico: conv_proj e blocchi vit devono essere trainabili
-        print("[SCRATCH CHECK] conv_proj trainable:", any(p.requires_grad for p in m.encoder.conv_proj.parameters()))
-        print("[SCRATCH CHECK] encoder_vit trainable:", any(p.requires_grad for p in m.encoder.encoder_vit.parameters()))'''
 
             
     def train(self, epochs=200):
