@@ -146,7 +146,7 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
                 X_train.append(t_img)
                 GT_train.append(np.array(new_mask, dtype=np.uint8)[..., None])
                 
-            print(f"[COPYPASTE] fails={fail_count}/10")    
+        print(f"[COPYPASTE] fails={fail_count}/10")    
                 
 
 
