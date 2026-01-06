@@ -59,14 +59,14 @@ class Trainer:
         # ----------------------
         
         #ViT frozen
-        self.optimizer = torch.optim.AdamW(
+        '''self.optimizer = torch.optim.AdamW(
             self.model.parameters(),
             lr=5e-4,
             weight_decay=1e-5
-        )
+        )'''
         
         #  ViT full trainable
-        '''decoder_params = []
+        decoder_params = []
         vit_params = []
 
         for name, p in self.model.named_parameters():
@@ -86,7 +86,7 @@ class Trainer:
         self.optimizer = torch.optim.AdamW(
             param_groups,
             betas=(0.9, 0.999)
-        )'''
+        )
 
 
             

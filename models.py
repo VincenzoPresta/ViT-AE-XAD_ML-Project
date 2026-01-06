@@ -9,7 +9,7 @@ class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
 
-        self.encoder = ViT_Encoder(freeze_vit=True, unfreeze_last_n=0)
+        self.encoder = ViT_Encoder_Scratch()
         self.decoder = AEXAD_Decoder()
 
     def forward(self, x):

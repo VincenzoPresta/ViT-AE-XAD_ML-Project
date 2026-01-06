@@ -135,18 +135,18 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
                 
                 
                 new_img, new_mask = copy_paste_defect_affine(base, img, mask)
+                
                 if new_img is None:
                     fail_count += 1
                     continue
-                t_img = aug_train(new_img)
-
+                
                 t_img = aug_train(new_img)
                 t_img = (t_img.permute(1,2,0).cpu().numpy() * 255).astype(np.uint8)
 
                 X_train.append(t_img)
                 GT_train.append(np.array(new_mask, dtype=np.uint8)[..., None])
                 
-        print(f"[COPYPASTE] fails={fail_count}/10")    
+            #print(f"[COPYPASTE] fails={fail_count}/10")    
                 
 
 
