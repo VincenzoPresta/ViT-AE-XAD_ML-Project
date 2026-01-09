@@ -1,0 +1,123 @@
+\section{Modifica architetturale: integrazione del Vision Transformer}
+
+In questa sezione viene descritta la modifica architetturale introdotta in questo
+lavoro, che consiste nella sostituzione dell’encoder convoluzionale originale
+di AE-XAD con un Vision Transformer. L’obiettivo è analizzare in modo
+controllato l’impatto di un diverso inductive bias sulla distribuzione spaziale
+dell’errore di ricostruzione e, di conseguenza, sulle prestazioni di anomaly
+detection e localizzazione.
+
+Per garantire un confronto equo e scientificamente rigoroso, tutte le altre
+componenti del framework AE-XAD vengono mantenute invariate rispetto alla
+formulazione originale descritta in \cite{angiulli2025aexad}.
+
+
+\subsection{Obiettivo della modifica}
+
+La scelta di integrare un Vision Transformer all’interno del framework AE-XAD
+nasce dall’interesse verso architetture di visione basate su meccanismi di
+self-attention, che hanno dimostrato elevate capacità rappresentazionali in
+numerosi compiti di visione artificiale.
+
+Tuttavia, AE-XAD non è un autoencoder generico, bensì un metodo progettato
+attorno a precise assunzioni sulla struttura dell’errore di ricostruzione e sulla
+sua separabilità statistica dal rumore di fondo. L’obiettivo di questa modifica
+non è quindi quello di migliorare direttamente le prestazioni del modello, ma di
+valutare se un encoder caratterizzato da un inductive bias differente sia
+compatibile con la pipeline decisionale di AE-XAD, mantenendo invariati decoder,
+loss e meccanismo di scoring.
+
+\subsection{Encoder ViT: struttura e adattamento spaziale}
+
+L’encoder convoluzionale originale è stato sostituito con un Vision Transformer
+di tipo ViT-B/16, pre-addestrato su ImageNet. L’architettura ViT opera
+suddividendo l’immagine di input in patch non sovrapposte di dimensione
+$16 \times 16$, che vengono proiettate in uno spazio di embedding tramite una
+convoluzione (\textit{patch embedding}) e successivamente elaborate da una
+sequenza di blocchi Transformer basati su self-attention.
+
+Poiché il decoder AE-XAD richiede in input una feature map spaziale di
+dimensione $28 \times 28 \times 64$, è stato necessario introdurre un adattamento
+architetturale per riconvertire l’output del Vision Transformer in una
+rappresentazione compatibile. In particolare, i token prodotti dal ViT (ad
+eccezione del token di classe) vengono rimappati in una griglia spaziale
+bidimensionale, successivamente proiettata tramite moduli convoluzionali per
+ottenere una feature map con la risoluzione e il numero di canali richiesti dal
+decoder originale.
+
+Questa operazione di riconversione rappresenta una differenza
+strutturale fondamentale rispetto all’encoder convoluzionale, poiché introduce
+un passaggio intermedio che non è presente nella formulazione originale di
+AE-XAD.
+
+\subsection{Componenti mantenuti invariati}
+
+Al fine di isolare l’effetto della sostituzione dell’encoder, tutte le altre
+componenti del framework AE-XAD sono state mantenute invariate. In particolare:
+
+\begin{itemize}
+\item il decoder asimmetrico a due rami è identico a quello descritto nel
+framework originale;
+\item la funzione di perdita AE-XAD è utilizzata senza alcuna modifica;
+\item la pipeline di scoring e localizzazione basata sulla soglia globale
+$\mu + \sigma$ è mantenuta invariata;
+\item le metriche di valutazione e pipeline di test adottate sono le stesse previste dal framework
+originale.
+\end{itemize}
+
+Questa scelta garantisce che eventuali variazioni nelle prestazioni osservate
+siano attribuibili esclusivamente alle proprietà rappresentazionali dell’encoder
+utilizzato.
+
+\subsection{Regimi di addestramento dell’encoder ViT}
+
+Per analizzare in modo più approfondito il ruolo dell’encoder Vision Transformer
+all’interno del framework AE-XAD, sono stati considerati due distinti regimi di
+addestramento, che differiscono esclusivamente per la modalità di aggiornamento
+dei parametri dell’encoder.
+
+\subsubsection{Encoder ViT completamente frozen}
+
+Nel primo setting sperimentale, l’intero encoder Vision Transformer è mantenuto
+congelato durante l’addestramento. In questo caso, vengono aggiornati
+esclusivamente i parametri del decoder AE-XAD.
+
+Questa configurazione riproduce fedelmente l’assunzione adottata nel framework
+originale, in cui l’encoder convoluzionale pre-addestrato viene utilizzato come
+estrattore di feature fisso. L’obiettivo di questo setting è valutare se le
+rappresentazioni apprese dal ViT in fase di pre-addestramento siano direttamente
+compatibili con il decoder e con il meccanismo di scoring di AE-XAD, senza alcun
+adattamento al dominio industriale.
+
+\subsubsection{Encoder ViT completamente trainable}
+
+Nel secondo setting sperimentale, l’encoder Vision Transformer viene reso
+completamente addestrabile e ottimizzato congiuntamente al decoder AE-XAD.
+
+Questo regime consente al ViT di adattare le proprie rappresentazioni al dominio
+specifico del dataset MVTec AD, caratterizzato da texture ripetitive e difetti
+locali sottili. L’obiettivo è valutare se un fine-tuning end-to-end dell’encoder
+sia in grado di produrre feature più compatibili con la pipeline di ricostruzione
+e di localizzazione di AE-XAD, attenuando il disallineamento introdotto dal
+diverso inductive bias.
+
+\subsection{Differenze strutturali rispetto all’encoder convoluzionale}
+
+La sostituzione dell’encoder convoluzionale con un Vision Transformer introduce
+differenze strutturali rilevanti all’interno del framework AE-XAD. In
+particolare, il Vision Transformer tende a modellare relazioni globali tra
+regioni dell’immagine, riducendo l’enfasi sulla località spaziale che caratterizza
+le architetture convoluzionali.
+
+Questa differenza di inductive bias può influenzare la distribuzione spaziale
+dell’errore di ricostruzione, producendo mappe di errore più diffuse e meno
+concentrate. In un framework come AE-XAD, in cui la decisione finale si basa su
+una soglia statistica globale applicata a una mappa di errore spaziale, tale
+disallineamento strutturale può compromettere l’efficacia della localizzazione
+pixel-wise delle anomalie.
+
+L’analisi sperimentale dei due regimi di addestramento consente quindi di
+distinguere tra limiti intrinseci dell’architettura ViT e limiti dovuti alla
+mancanza di adattamento al dominio, rendendo possibile una lettura critica dei risultati 
+sperimentali alla luce delle assunzioni implicite del framework AE-XAD.
+

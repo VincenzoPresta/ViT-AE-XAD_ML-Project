@@ -1,0 +1,95 @@
+\section{Discussione e conclusioni}
+\subsection{Discussione dei risultati}
+
+In questo lavoro è stata analizzata la possibilità di sostituire l’encoder
+convoluzionale originale del framework AE-XAD con un Vision Transformer,
+mantenendo invariata l’intera pipeline di ricostruzione, scoring e
+localizzazione. L’obiettivo non era quello di ottimizzare ulteriormente le
+prestazioni del metodo, bensì di valutare la compatibilità tra un encoder
+caratterizzato da un inductive bias globale e un framework di anomaly detection
+basato su errori di ricostruzione pixel-wise e sogliatura statistica globale.
+
+I risultati quantitativi mostrano che l’utilizzo di un Vision Transformer come
+encoder consente di ottenere prestazioni image-level discrete, in particolare
+nel setting frozen, dove i valori di X-AUC rimangono relativamente elevati per
+diverse classi del dataset MVTec AD. Ciò indica che le rappresentazioni
+pre-addestrate del ViT sono in grado di supportare, almeno in parte, il ranking
+globale delle anomalie.
+
+Tuttavia, le prestazioni di localizzazione pixel-wise risultano
+in generale inferiori rispetto al framework AE-XAD originale basato su
+encoder convoluzionale. Questo divario emerge in modo consistente nelle metriche
+F1-score e IoU e risulta particolarmente marcato nelle classi caratterizzate da
+anomalie sottili o localizzate.
+
+\subsection{Ruolo dell’inductive bias}
+
+L’analisi qualitativa delle heatmap fornisce una chiave di lettura
+fondamentale per interpretare i risultati quantitativi osservati. Le
+architetture convoluzionali incorporano un forte inductive bias locale, che
+favorisce la modellazione di pattern spaziali e la produzione di errori di
+ricostruzione compatti e ben localizzati. Tale proprietà risulta coerente con le
+assunzioni alla base del framework AE-XAD, in cui la localizzazione delle
+anomalie si basa sull’applicazione di una soglia statistica globale a una mappa
+di errore spaziale.
+
+Al contrario, il Vision Transformer è progettato per modellare relazioni globali
+tra regioni dell’immagine, riducendo l’enfasi sulla località spaziale. Questo
+diverso inductive bias si riflette in heatmap più diffuse e meno
+contrastate, che risultano meno compatibili con una pipeline di localizzazione
+basata su sogliatura globale. In tale contesto, il problema non risiede
+necessariamente nella capacità rappresentazionale del Vision Transformer, ma
+nel disallineamento tra le proprietà dell’encoder e il meccanismo decisionale di
+AE-XAD.
+
+\subsection{Frozen vs trainable: implicazioni}
+
+Il confronto tra i due regimi di addestramento del Vision Transformer fornisce
+ulteriori indicazioni sul ruolo dell’encoder all’interno del framework AE-XAD.
+Nel setting frozen, l’encoder ViT mantiene rappresentazioni pre-addestrate che,
+pur non ottimali per la localizzazione pixel-wise, conservano una certa
+correlazione con le anomalie presenti nell’immagine.
+
+Nel setting completamente trainable, invece, il fine-tuning end-to-end tende in
+diversi casi a ridurre ulteriormente il segnale di errore associato alle regioni
+anomale, fino alla quasi soppressione dello stesso. Questo comportamento
+suggerisce che l’adattamento al dominio industriale non compensi il
+disallineamento strutturale introdotto dall’inductive bias globale del Vision
+Transformer e, anzi, possa accentuarlo all’interno di una pipeline basata su
+ricostruzione.
+
+\subsection{Limiti del lavoro}
+
+Il presente lavoro presenta alcuni limiti che devono essere esplicitamente
+riconosciuti. In primo luogo, l’analisi si concentra esclusivamente sulla
+sostituzione dell’encoder, mantenendo invariata la pipeline AE-XAD originale. Di
+conseguenza, non viene esplorata la possibilità di adattare il meccanismo di
+scoring o la sogliatura statistica per renderli più compatibili con architetture
+basate su attenzione globale.
+
+Inoltre, l’analisi qualitativa si basa sulle heatmap prodotte dalle
+configurazioni con Vision Transformer, senza un confronto visivo diretto con le
+heatmap del framework AE-XAD originale. Tuttavia, tale limitazione non
+compromette le conclusioni del lavoro, poiché l’obiettivo principale è valutare
+la compatibilità tra encoder e pipeline decisionale piuttosto che confrontare
+visivamente due metodi differenti.
+
+\subsection{Conclusioni e prospettive future}
+
+In conclusione, questo lavoro mostra che la sostituzione dell’encoder
+convoluzionale di AE-XAD con un Vision Transformer, mantenendo invariata la
+pipeline di ricostruzione e localizzazione, non risulta efficace per il compito
+di anomaly detection pixel-wise in ambito industriale. I risultati evidenziano
+che l’inductive bias locale delle architetture convoluzionali rappresenta un
+elemento chiave per il successo del framework AE-XAD.
+
+Le architetture basate su attenzione globale possono fornire rappresentazioni
+utili per il ranking delle anomalie, ma richiedono una riprogettazione del
+meccanismo di scoring e localizzazione per essere pienamente sfruttate in un
+contesto di anomaly detection basato su ricostruzione.
+
+Come prospettive future, risulta pertanto di particolare interesse lo studio di
+pipeline ibride, in cui encoder basati su Vision Transformer siano affiancati da
+meccanismi di localizzazione adattivi o da strategie di sogliatura non globali,
+al fine di riallineare le proprietà rappresentazionali del modello con gli
+obiettivi del task.

@@ -1,0 +1,223 @@
+\section{Analisi qualitativa delle mappe di errore}
+
+In questa sezione viene condotta un’analisi qualitativa delle mappe di errore di
+ricostruzione prodotte dal framework AE-XAD nelle configurazioni basate su Vision
+Transformer. L’obiettivo è fornire un’interpretazione visiva dei risultati
+quantitativi presentati nella Sezione~6, analizzando la struttura spaziale
+dell’errore di ricostruzione in diverse categorie del dataset MVTec AD.
+
+L’analisi è limitata alle configurazioni con encoder Vision Transformer (frozen e
+trainable), per le quali sono disponibili le heatmap pixel-wise generate durante
+la fase di test. Le mappe di errore del framework AE-XAD originale non sono
+disponibili; tuttavia, tale limitazione non compromette l’interpretazione dei
+risultati, poiché l’analisi è finalizzata a comprendere il comportamento interno
+del Vision Transformer all’interno della pipeline AE-XAD.
+
+\subsection{Caratteristiche generali delle mappe di errore ViT}
+
+Un’osservazione comune a tutte le classi del dataset è che le mappe di errore
+prodotte dalle configurazioni basate su Vision Transformer presentano una
+distribuzione spaziale dell’errore tendenzialmente più diffusa rispetto a quanto
+ci si aspetterebbe in un paradigma di anomaly detection basato su ricostruzione
+pixel-wise.
+
+In particolare, l’errore di ricostruzione tende a manifestarsi su regioni ampie
+dell’immagine, anche in presenza di anomalie localizzate. Questo comportamento
+produce mappe di errore meno contrastate, in cui la separazione tra regioni
+anomale e sfondo risulta meno netta, rendendo meno efficace l’applicazione di una
+soglia statistica globale.
+
+\subsection{Classi con anomalie estese}
+Nelle classi caratterizzate da anomalie estese e strutturalmente coerenti, come
+\textit{tile}, \textit{wood} e \textit{hazelnut}, le mappe di errore prodotte dal
+Vision Transformer mostrano una maggiore concentrazione dell’errore in
+corrispondenza delle regioni difettose.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{images/heatmap_tile_vit_frozen.jpg}
+\caption{Esempio di mappa di errore per la classe \textit{tile} con encoder ViT frozen.
+L’anomalia, di natura estesa e strutturata, produce una concentrazione visivamente
+riconoscibile dell’errore di ricostruzione. Nonostante una certa diffusione del
+segnale anche nelle regioni circostanti, la struttura spaziale del difetto risulta
+preservata, in accordo con i buoni valori di F1-score e IoU osservati.}
+\label{fig:tile_vit_frozen}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{images/heatmap_wood_vit_frozen.jpg}
+\caption{Mappa di errore di ricostruzione per la classe \textit{wood} con encoder
+ViT frozen. L’errore risulta maggiormente concentrato in corrispondenza delle
+regioni difettose, sebbene a volte non perfettamente localizzato. Questo comportamento
+è coerente con le prestazioni quantitative relativamente elevate ottenute per
+questa classe.}
+\label{fig:wood_vit_frozen}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{images/heatmap_hazelnut_vit_frozen.jpg}
+\caption{Esempio di heatmap per la classe \textit{hazelnut} con encoder ViT frozen.
+Le anomalie estese generano una risposta di errore chiaramente distinguibile
+dallo sfondo, confermando che il Vision Transformer riesce a supportare la
+localizzazione quando il difetto presenta una struttura spaziale marcata.}
+\label{fig:tile_vit_frozen}
+\end{figure}
+
+\noindent
+In questi casi, nonostante una certa diffusione dell’errore anche nelle regioni
+circostanti, la struttura spaziale dell’anomalia rimane visivamente riconoscibile.
+Ciò è coerente con i valori relativamente elevati di F1-score e IoU osservati
+nelle metriche quantitative, suggerendo che il framework AE-XAD riesca a
+localizzare correttamente anomalie di grande estensione anche in presenza di un
+encoder con inductive bias globale.
+
+\subsection{Classi con anomalie sottili o localizzate}
+Un comportamento significativamente diverso emerge nelle classi in cui le
+anomalie sono sottili, filamentose o di dimensioni ridotte, come
+\textit{screw}, \textit{capsule}, \textit{transistor} e \textit{toothbrush}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{images/heatmap_screw_vit_frozen.jpg}
+\caption{Mappa di errore di ricostruzione per la classe \textit{screw} con encoder
+ViT frozen. Le anomalie, di dimensioni ridotte e localizzate lungo strutture
+sottili, non producono una concentrazione spaziale dell’errore. Il segnale
+risulta diffuso su gran parte dell’immagine, con un contrasto insufficiente tra
+regioni normali e anomale, rendendo inefficace la sogliatura statistica globale
+$\mu + \sigma$ e spiegando i bassi valori di F1-score e IoU osservati.}
+\label{fig:screw_vit_frozen}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{images/heatmap_capsule_vit_frozen.jpg}
+\caption{Heatmap di ricostruzione per la classe \textit{capsule} con encoder ViT
+frozen. L’errore di ricostruzione risulta scarsamente correlato alla posizione
+dell’anomalia, con una distribuzione spaziale uniforme che ostacola la
+localizzazione pixel-wise.}
+\label{fig:capsule_vit_frozen}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{images/heatmap_transistor_vit_frozen.jpg}
+\caption{Mappa di errore per la classe \textit{transistor} con encoder ViT frozen.
+L’anomalia, di dimensioni ridotte e ad alta frequenza spaziale, non produce una
+concentrazione localizzata dell’errore. Il segnale risulta diffuso su gran parte
+dell’immagine, rendendo inefficace la sogliatura globale e spiegando i bassi
+valori di F1-score e IoU osservati.}
+\label{fig:transistor_vit_frozen}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\linewidth]{images/heatmap_toothbrush_vit_frozen.jpg}
+\caption{Esempio di mappa di errore per la classe \textit{toothbrush} con encoder
+ViT frozen. La presenza di anomalie sottili e localizzate non si traduce in una
+risposta di errore spazialmente concentrata, confermando le difficoltà del Vision
+Transformer nel supportare la pipeline di localizzazione di AE-XAD in questi
+scenari.}
+\label{fig:toothbrush_vit_frozen}
+\end{figure}
+
+\noindent
+In questi casi, le mappe di errore risultano fortemente diffuse e prive di una
+chiara concentrazione spaziale in corrispondenza delle regioni difettose.
+L’errore di ricostruzione si distribuisce su gran parte dell’immagine, riducendo
+il contrasto tra area anomala e sfondo. Di conseguenza, l’applicazione della
+soglia globale $\mu + \sigma$ tende a produrre segmentazioni frammentate o
+incomplete, in linea con i bassi valori di F1-score e IoU osservati nella Sezione~6.
+
+\subsection{Confronto qualitativo tra ViT frozen e ViT trainable}
+Il confronto qualitativo tra le mappe prodotte nei setting frozen e
+trainable evidenzia differenze sottili ma sistematiche. Nel setting frozen,
+l’errore di ricostruzione mantiene in alcuni casi una struttura
+più coerente con l’anomalia presente nell’immagine.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.9\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/test_34_frozen.jpg}
+    \caption{ViT frozen}
+\end{subfigure}
+\hfill
+\begin{subfigure}[H]{0.9\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/test_34_trainable.jpg}
+    \caption{ViT trainable}
+\end{subfigure}
+\caption{Confronto qualitativo tra encoder ViT frozen e trainable per la classe
+\textit{tile}. Nel setting trainable si osserva una riduzione del contrasto tra
+regioni anomale e sfondo, con una mappa di errore più uniforme rispetto alla
+configurazione frozen.}
+\label{fig:qual_tile_frozen_vs_trainable}
+\end{figure}
+
+Nel setting completamente trainable si osserva un comportamento qualitativamente
+differente. In particolare, il fine-tuning end-to-end dell’encoder Vision
+Transformer porta in diversi casi a una marcata riduzione, fino alla quasi
+soppressione, del segnale di errore associato all’anomalia. Le regioni difettose
+vengono ricostruite in modo più uniforme, producendo mappe di errore scarsamente
+correlate alla ground truth. Questo effetto è particolarmente evidente nelle
+classi caratterizzate da anomalie sottili o localizzate, dove l’errore residuo
+risulta dominato da rumore spurio, rendendo inefficace la sogliatura statistica
+globale.
+
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.9\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/test_79_transistor_frozen.jpg}
+    \caption{ViT frozen}
+\end{subfigure}
+\hfill
+\begin{subfigure}[H]{0.9\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/test_79_transistor_trainable.jpg}
+    \caption{ViT trainable}
+\end{subfigure}
+\caption{Confronto tra mappe di errore per la classe \textit{transistor} con encoder
+ViT frozen e trainable. Il fine-tuning end-to-end porta a una quasi completa
+soppressione del segnale di errore associato all’anomalia, rendendo inefficace la
+localizzazione pixel-wise.}
+
+\label{fig:qual_transistor_frozen_vs_trainable}
+\end{figure}
+
+
+Questa osservazione qualitativa è coerente con il peggioramento medio delle
+metriche pixel-wise osservato nel setting trainable e suggerisce che il
+fine-tuning del Vision Transformer non solo non migliori la separabilità
+spaziale dell’errore di ricostruzione, ma in alcuni casi ne comprometta
+ulteriormente la correlazione con la ground truth, rendendo inefficace la
+pipeline di localizzazione basata su sogliatura statistica globale.
+
+
+\subsection{Sintesi dell’analisi qualitativa}
+
+Nel complesso, l’analisi qualitativa delle mappe di errore conferma in modo
+consistente quanto emerso dai risultati quantitativi. Le configurazioni basate
+su Vision Transformer producono mappe di errore che risultano spesso diffuse e
+caratterizzate da un contrasto limitato tra regioni normali e anomale, in
+contrasto con le assunzioni alla base del framework AE-XAD per una localizzazione
+pixel-wise efficace.
+
+In particolare, nelle classi con anomalie estese e strutturalmente coerenti,
+come \textit{tile}, \textit{wood} e \textit{hazelnut}, il segnale di errore
+rimane visivamente individuabile, sebbene non sempre perfettamente concentrato.
+Al contrario, nelle classi caratterizzate da anomalie sottili o localizzate,
+l’errore di ricostruzione risulta scarsamente correlato alla posizione del
+difetto, rendendo difficile la separazione dal rumore di fondo tramite una
+soglia statistica globale.
+
+Il confronto tra i setting frozen e trainable evidenzia inoltre che il
+fine-tuning end-to-end dell’encoder Vision Transformer non migliora la qualità
+delle mappe di errore e, in diversi casi, porta a una riduzione significativa,
+fino alla quasi soppressione, del segnale anomalo. Questo comportamento compromette
+ulteriormente la separabilità spaziale dell’errore di ricostruzione e spiega il
+peggioramento osservato nelle metriche di localizzazione pixel-wise.
+

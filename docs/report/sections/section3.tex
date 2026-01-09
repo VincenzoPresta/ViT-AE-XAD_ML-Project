@@ -1,84 +1,122 @@
-\section{Setup sperimentale}
+\section{Il framework AE-XAD}
 
-In questa sezione vengono descritti il dataset utilizzato, l’architettura del modello, la
-funzione di loss, le metriche di valutazione e il protocollo sperimentale adottato. Tutti gli
-esperimenti sono stati condotti mantenendo invariata la pipeline di AE-XAD, al fine di
-analizzare in modo isolato l’impatto della sostituzione dell’encoder convoluzionale con un
-Vision Transformer.
+Il framework AE-XAD (AutoEncoder for eXplainable Anomaly Detection) è un metodo
+di anomaly detection basato su ricostruzione, progettato specificamente per
+scenari industriali caratterizzati da anomalie rare, eterogenee e difficilmente
+annotabili in modo esaustivo \cite{angiulli2025aexad}. A differenza di autoencoder
+generici, AE-XAD introduce una pipeline strutturata che integra scelte
+architetturali, una funzione di perdita dedicata e un meccanismo di scoring
+esplicitamente orientato alla localizzazione delle anomalie.
 
-\subsection{Dataset e preprocessing}
+L’intero framework è concepito per operare in regime few-shot supervisionato,
+sfruttando un numero limitato di esempi anomali durante l’addestramento senza
+snaturare la natura reconstruction-based del metodo.
 
-Gli esperimenti sono stati condotti sul dataset MVTec AD, ampiamente utilizzato per la
-valutazione di metodi di anomaly detection in ambito industriale. Il dataset include immagini
-di componenti e superfici industriali, accompagnate da maschere pixel-wise che annotano le
-regioni anomale nelle immagini di test.
+\subsection{Architettura del modello}
 
-Seguendo il protocollo adottato nel framework AE-XAD, il dataset viene utilizzato in regime
-few-shot supervisionato, in cui un numero limitato di campioni anomali è reso disponibile
-durante la fase di addestramento. Le immagini sono ridimensionate a una risoluzione uniforme
-e sottoposte a un preprocessing coerente con quello previsto dal metodo originale, senza
-introdurre trasformazioni aggiuntive che possano alterare la distribuzione spaziale dei
-difetti.
+L’architettura di AE-XAD è composta da tre componenti principali: un encoder
+convoluzionale, un decoder asimmetrico e un modulo di decisione basato
+sull’analisi statistica dell’errore di ricostruzione.
 
-\subsection{Architettura del modello e funzione di loss}
+L’encoder è costituito dai primi blocchi di una Deep CNN
+pre-addestrata (ResNet), utilizzata come estrattore di feature. L’encoder
+produce una rappresentazione latente sotto forma di feature map con risoluzione
+spaziale fissa pari a $28 \times 28$ e 64 canali, scelta per garantire la
+compatibilità con il decoder e per preservare una struttura spaziale
+sufficientemente dettagliata.
 
-Il framework AE-XAD adotta una pipeline di anomaly detection basata su ricostruzione,
-composta da un encoder $E(\cdot)$, un decoder $D(\cdot)$ e un modulo di decisione a valle
-\cite{angiulli2025aexad}. Dato un input $x \in \mathbb{R}^{H \times W \times C}$, l’encoder
-produce una rappresentazione latente $z = E(x)$, che viene utilizzata dal decoder per
-ottenere la ricostruzione $\hat{x} = D(z)$.
+Il decoder AE-XAD presenta una struttura asimmetrica a due rami. Il primo ramo,
+non addestrabile, esegue un’operazione di upsampling diretto della feature map
+latente e applica una funzione di attivazione \textit{tanh}, producendo una
+ricostruzione regolarizzata che cattura la struttura globale dell’immagine.
+Il secondo ramo, completamente addestrabile, è composto da una sequenza di
+blocchi convoluzionali e di deconvoluzione con attivazione SELU, ed è progettato
+per modellare dettagli più fini della ricostruzione.
 
-L’addestramento del modello è guidato da una funzione di loss di ricostruzione definita
-a livello pixel-wise, che misura la discrepanza tra l’immagine originale e quella
-ricostruita. In forma generale, la loss può essere espressa come:
+Le due ricostruzioni vengono fuse mediante una modulazione moltiplicativa,
+secondo una formulazione del tipo $b_2 + b_1 \cdot b_2$, dove $b_1$ e $b_2$
+rappresentano rispettivamente l’output del ramo non addestrabile e di quello
+addestrabile. Questa scelta architetturale consente di enfatizzare le
+discrepanze locali rispetto alla normalità, rendendo più evidente l’errore di
+ricostruzione in corrispondenza delle regioni anomale.
+
+Lo strato finale del decoder è costituito da una convoluzione seguita da una
+funzione di attivazione sigmoide, che produce l’immagine ricostruita nello
+spazio RGB.
+
+\subsection{Funzione di perdita AE-XAD}
+
+Un elemento distintivo del framework AE-XAD è la funzione di perdita, progettata
+per guidare l’apprendimento in presenza di un numero limitato di esempi
+anomali. La loss è definita a livello pixel-wise e combina il contributo dei
+pixel normali e dei pixel anomali in modo differenziato.
+
+Indicando con $x$ l’immagine di input, con $\tilde{x}$ la ricostruzione prodotta
+dal decoder e con $y_j \in \{0,1\}$ l’etichetta del pixel $j$ (normale o
+anomalo), la funzione di perdita è definita come:
+
 \[
-\mathcal{L}_{rec}(x, \hat{x}) = \frac{1}{HW} \sum_{i,j} \lVert x_{i,j} - \hat{x}_{i,j} \rVert,
+\ell(x, y) =
+\sum_{j=1}^{D}
+\left[
+(1 - y_j)
+\frac{(x_j - \tilde{x}_j)^2}{(F(x_j) - x_j)^2}
++
+\lambda_y y_j
+\frac{(F(x_j) - \tilde{x}_j)^2}{(F(x_j) - x_j)^2}
+\right],
 \]
-dove $(i,j)$ indicano le coordinate spaziali dei pixel.
 
-Nel regime few-shot supervisionato considerato in AE-XAD, un numero limitato di campioni
-anomali è reso disponibile durante l’addestramento. Tali campioni contribuiscono alla
-funzione obiettivo secondo la formulazione proposta nel framework originale, consentendo
-di guidare l’apprendimento senza alterare la natura reconstruction-based del metodo.
+dove $F(x_j)$ è una funzione di scaling fissata a 2 e $\lambda_y$ è un termine di
+normalizzazione proporzionale al numero di pixel anomali presenti nell’immagine.
 
-In fase di inferenza, la differenza pixel-wise tra input e ricostruzione produce una
-\emph{reconstruction error map} $M \in \mathbb{R}^{H \times W}$, definita come:
-\[
-M_{i,j} = \lVert x_{i,j} - \hat{x}_{i,j} \rVert.
-\]
-La mappa di errore viene successivamente filtrata per ridurre il rumore ad alta frequenza
-e binarizzata tramite una soglia statistica globale definita come:
+Questa formulazione consente di mantenere il focus sull’apprendimento della
+normalità, limitando al contempo l’influenza dei pochi esempi anomali disponibili
+durante l’addestramento. In tal modo, AE-XAD preserva il paradigma
+reconstruction-based, evitando che il modello degeneri in un classificatore
+supervisionato.
+
+\subsection{Pipeline di scoring e localizzazione}
+
+In fase di inferenza, l’immagine di input viene ricostruita dal decoder e
+confrontata con l’originale per ottenere una \textit{reconstruction error map}
+$M \in \mathbb{R}^{H \times W}$, definita come la distanza pixel-wise tra input e
+ricostruzione.
+
+Per ridurre il rumore ad alta frequenza e migliorare la coerenza spaziale
+dell’errore, la mappa $M$ viene sottoposta a un filtraggio gaussiano adattivo.
+Successivamente, viene applicata una soglia statistica globale definita come:
+
 \[
 T = \mu + \sigma,
 \]
-dove $\mu$ e $\sigma$ rappresentano rispettivamente la media e la deviazione standard dei
-valori di $M$.
 
-La localizzazione delle anomalie è infine ottenuta confrontando la mappa binarizzata con
-le maschere di ground truth fornite dal dataset. In questo lavoro, l’intera pipeline
-descritta viene mantenuta invariata, sostituendo esclusivamente l’encoder convoluzionale
-originale con un Vision Transformer, al fine di analizzare l’impatto del diverso inductive
-bias sulla distribuzione spaziale dell’errore di ricostruzione.
+dove $\mu$ e $\sigma$ rappresentano rispettivamente la media e la deviazione
+standard dei valori della mappa di errore filtrata.
 
+La binarizzazione della mappa consente di ottenere una segmentazione delle
+regioni anomale, mentre uno score globale a livello di immagine viene calcolato
+aggregando l’errore normalizzato. Questo meccanismo permette di valutare sia la
+presenza di anomalie nell’immagine sia la loro localizzazione spaziale.
 
-\subsection{Metriche di valutazione}
+\subsection{Assunzioni implicite del framework AE-XAD}
 
-Le prestazioni del modello sono valutate utilizzando le metriche previste dal framework
-AE-XAD. In particolare, vengono considerate metriche di rilevazione a livello di immagine e
-metriche di localizzazione a livello pixel-wise.
+Il funzionamento del framework AE-XAD si basa su una serie di assunzioni
+implicite, che ne determinano l’efficacia nei contesti industriali considerati.
 
-La localizzazione delle anomalie è ottenuta applicando una soglia statistica globale basata su
-media e deviazione standard ($\mu + \sigma$) alla mappa di errore di ricostruzione filtrata.
-Le prestazioni di localizzazione sono quindi misurate confrontando la mappa binarizzata con le
-maschere di ground truth fornite dal dataset.
+In primo luogo, si assume che le anomalie producano errori di ricostruzione
+spazialmente localizzati e sufficientemente concentrati, in modo da risultare
+statisticamente separabili dal rumore di fondo mediante una soglia globale.
+Questa assunzione è coerente con la presenza di difetti fisici localizzati sulle
+superfici industriali.
 
-\subsection{Protocollo sperimentale}
+In secondo luogo, il decoder e la pipeline di scoring sono progettati per
+operare su feature map dotate di una forte struttura spaziale locale, come
+quelle prodotte da encoder convoluzionali. L’inductive bias locale delle CNN
+favorisce infatti la preservazione di dettagli e discontinuità spaziali,
+fondamentali per la localizzazione pixel-wise delle anomalie.
 
-Per valutare in modo rigoroso l’impatto della sostituzione dell’encoder, gli esperimenti sono
-condotti modificando un solo componente alla volta. In particolare, decoder, funzione di
-loss, metriche di valutazione e pipeline di test sono mantenuti invariati rispetto al framework
-AE-XAD originale.
-
-Questo protocollo consente di attribuire eventuali variazioni nelle prestazioni osservate
-esclusivamente al tipo di encoder utilizzato, permettendo un’analisi controllata e
-scientificamente fondata del ruolo dell’inductive bias nelle prestazioni di anomaly detection.
+Infine, l’intero framework presuppone una compatibilità strutturale tra encoder,
+decoder e meccanismo decisionale. Qualsiasi modifica a uno di questi componenti
+può alterare la distribuzione dell’errore di ricostruzione e compromettere
+l’efficacia della soglia statistica adottata.

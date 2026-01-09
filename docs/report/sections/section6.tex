@@ -1,0 +1,248 @@
+\section{Risultati sperimentali}
+
+In questa sezione vengono presentati i risultati sperimentali ottenuti sul
+dataset MVTec AD utilizzando il framework AE-XAD con encoder Vision Transformer.
+L’analisi è inizialmente focalizzata sul setting in cui l’encoder ViT è mantenuto
+completamente frozen durante l’addestramento, al fine di valutare il comportamento
+del modello in assenza di adattamento al dominio industriale.
+
+Tutti gli esperimenti sono stati condotti secondo il protocollo descritto nella
+Sezione~5, mantenendo invariati il decoder, la funzione di perdita e la pipeline
+di scoring del framework AE-XAD. Le prestazioni riportate riflettono pertanto
+l’impatto delle rappresentazioni fornite da un encoder Transformer
+pre-addestrato, utilizzato come estrattore di feature fisso.
+
+\subsection{Risultati quantitativi per classe (ViT frozen)}
+
+La Tabella~\ref{tab:vit_frozen_results} riporta i risultati ottenuti per ciascuna
+delle 15 classi del dataset MVTec AD utilizzando un encoder Vision Transformer
+completamente frozen. Le prestazioni sono valutate mediante metriche image-level
+(X-AUC) e pixel-level (F1-score e Intersection over Union), calcolate sulle mappe
+di errore binarizzate tramite soglia statistica globale $\mu + \sigma$.
+
+\begin{table}[t]
+\centering
+\caption{Risultati per classe su MVTec AD con encoder ViT completamente frozen.}
+\label{tab:vit_frozen_results}
+\begin{tabular}{lccc}
+\hline
+\textbf{Classe} & \textbf{X-AUC} & \textbf{IoU$_{\max}$} & \textbf{F1$_{\max}$} \\
+\hline
+bottle     & 0.877 & 0.358 & 0.490 \\
+cable      & 0.898 & 0.341 & 0.467 \\
+capsule    & 0.860 & 0.102 & 0.166 \\
+carpet     & 0.897 & 0.332 & 0.443 \\
+grid       & 0.894 & 0.199 & 0.314 \\
+hazelnut   & 0.973 & 0.449 & 0.592 \\
+leather    & 0.973 & 0.366 & 0.512 \\
+metal\_nut & 0.922 & 0.359 & 0.498 \\
+pill       & 0.945 & 0.246 & 0.357 \\
+screw      & 0.914 & 0.063 & 0.111 \\
+tile       & 0.955 & 0.642 & 0.757 \\
+toothbrush & 0.945 & 0.160 & 0.255 \\
+transistor & 0.744 & 0.134 & 0.208 \\
+wood       & 0.963 & 0.497 & 0.643 \\
+zipper     & 0.888 & 0.418 & 0.566 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Analisi delle prestazioni image-level}
+
+Considerando la metrica X-AUC, che misura la capacità del modello di distinguere
+immagini normali e anomale a livello globale, si osservano valori generalmente
+elevati per la maggior parte delle classi del dataset. In numerose categorie lo
+score X-AUC supera 0.90, indicando che il framework AE-XAD, anche con encoder ViT
+frozen, conserva una buona capacità di ranking globale delle anomalie.
+
+Tuttavia, tale comportamento non risulta uniforme su tutte le classi. Alcune
+categorie presentano una riduzione significativa dello score X-AUC, suggerendo
+che le rappresentazioni fornite dall’encoder Vision Transformer pre-addestrato
+non siano sempre sufficientemente discriminative a livello di immagine,
+soprattutto in presenza di anomalie sottili o strutturalmente complesse.
+
+\subsection{Analisi delle prestazioni pixel-level}
+
+Un comportamento sensibilmente diverso emerge analizzando le metriche di
+localizzazione pixel-wise. I valori di F1-score e IoU mostrano una marcata
+variabilità tra le diverse classi del dataset, evidenziando una forte dipendenza
+dalla natura spaziale delle anomalie.
+
+Le classi caratterizzate da anomalie estese e visivamente coerenti tendono a
+ottenere valori più elevati di F1-score e IoU, indicando una localizzazione
+efficace delle regioni difettose. Al contrario, le classi in cui le anomalie sono
+sottili, filamentose o di dimensioni ridotte mostrano un netto degrado delle
+prestazioni di localizzazione.
+
+Questo risultato suggerisce che, nel setting frozen, l’encoder Vision Transformer
+fatichi a produrre errori di ricostruzione spazialmente concentrati, condizione
+necessaria per il corretto funzionamento del meccanismo di sogliatura globale
+adottato dal framework AE-XAD.
+
+\subsection{Relazione tra rilevazione e localizzazione}
+
+Un aspetto rilevante emerso dai risultati è il parziale disaccoppiamento tra le
+prestazioni di rilevazione a livello di immagine e quelle di localizzazione
+pixel-wise. In diverse classi, a valori elevati di X-AUC non corrispondono
+prestazioni altrettanto elevate in termini di F1-score e IoU.
+
+Questo fenomeno indica che la capacità del modello di identificare la presenza di
+un’anomalia a livello globale non implica necessariamente una corretta
+localizzazione spaziale della stessa. Nel contesto del framework AE-XAD, tale
+disaccoppiamento risulta particolarmente critico, poiché la decisione finale e la
+valutazione della qualità della segmentazione dipendono direttamente dalla
+distribuzione spaziale dell’errore di ricostruzione.
+
+\subsection{Sintesi dei risultati (ViT frozen)}
+
+Nel complesso, i risultati ottenuti con encoder Vision Transformer completamente
+frozen mostrano che il framework AE-XAD conserva una buona capacità di
+rilevazione delle anomalie a livello di immagine, ma presenta limitazioni
+significative nella localizzazione pixel-wise per specifiche categorie del
+dataset MVTec AD.
+
+Queste evidenze indicano che l’utilizzo di un encoder Vision Transformer
+pre-addestrato, senza adattamento al dominio, introduce un disallineamento con
+le assunzioni implicite del framework AE-XAD, motivate dalla necessità di errori
+di ricostruzione spazialmente localizzati.
+
+\subsection{Risultati quantitativi per classe (ViT trainable)}
+
+In questa sottosezione vengono riportati i risultati ottenuti utilizzando un
+encoder Vision Transformer completamente trainable, ottimizzato
+congiuntamente al decoder AE-XAD sul dataset MVTec AD. A differenza del setting
+frozen, in questo caso l’encoder è in grado di adattare le proprie
+rappresentazioni al dominio industriale durante la fase di addestramento.
+
+La Tabella~\ref{tab:vit_trainable_results} riporta le prestazioni per ciascuna
+delle 15 classi del dataset, misurate mediante metriche image-level (X-AUC) e
+pixel-level (F1-score e Intersection over Union), calcolate secondo la pipeline
+AE-XAD invariata.
+
+\begin{table}[t]
+\centering
+\caption{Risultati per classe su MVTec AD con encoder ViT completamente trainable.}
+\label{tab:vit_trainable_results}
+\begin{tabular}{lccc}
+\hline
+\textbf{Classe} & \textbf{X-AUC} & \textbf{IoU$_{\max}$} & \textbf{F1$_{\max}$} \\
+\hline
+bottle     & 0.874 & 0.316 & 0.456 \\
+cable      & 0.902 & 0.333 & 0.463 \\
+capsule    & 0.852 & 0.096 & 0.160 \\
+carpet     & 0.854 & 0.281 & 0.394 \\
+grid       & 0.725 & 0.055 & 0.099 \\
+hazelnut   & 0.958 & 0.416 & 0.587 \\
+leather    & 0.961 & 0.354 & 0.505 \\
+metal\_nut & 0.905 & 0.337 & 0.475 \\
+pill       & 0.936 & 0.236 & 0.354 \\
+screw      & 0.893 & 0.061 & 0.109 \\
+tile       & 0.967 & 0.639 & 0.750 \\
+toothbrush & 0.934 & 0.122 & 0.208 \\
+transistor & 0.633 & 0.046 & 0.086 \\
+wood       & 0.875 & 0.412 & 0.549 \\
+zipper     & 0.729 & 0.047 & 0.087 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Confronto tra encoder ViT frozen e ViT trainable}
+
+Il confronto tra i due regimi di addestramento del Vision Transformer consente di
+valutare l’effetto dell’adattamento al dominio industriale rispetto alle
+limitazioni intrinseche dell’architettura.
+
+\begin{table}[t]
+\centering
+\caption{Confronto medio tra encoder ViT frozen e ViT trainable sul dataset MVTec AD.}
+\label{tab:vit_frozen_vs_trainable}
+\begin{tabular}{lccc}
+\hline
+\textbf{Setting} & \textbf{X-AUC (avg)} & \textbf{IoU$_{\text{avg}}$} & \textbf{F1$_{\text{avg}}$} \\
+\hline
+ViT frozen     & 0.910 & 0.311 & 0.425 \\
+ViT trainable  & 0.867 & 0.250 & 0.352 \\
+\hline
+\end{tabular}
+\end{table}
+
+
+La Tabella~\ref{tab:vit_frozen_vs_trainable} riporta un confronto riassuntivo
+delle prestazioni medie ottenute sui 15 oggetti del dataset MVTec AD nei due
+setting considerati. Le metriche sono calcolate come media per classe delle
+prestazioni image-level (X-AUC) e pixel-level (F1-score e IoU).
+
+Dai risultati emerge che il fine-tuning end-to-end dell’encoder ViT non comporta
+un miglioramento sistematico delle prestazioni. In particolare, lo score X-AUC
+medio risulta comparabile, ma leggermente inferiore nel setting trainable,
+indicando che l’adattamento al dominio non migliora la capacità di ranking
+globale delle anomalie.
+
+Per quanto riguarda la localizzazione pixel-wise, il setting trainable mostra
+valori medi di F1-score e IoU inferiori rispetto alla configurazione frozen. Ciò
+indica che il fine-tuning dell’encoder Vision Transformer non è sufficiente a
+produrre errori di ricostruzione più compatti e meglio separabili dal rumore di
+fondo.
+
+Nel complesso, questi risultati suggeriscono che il disallineamento osservato tra
+Vision Transformer e pipeline AE-XAD non sia imputabile esclusivamente alla
+mancanza di adattamento al dominio, ma rifletta una differenza più profonda
+nell’inductive bias dell’architettura, che non viene compensata dal training
+end-to-end.
+
+Il confronto tra i due setting mostra che l’encoder ViT completamente frozen
+mantiene una discreta capacità di rilevazione a livello di immagine, come
+evidenziato dai valori medi di X-AUC. Ciò indica che le rappresentazioni
+pre-addestrate del Vision Transformer risultano in parte compatibili con il
+paradigma di anomaly detection adottato da AE-XAD.
+
+Al contrario, il fine-tuning end-to-end dell’encoder ViT non porta a un
+miglioramento delle prestazioni e, in media, comporta un ulteriore degrado sia
+delle metriche image-level sia di quelle pixel-level. Questo suggerisce che
+l’adattamento al dominio industriale, nel contesto della pipeline AE-XAD, non
+riesca a compensare il disallineamento introdotto dall’inductive bias globale del
+Vision Transformer.
+
+
+\subsection{Confronto finale con AE-XAD originale}
+
+\begin{table}[H]
+\centering
+\caption{Confronto medio delle prestazioni sul dataset MVTec AD tra AE-XAD originale
+(encoder convoluzionale), ViT frozen e ViT trainable.}
+\label{tab:final_comparison}
+\begin{tabular}{lccc}
+\hline
+\textbf{Metodo} & \textbf{X-AUC (avg)} & \textbf{F1$_{\text{avg}}$} & \textbf{IoU$_{\text{avg}}$} \\
+\hline
+AE-XAD (CNN)      & 0.978 & 0.556 & 0.404 \\
+ViT frozen        & 0.910 & 0.425 & 0.311 \\
+ViT trainable     & 0.867 & 0.352 & 0.250 \\
+\hline
+\end{tabular}
+\end{table}
+
+La Tabella~\ref{tab:final_comparison} riporta un confronto riassuntivo delle
+prestazioni medie ottenute sul dataset MVTec AD tra il framework AE-XAD originale,
+basato su encoder convoluzionale, e le due varianti che impiegano un Vision
+Transformer come encoder (frozen e trainable).
+
+Dai risultati emerge in modo chiaro che AE-XAD con encoder convoluzionale
+supera entrambe le configurazioni basate su Vision Transformer, sia in termini
+di rilevazione a livello di immagine sia, in modo più marcato, per quanto
+riguarda la localizzazione pixel-wise delle anomalie. In particolare, il gap
+nelle metriche F1-score e IoU evidenzia una maggiore capacità dell’architettura
+convoluzionale di produrre errori di ricostruzione spazialmente compatti e ben
+separabili dal rumore di fondo.
+
+Il confronto tra ViT frozen e ViT trainable mostra inoltre che il fine-tuning
+end-to-end dell’encoder non è sufficiente a colmare tale divario. Anzi, nel
+setting trainable si osserva un ulteriore peggioramento medio delle prestazioni,
+suggerendo che l’adattamento al dominio non compensa il disallineamento tra
+l’inductive bias globale del Vision Transformer e la pipeline di decisione di
+AE-XAD.
+
+Nel complesso, questi risultati confermano che l’efficacia del framework AE-XAD
+dipende in modo critico dall’inductive bias locale dell’encoder convoluzionale,
+che risulta particolarmente adatto a supportare un paradigma di anomaly
+detection basato su ricostruzione pixel-wise e sogliatura statistica globale.

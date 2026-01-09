@@ -1,0 +1,167 @@
+\section{Setup sperimentale}
+
+In questa sezione viene descritto il setup sperimentale adottato per valutare
+l’impatto della sostituzione dell’encoder convoluzionale di AE-XAD con un Vision
+Transformer. Tutti gli esperimenti sono stati condotti seguendo un protocollo
+controllato, mantenendo invariata la pipeline originale del framework, al fine
+di attribuire le variazioni osservate esclusivamente alle proprietà
+rappresentazionali dell’encoder utilizzato.
+
+\subsection{Dataset}
+
+Gli esperimenti sono stati condotti sul dataset MVTec Anomaly Detection (MVTec
+AD), ampiamente utilizzato per la valutazione di metodi di anomaly detection in
+ambito industriale. Il dataset comprende 15 categorie di oggetti e superfici,
+ciascuna caratterizzata da immagini normali e da un insieme di immagini
+anomale accompagnate da maschere pixel-wise di ground truth.
+
+Per ogni categoria sono stati utilizzati:
+\begin{itemize}
+\item tutte le immagini normali disponibili nel set di training;
+\item tutte le immagini normali e anomale del set di test;
+\item le maschere di ground truth associate alle anomalie di test.
+\end{itemize}
+
+Il dataset MVTec AD presenta una marcata eterogeneità tra le diverse categorie,
+sia in termini di struttura visiva degli oggetti sia nella tipologia delle
+anomalie. Alcune classi sono caratterizzate prevalentemente da difetti estesi e
+strutturati su superfici quasi uniformi (ad esempio texture), mentre altre
+presentano anomalie localizzate, sottili o di piccole dimensioni, spesso
+associate a componenti meccanici complessi.
+
+Questa eterogeneità rende MVTec AD particolarmente adatto allo studio di metodi
+di anomaly detection basati su ricostruzione e localizzazione pixel-wise, poiché
+permette di valutare la capacità del modello di gestire anomalie con diversa
+scala spaziale e diverso grado di separabilità dal rumore di fondo.
+
+Seguendo il protocollo di AE-XAD, il dataset è stato utilizzato in regime
+few-shot supervisionato, rendendo disponibili durante l’addestramento un numero
+limitato di esempi anomali per ciascuna classe.
+
+\subsection{Protocollo few-shot supervisionato}
+
+Per ciascuna categoria del dataset MVTec AD sono stati selezionati $n_{anom}$
+campioni anomali da includere nel training set, mentre tutte le restanti
+anomalie sono state utilizzate esclusivamente in fase di test. Tale impostazione
+replica il regime few-shot supervisionato previsto dal framework AE-XAD, in cui
+l’obiettivo è guidare l’apprendimento senza disporre di una copertura esaustiva
+delle possibili anomalie.
+
+La scelta di adottare un regime few-shot supervisionato è particolarmente
+coerente con il dataset MVTec AD, in cui le anomalie sono per loro natura rare e
+fortemente sbilanciate rispetto alle istanze normali, rispecchiando scenari
+industriali realistici.
+
+Le etichette a livello di immagine sono binarie, con valore 0 per le immagini
+normali e valore 1 per le immagini anomale. Durante il training, alle immagini
+anomale è associata anche una maschera pixel-wise che identifica le regioni
+difettose.
+
+\subsection{Preprocessing delle immagini}
+
+Tutte le immagini sono state preprocessate seguendo una pipeline uniforme.
+In particolare:
+\begin{itemize}
+\item le immagini sono state ridimensionate a $224 \times 224$ pixel tramite
+interpolazione nearest-neighbor;
+\item è stata mantenuta la rappresentazione RGB a tre canali;
+\item non è stata applicata alcuna normalizzazione o trasformazione
+fotometrica;
+\item le immagini sono state fornite al modello nella forma
+$(3, 224, 224)$.
+\end{itemize}
+
+Seguendo il protocollo standard del dataset MVTec AD, tutti gli esperimenti sono
+stati condotti addestrando un modello separato per ciascuna categoria. Per ogni
+classe, il modello è stato addestrato per 200 epoche, utilizzando esclusivamente
+i dati appartenenti alla categoria considerata.
+
+Questa impostazione consente di evitare interferenze tra distribuzioni visive
+eterogenee e di valutare l’impatto della sostituzione dell’encoder in modo
+indipendente per ciascuna classe.
+
+Le scelte fatte sono coerenti sia con i requisiti dell’encoder ViT
+sia con l’impostazione originale di AE-XAD, che non prevede una normalizzazione
+standard delle immagini di input.
+
+\subsection{Data augmentation}
+
+Nel framework AE-XAD Arrays, la strategia di data augmentation è articolata e
+prevede la replicazione sistematica delle anomalie, l’applicazione di tecniche
+di cut--paste con trasformazioni geometriche e un meccanismo di oversampling dei
+batch per garantire una proporzione controllata tra esempi normali e anomali.
+
+In questa sperimentazione, tale strategia non è stata adottata nella sua forma
+completa. È stata invece utilizzata una pipeline di data augmentation
+semplificata, con l’obiettivo di isolare l’effetto architetturale della
+sostituzione dell’encoder convoluzionale con il Vision Transformer.
+
+In particolare:
+\begin{itemize}
+\item non sono state applicate rotazioni, flip o trasformazioni geometriche
+esplicite;
+\item non è stato utilizzato alcun meccanismo di oversampling dei batch;
+\item per ciascun campione anomalo di training è stata generata una singola
+variante mediante l’aggiunta di un leggero rumore gaussiano;
+\item opzionalmente, è stata applicata una procedura di copy--paste del difetto
+su immagini normali, senza distorsioni geometriche e mantenendo la posizione
+originale dell’anomalia.
+\end{itemize}
+
+Questa scelta è deliberata e consente di attribuire le differenze di
+prestazioni osservate principalmente alla modifica dell’encoder, piuttosto che
+a effetti introdotti da strategie di augmentazione complesse.
+
+\subsection{Funzione di perdita}
+
+In tutti gli esperimenti è stata utilizzata la funzione di perdita AE-XAD
+originale, implementata fedelmente secondo la formulazione proposta nel paper
+Arrays. La loss è definita a livello pixel-wise e combina il contributo dei
+pixel normali e dei pixel anomali mediante un termine di normalizzazione che
+tiene conto del numero di pixel anomali presenti nell’immagine.
+
+L’uso della loss originale garantisce che il comportamento del modello in fase
+di training sia direttamente confrontabile con quello descritto nel framework
+AE-XAD.
+
+\subsection{Ottimizzazione e dettagli di training}
+
+L’addestramento del modello è stato effettuato utilizzando l’ottimizzatore Adam,
+con learning rate iniziale pari a $5 \times 10^{-4}$ e weight decay pari a
+$1 \times 10^{-5}$. È stato adottato uno scheduler di tipo Cosine Annealing Learning
+Rate, con $T_{max} = 200$ epoche e learning rate minimo pari a $10^{-6}$.
+
+È stato applicato gradient clipping con norma $\ell_2$ limitata a 1.0. Il batch
+size utilizzato è pari a 32, e il numero totale di epoche di addestramento è
+fissato a 200, in accordo con il protocollo sperimentale adottato nel framework AE-XAD
+originale.
+
+Nel setting con encoder Vision Transformer congelato, sono stati aggiornati
+esclusivamente i parametri del decoder. Nel setting completamente trainable,
+tutti i parametri del modello sono stati ottimizzati congiuntamente.
+
+\subsection{Pipeline di training e test}
+
+Durante il training, ciascun batch fornisce al modello l’immagine di input, la
+label a livello di immagine e, per i campioni anomali, la maschera pixel-wise di
+ground truth. La procedura di test segue fedelmente la pipeline ufficiale
+AE-XAD e prevede:
+
+\begin{enumerate}
+\item il calcolo dell’errore di ricostruzione normalizzato;
+\item l’applicazione di un filtro gaussiano adattivo;
+\item la generazione della heatmap binarizzata mediante soglia globale
+$\mu + \sigma$;
+\item il calcolo dello score a livello di immagine;
+\item la valutazione delle metriche di localizzazione e rilevazione.
+\end{enumerate}
+
+Le maschere pixel-wise fornite dal dataset sono utilizzate esclusivamente in fase
+di valutazione, al fine di misurare le prestazioni di localizzazione delle
+anomalie. Durante l’addestramento, esse sono impiegate unicamente per i pochi
+campioni anomali inclusi nel regime few-shot supervisionato, in accordo con il
+framework AE-XAD.
+
+
+Tutti i risultati quantitativi e qualitativi sono stati ottenuti utilizzando
+questa pipeline invariata.
