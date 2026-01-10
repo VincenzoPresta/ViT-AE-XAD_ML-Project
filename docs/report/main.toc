@@ -14,35 +14,35 @@
 \contentsline {subsection}{\numberline {4.2}Encoder ViT: struttura e adattamento spaziale}{8}{}%
 \contentsline {subsection}{\numberline {4.3}Componenti mantenuti invariati}{9}{}%
 \contentsline {subsection}{\numberline {4.4}Regimi di addestramento dell’encoder ViT}{9}{}%
-\contentsline {subsubsection}{\numberline {4.4.1}Encoder ViT completamente frozen}{9}{}%
+\contentsline {subsubsection}{\numberline {4.4.1}Encoder ViT completamente frozen}{10}{}%
 \contentsline {subsubsection}{\numberline {4.4.2}Encoder ViT completamente trainable}{10}{}%
 \contentsline {subsection}{\numberline {4.5}Differenze strutturali rispetto all’encoder convoluzionale}{10}{}%
 \contentsline {section}{\numberline {5}Setup sperimentale}{10}{}%
-\contentsline {subsection}{\numberline {5.1}Dataset}{10}{}%
+\contentsline {subsection}{\numberline {5.1}Dataset}{11}{}%
 \contentsline {subsection}{\numberline {5.2}Protocollo few-shot supervisionato}{11}{}%
-\contentsline {subsection}{\numberline {5.3}Preprocessing delle immagini}{11}{}%
+\contentsline {subsection}{\numberline {5.3}Preprocessing delle immagini}{12}{}%
 \contentsline {subsection}{\numberline {5.4}Data augmentation}{12}{}%
-\contentsline {subsection}{\numberline {5.5}Funzione di perdita}{12}{}%
+\contentsline {subsection}{\numberline {5.5}Funzione di loss}{13}{}%
 \contentsline {subsection}{\numberline {5.6}Ottimizzazione e dettagli di training}{13}{}%
 \contentsline {subsection}{\numberline {5.7}Pipeline di training e test}{13}{}%
-\contentsline {section}{\numberline {6}Risultati sperimentali}{13}{}%
+\contentsline {section}{\numberline {6}Risultati sperimentali}{14}{}%
 \contentsline {subsection}{\numberline {6.1}Risultati quantitativi per classe (ViT frozen)}{14}{}%
 \contentsline {subsection}{\numberline {6.2}Analisi delle prestazioni image-level}{14}{}%
 \contentsline {subsection}{\numberline {6.3}Analisi delle prestazioni pixel-level}{15}{}%
-\contentsline {subsection}{\numberline {6.4}Relazione tra rilevazione e localizzazione}{15}{}%
-\contentsline {subsection}{\numberline {6.5}Sintesi dei risultati (ViT frozen)}{15}{}%
+\contentsline {subsection}{\numberline {6.4}Relazione tra rilevazione e localizzazione}{16}{}%
+\contentsline {subsection}{\numberline {6.5}Sintesi dei risultati (ViT frozen)}{16}{}%
 \contentsline {subsection}{\numberline {6.6}Risultati quantitativi per classe (ViT trainable)}{16}{}%
 \contentsline {subsection}{\numberline {6.7}Confronto tra encoder ViT frozen e ViT trainable}{16}{}%
-\contentsline {subsection}{\numberline {6.8}Confronto finale con AE-XAD originale}{17}{}%
+\contentsline {subsection}{\numberline {6.8}Confronto finale con AE-XAD originale}{18}{}%
 \contentsline {section}{\numberline {7}Analisi qualitativa delle mappe di errore}{18}{}%
-\contentsline {subsection}{\numberline {7.1}Caratteristiche generali delle mappe di errore ViT}{18}{}%
+\contentsline {subsection}{\numberline {7.1}Caratteristiche generali delle mappe di errore ViT}{19}{}%
 \contentsline {subsection}{\numberline {7.2}Classi con anomalie estese}{19}{}%
 \contentsline {subsection}{\numberline {7.3}Classi con anomalie sottili o localizzate}{21}{}%
-\contentsline {subsection}{\numberline {7.4}Confronto qualitativo tra ViT frozen e ViT trainable}{23}{}%
-\contentsline {subsection}{\numberline {7.5}Sintesi dell’analisi qualitativa}{26}{}%
-\contentsline {section}{\numberline {8}Discussione e conclusioni}{26}{}%
-\contentsline {subsection}{\numberline {8.1}Discussione dei risultati}{26}{}%
-\contentsline {subsection}{\numberline {8.2}Ruolo dell’inductive bias}{27}{}%
-\contentsline {subsection}{\numberline {8.3}Frozen vs trainable: implicazioni}{27}{}%
-\contentsline {subsection}{\numberline {8.4}Limiti del lavoro}{27}{}%
-\contentsline {subsection}{\numberline {8.5}Conclusioni e prospettive future}{28}{}%
+\contentsline {subsection}{\numberline {7.4}Confronto qualitativo tra ViT frozen e ViT trainable}{24}{}%
+\contentsline {subsection}{\numberline {7.5}Sintesi dell’analisi qualitativa}{27}{}%
+\contentsline {section}{\numberline {8}Discussione e conclusioni}{27}{}%
+\contentsline {subsection}{\numberline {8.1}Discussione dei risultati}{27}{}%
+\contentsline {subsection}{\numberline {8.2}Ruolo dell’inductive bias}{28}{}%
+\contentsline {subsection}{\numberline {8.3}Frozen vs trainable: implicazioni}{28}{}%
+\contentsline {subsection}{\numberline {8.4}Limiti del lavoro}{28}{}%
+\contentsline {subsection}{\numberline {8.5}Conclusioni e prospettive future}{29}{}%

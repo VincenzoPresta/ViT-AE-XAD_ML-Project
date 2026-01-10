@@ -71,6 +71,10 @@ fotometrica;
 $(3, 224, 224)$.
 \end{itemize}
 
+La scelta di non applicare una normalizzazione ImageNet è coerente con l’impostazione 
+originale di AE-XAD e consente di evitare l’introduzione di ulteriori adattamenti specifici 
+dell’encoder Vision Transformer
+
 Seguendo il protocollo standard del dataset MVTec AD, tutti gli esperimenti sono
 stati condotti addestrando un modello separato per ciascuna categoria. Per ogni
 classe, il modello è stato addestrato per 200 epoche, utilizzando esclusivamente
@@ -108,13 +112,18 @@ su immagini normali, senza distorsioni geometriche e mantenendo la posizione
 originale dell’anomalia.
 \end{itemize}
 
-Questa scelta è deliberata e consente di attribuire le differenze di
-prestazioni osservate principalmente alla modifica dell’encoder, piuttosto che
-a effetti introdotti da strategie di augmentazione complesse.
+La scelta di adottare una versione semplificata della data augmentation è motivata dalla volontà 
+di evitare l’introduzione di ulteriori inductive bias convoluzionali non legati 
+all’architettura dell’encoder. La pipeline di augmentation proposta in AE-XAD Arrays
+è infatti progettata per rafforzare le proprietà di località e invarianza tipiche 
+delle architetture CNN. L’utilizzo integrale di tale pipeline in combinazione con un 
+encoder Vision Transformer avrebbe reso meno chiara l’attribuzione causale degli effetti 
+osservati, confondendo l’impatto architetturale dell’encoder con quello delle trasformazioni 
+applicate ai dati.
 
-\subsection{Funzione di perdita}
+\subsection{Funzione di loss}
 
-In tutti gli esperimenti è stata utilizzata la funzione di perdita AE-XAD
+In tutti gli esperimenti è stata utilizzata la funzione di loss AE-XAD
 originale, implementata fedelmente secondo la formulazione proposta nel paper
 Arrays. La loss è definita a livello pixel-wise e combina il contributo dei
 pixel normali e dei pixel anomali mediante un termine di normalizzazione che

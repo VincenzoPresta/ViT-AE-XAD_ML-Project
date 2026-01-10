@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex main"] 1767950601.53918 "main.aux" "main.bbl" "main" 1767950607.66138 0
+["bibtex main"] 1768042819.37982 "main.aux" "main.bbl" "main" 1768042822.72523 0
   "./bibliography.bib" 1767777477 336 c96bc00d6c91f207c7d9dc3fc3886543 ""
   "C:/Users/Utente/AppData/Local/Programs/MiKTeX/bibtex/bst/ieeetran/IEEEtran.bst" 1440622569 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "main.aux" 1767950606 11660 5d7a7db6f9d618dc4ee82389bf536143 "pdflatex"
+  "main.aux" 1768042821 11658 b687f74648252ee225dba7bc3e8196d5 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1767950606.1693 "c:/Users/Utente/Desktop/Uni - Current/ML_Project--AE-XAD/docs/report/main.tex" "main.pdf" "main" 1767950607.66196 0
+["pdflatex"] 1768042821.23101 "c:/Users/Utente/Desktop/Uni - Current/ML_Project--AE-XAD/docs/report/main.tex" "main.pdf" "main" 1768042822.72583 0
   "C:/Users/Utente/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1764066172 80909 eab91d9745dd2edfd62a31d53cd5fe15 ""
   "C:/Users/Utente/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/tcrm1000.pk" 1763981595 11548 cfabeab67f4854ff6a266a5232c2ba79 ""
   "C:/Users/Utente/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1763980231 24225519 1657abe428e61c5bba418ab2bd6847a5 ""
@@ -86,18 +86,18 @@
   "images/test_34_trainable.jpg" 1767735498 63922 41b4a5607b03282513b9e5e7c777b7a9 ""
   "images/test_79_transistor_frozen.jpg" 1767522954 53628 26b5fa8fb4332fad0bf0ab841a6a2598 ""
   "images/test_79_transistor_trainable.jpg" 1767739584 57302 7e1a20461e112d0053508e579e16b74a ""
-  "main.aux" 1767950606 11660 5d7a7db6f9d618dc4ee82389bf536143 "pdflatex"
-  "main.bbl" 1767950601 1080 4ca7e7c5d5b300fa7690562d9d234877 "bibtex main"
+  "main.aux" 1768042821 11658 b687f74648252ee225dba7bc3e8196d5 "pdflatex"
+  "main.bbl" 1768042819 1080 4ca7e7c5d5b300fa7690562d9d234877 "bibtex main"
   "main.tex" 1767950605 2264 e9f17dec95b24edaa59df6c6d2c23935 ""
-  "main.toc" 1767950606 4092 9e14d64e9ee87e29392e260beea6e88b "pdflatex"
+  "main.toc" 1768042821 4090 e780cd32e735afef5b526620a0efa60d "pdflatex"
   "sections/section1.tex" 1767776732 4769 ff585c7eba0a5effea883bc229bdfc54 ""
   "sections/section2.tex" 1767126488 4426 8a2762f76710b07eedf7356cacdbd2ae ""
   "sections/section3.tex" 1767776900 6091 2e87e760e119f5975bd87f54dc2fccba ""
-  "sections/section4.tex" 1767777684 6582 cc1cf38ee54a9c074604b117b69568d0 ""
-  "sections/section5.tex" 1767797096 8306 beba0cdb7ebfafa0e8f75fa248f722eb ""
+  "sections/section4.tex" 1768039912 7744 aeaf4a326966331e439104aa4f50714b ""
+  "sections/section5.tex" 1768042819 8971 dcf6764499bcb39b56935e49aa89f2a4 ""
   "sections/section6.tex" 1767797056 11944 4007e1bc72d176af7af1a13409314d03 ""
   "sections/section7.tex" 1767888163 11194 c3e3bd8f44680b5e0b084eb056d4bbb7 ""
-  "sections/section8.tex" 1767950574 5479 7e0e0e88e50cc2630c07a0f1a98d4f7d ""
+  "sections/section8.tex" 1767962468 6100 ebc296bbbfe4af221b6bd6975590ae3a ""
   (generated)
   "main.aux"
   "main.log"

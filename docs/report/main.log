@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.11.24)  9 JAN 2026 10:23
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.11.24)  10 JAN 2026 12:00
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -276,12 +276,7 @@ Overfull \hbox (0.15126pt too wide) in paragraph at lines 32--38
  []
 
 [8] [9]
-Overfull \hbox (8.82475pt too wide) in paragraph at lines 97--103
-\OT1/cmr/m/n/10 difetti lo-cali sot-tili. L'obiettivo ^^Re va-l-utare se un fine-tuning end-to-end dell'encoder
- []
-
-
-Overfull \hbox (13.12225pt too wide) in paragraph at lines 104--104
+Overfull \hbox (13.12225pt too wide) in paragraph at lines 118--118
 []\OT1/cmr/bx/n/12 Differenze strut-turali rispetto all'encoder con-voluzionale 
  []
 
@@ -291,11 +286,11 @@ Overfull \hbox (5.36177pt too wide) in paragraph at lines 43--49
  []
 
 [11] [12]
-Overfull \hbox (1.41737pt too wide) in paragraph at lines 129--133
+Overfull \hbox (1.41737pt too wide) in paragraph at lines 138--142
 \OT1/cmr/m/n/10 L'addestramento del mod-ello ^^Re stato ef-fet-tuato uti-liz-zando l'ottimizzatore Adam,
  []
 
-) (sections/section6.tex [13]
+[13]) (sections/section6.tex
 Overfull \hbox (7.91731pt too wide) in paragraph at lines 9--14
 \OT1/cmr/m/n/10 l'impatto delle rap-p-re-sen-tazioni for-nite da un en-coder Trans-former pre-addestrato,
  []
@@ -310,7 +305,7 @@ Overfull \hbox (10.24959pt too wide) in paragraph at lines 245--1
 \OT1/cmr/m/n/10 XAD dipende in modo critico dall'inductive bias lo-cale dell'encoder con-voluzionale,
  []
 
-
+[18]
 Overfull \hbox (1.30617pt too wide) in paragraph at lines 9--15
 []\OT1/cmr/m/n/10 L'analisi ^^Re lim-i-tata alle con-fig-u-razioni con en-coder Vi-sion Trans-former (frozen
  []
@@ -320,24 +315,23 @@ Overfull \hbox (6.31113pt too wide) in paragraph at lines 31--35
 \OT1/cmr/m/it/10 tile\OT1/cmr/m/n/10 , \OT1/cmr/m/it/10 wood \OT1/cmr/m/n/10 e \OT1/cmr/m/it/10 hazel-nut\OT1/cmr/m/n/10 , le mappe di er-rore prodotte dal Vi-sion Trans-former mostrano
  []
 
-[18]
 <images/heatmap_tile_vit_frozen.jpg, id=78, 1011.78pt x 578.16pt>
 File: images/heatmap_tile_vit_frozen.jpg Graphic file (type jpg)
 <use images/heatmap_tile_vit_frozen.jpg>
 Package pdftex.def Info: images/heatmap_tile_vit_frozen.jpg  used on input line 38.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
-<images/heatmap_wood_vit_frozen.jpg, id=79, 1011.78pt x 578.16pt>
+[19]
+<images/heatmap_wood_vit_frozen.jpg, id=82, 1011.78pt x 578.16pt>
 File: images/heatmap_wood_vit_frozen.jpg Graphic file (type jpg)
 <use images/heatmap_wood_vit_frozen.jpg>
 Package pdftex.def Info: images/heatmap_wood_vit_frozen.jpg  used on input line 49.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
- [19 <./images/heatmap_tile_vit_frozen.jpg>]
 <images/heatmap_hazelnut_vit_frozen.jpg, id=83, 1011.78pt x 578.16pt>
 File: images/heatmap_hazelnut_vit_frozen.jpg Graphic file (type jpg)
 <use images/heatmap_hazelnut_vit_frozen.jpg>
 Package pdftex.def Info: images/heatmap_hazelnut_vit_frozen.jpg  used on input line 60.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
- [20 <./images/heatmap_wood_vit_frozen.jpg> <./images/heatmap_hazelnut_vit_frozen.jpg>]
+ [20 <./images/heatmap_tile_vit_frozen.jpg> <./images/heatmap_wood_vit_frozen.jpg>]
 Overfull \hbox (1.13948pt too wide) in paragraph at lines 77--80
 \OT1/cmr/m/n/10 Un com-por-ta-mento sig-ni-fica-ti-va-mente di-verso emerge nelle classi in cui le anoma-
  []
@@ -347,50 +341,51 @@ File: images/heatmap_screw_vit_frozen.jpg Graphic file (type jpg)
 <use images/heatmap_screw_vit_frozen.jpg>
 Package pdftex.def Info: images/heatmap_screw_vit_frozen.jpg  used on input line 83.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
-<images/heatmap_capsule_vit_frozen.jpg, id=88, 1011.78pt x 578.16pt>
+[21 <./images/heatmap_hazelnut_vit_frozen.jpg>]
+<images/heatmap_capsule_vit_frozen.jpg, id=91, 1011.78pt x 578.16pt>
 File: images/heatmap_capsule_vit_frozen.jpg Graphic file (type jpg)
 <use images/heatmap_capsule_vit_frozen.jpg>
 Package pdftex.def Info: images/heatmap_capsule_vit_frozen.jpg  used on input line 95.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
-[21 <./images/heatmap_screw_vit_frozen.jpg>]
 <images/heatmap_transistor_vit_frozen.jpg, id=92, 1011.78pt x 578.16pt>
 File: images/heatmap_transistor_vit_frozen.jpg Graphic file (type jpg)
 <use images/heatmap_transistor_vit_frozen.jpg>
 Package pdftex.def Info: images/heatmap_transistor_vit_frozen.jpg  used on input line 105.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
-<images/heatmap_toothbrush_vit_frozen.jpg, id=93, 1011.78pt x 578.16pt>
+ [22 <./images/heatmap_screw_vit_frozen.jpg> <./images/heatmap_capsule_vit_frozen.jpg>]
+<images/heatmap_toothbrush_vit_frozen.jpg, id=96, 1011.78pt x 578.16pt>
 File: images/heatmap_toothbrush_vit_frozen.jpg Graphic file (type jpg)
 <use images/heatmap_toothbrush_vit_frozen.jpg>
 Package pdftex.def Info: images/heatmap_toothbrush_vit_frozen.jpg  used on input line 116.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
- [22 <./images/heatmap_capsule_vit_frozen.jpg> <./images/heatmap_transistor_vit_frozen.jpg>]
-<images/test_34_frozen.jpg, id=97, 1011.78pt x 578.16pt>
+ [23 <./images/heatmap_transistor_vit_frozen.jpg> <./images/heatmap_toothbrush_vit_frozen.jpg>]
+<images/test_34_frozen.jpg, id=100, 1011.78pt x 578.16pt>
 File: images/test_34_frozen.jpg Graphic file (type jpg)
 <use images/test_34_frozen.jpg>
 Package pdftex.def Info: images/test_34_frozen.jpg  used on input line 143.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
-<images/test_34_trainable.jpg, id=98, 1011.78pt x 578.16pt>
+<images/test_34_trainable.jpg, id=101, 1011.78pt x 578.16pt>
 File: images/test_34_trainable.jpg Graphic file (type jpg)
 <use images/test_34_trainable.jpg>
 Package pdftex.def Info: images/test_34_trainable.jpg  used on input line 149.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
- [23 <./images/heatmap_toothbrush_vit_frozen.jpg>] [24 <./images/test_34_frozen.jpg> <./images/test_34_trainable.jpg>]
-<images/test_79_transistor_frozen.jpg, id=107, 1011.78pt x 578.16pt>
+ [24] [25 <./images/test_34_frozen.jpg> <./images/test_34_trainable.jpg>]
+<images/test_79_transistor_frozen.jpg, id=110, 1011.78pt x 578.16pt>
 File: images/test_79_transistor_frozen.jpg Graphic file (type jpg)
 <use images/test_79_transistor_frozen.jpg>
 Package pdftex.def Info: images/test_79_transistor_frozen.jpg  used on input line 174.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
-<images/test_79_transistor_trainable.jpg, id=108, 1011.78pt x 578.16pt>
+<images/test_79_transistor_trainable.jpg, id=111, 1011.78pt x 578.16pt>
 File: images/test_79_transistor_trainable.jpg Graphic file (type jpg)
 <use images/test_79_transistor_trainable.jpg>
 Package pdftex.def Info: images/test_79_transistor_trainable.jpg  used on input line 180.
 (pdftex.def)             Requested size: 310.4979pt x 177.42805pt.
- [25 <./images/test_79_transistor_frozen.jpg> <./images/test_79_transistor_trainable.jpg>]) (sections/section8.tex [26] [27]
-Overfull \hbox (9.47282pt too wide) in paragraph at lines 79--85
+ [26 <./images/test_79_transistor_frozen.jpg> <./images/test_79_transistor_trainable.jpg>]) (sections/section8.tex [27] [28]
+Overfull \hbox (9.47282pt too wide) in paragraph at lines 93--99
 \OT1/cmr/m/n/10 In con-clu-sione, questo la-voro mostra che la sos-ti-tuzione dell'encoder con-voluzionale
  []
 
-) [28] (main.bbl) [29] (main.aux)
+) [29] (main.bbl) [30] (main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
@@ -409,9 +404,9 @@ Here is how much of TeX's memory you used:
  1141 hyphenation exceptions out of 8191
  57i,13n,65p,670b,495s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\Utente\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm1000.pk><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr9.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/Utente/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on main.pdf (30 pages, 840468 bytes).
+Output written on main.pdf (31 pages, 842849 bytes).
 PDF statistics:
- 186 PDF objects out of 1000 (max. 8388607)
+ 190 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  61 words of extra memory for PDF output out of 10000 (max. 10000000)
 

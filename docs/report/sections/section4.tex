@@ -50,6 +50,12 @@ strutturale fondamentale rispetto all’encoder convoluzionale, poiché introduc
 un passaggio intermedio che non è presente nella formulazione originale di
 AE-XAD.
 
+Nel processo di estrazione delle feature, il token CLS prodotto dal Vision Transformer 
+non viene utilizzato. Tale scelta è coerente con il framework AE-XAD, 
+che richiede una rappresentazione spaziale densa per la ricostruzione e la 
+localizzazione delle anomalie. Il token CLS, pur veicolando informazione globale, 
+non è associato a una posizione spaziale specifica e risulta pertanto incompatibile 
+con la pipeline di ricostruzione e scoring basata su mappe di errore pixel-wise
 \subsection{Componenti mantenuti invariati}
 
 Al fine di isolare l’effetto della sostituzione dell’encoder, tutte le altre
@@ -65,9 +71,18 @@ $\mu + \sigma$ è mantenuta invariata;
 originale.
 \end{itemize}
 
-Questa scelta garantisce che eventuali variazioni nelle prestazioni osservate
-siano attribuibili esclusivamente alle proprietà rappresentazionali dell’encoder
-utilizzato.
+Questa scelta consente di attribuire le variazioni osservate principalmente alle proprietà 
+rappresentazionali dell’encoder utilizzato, a parità di decoder, funzione di perdita e pipeline 
+di scoring.
+
+È tuttavia importante osservare che il decoder di AE-XAD non è architetturalmente neutro
+rispetto all’encoder. La sua struttura, basata su operazioni convoluzionali e su un 
+ramo di ricostruzione non addestrabile, presuppone una rappresentazione latente 
+caratterizzata da località spaziale, stazionarietà e gerarchia multiscala, tipiche 
+delle architetture CNN. Di conseguenza, la sostituzione dell’encoder convoluzionale 
+con un Vision Transformer non costituisce una modifica simmetrica del modello, ma 
+introduce una potenziale discontinuità tra la natura delle feature estratte e le 
+assunzioni implicite del decoder.
 
 \subsection{Regimi di addestramento dell’encoder ViT}
 
@@ -93,7 +108,6 @@ adattamento al dominio industriale.
 
 Nel secondo setting sperimentale, l’encoder Vision Transformer viene reso
 completamente addestrabile e ottimizzato congiuntamente al decoder AE-XAD.
-
 Questo regime consente al ViT di adattare le proprie rappresentazioni al dominio
 specifico del dataset MVTec AD, caratterizzato da texture ripetitive e difetti
 locali sottili. L’obiettivo è valutare se un fine-tuning end-to-end dell’encoder
