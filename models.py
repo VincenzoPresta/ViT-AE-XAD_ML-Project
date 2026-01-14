@@ -88,7 +88,7 @@ class ViT_Encoder(nn.Module):
     def __init__(self, freeze_vit: bool = True, unfreeze_last_n: int = 0):
         super().__init__()
 
-        # STEM CONVOLUZIONALE
+        # STEM CONVOLUZIONALE -> Migliora leggermente la localizzazione senza alterare il comportamento del ViT
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64),
