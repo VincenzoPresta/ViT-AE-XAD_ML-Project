@@ -7,8 +7,7 @@
 \providecommand{\BIBentrySTDinterwordspacing}{\spaceskip=0pt\relax}
 \providecommand{\BIBentryALTinterwordstretchfactor}{4}
 \providecommand{\BIBentryALTinterwordspacing}{\spaceskip=\fontdimen2\font plus
-\BIBentryALTinterwordstretchfactor\fontdimen3\font minus
-  \fontdimen4\font\relax}
+\BIBentryALTinterwordstretchfactor\fontdimen3\font minus \fontdimen4\font\relax}
 \providecommand{\BIBforeignlanguage}[2]{{%
 \expandafter\ifx\csname l@#1\endcsname\relax
 \typeout{** WARNING: IEEEtran.bst: No hyphenation pattern has been}%
@@ -22,7 +21,6 @@
 \BIBdecl
 
 \bibitem{angiulli2025aexad}
-F.~Angiulli, F.~Fassetti, L.~Ferragina, and S.~Nistic{\`o}, ``Explaining
-  anomalies through semi-supervised autoencoders,'' \emph{Array}, 2025.
+F.~Angiulli, F.~Fassetti, L.~Ferragina, and S.~Nistic{\`o}, ``Explaining anomalies through semi-supervised autoencoders,'' \emph{Array}, 2025.
 
 \end{thebibliography}

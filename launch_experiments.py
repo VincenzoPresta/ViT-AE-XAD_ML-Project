@@ -42,7 +42,7 @@ class RatioBatchSampler(Sampler):
         self.norm_idx = np.where(self.labels == 0)[0].tolist()
         assert len(self.anom_idx) > 0 and len(self.norm_idx) > 0, "servono sia normali che anomalie"
 
-        # numero batch per epoca: usa tutti i normali una volta circa
+        # numero batch per epoca
         self.num_batches = int(math.ceil(len(self.norm_idx) / self.norm_bs))
 
     def __len__(self):
@@ -73,25 +73,6 @@ class RatioBatchSampler(Sampler):
             yield batch
             
 
-
-def print_dataset_stats(ds, name="dataset"):
-    # prova: alcuni dataset espongono ds.labels
-    labels = None
-    if hasattr(ds, "labels"):
-        labels = np.asarray(ds.labels)
-    else:
-        # fallback: prova a estrarre label chiamando __getitem__ su un subset (costo alto)
-        raise RuntimeError(f"{name}: ds.labels non trovato. Aggiungi un attributo labels nel dataset.")
-
-    c = Counter(labels.tolist())
-    n0 = c.get(0, 0)
-    n1 = c.get(1, 0)
-    tot = len(labels)
-
-    print(f"[{name}] N={tot}  normal(0)={n0}  anomal(1)={n1}  anom_ratio={n1/max(1,tot):.4f}")
-    
-
-
 def check_first_batch_ratio_dict(loader, name="train_loader"):
     batch = next(iter(loader))  # dict
     y = batch["label"]          # tensor 0/1
@@ -111,9 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32)
     args = parser.parse_args()
 
-    # ============================================================
-    #                  DATASET: MVTec (default)
-    # ============================================================
+    # DATASET: MVTec (default)
     if args.ds == "mvtec":
 
         X_train, Y_train, X_test, Y_test, GT_train, GT_test = mvtec_ViT(
@@ -132,9 +111,8 @@ if __name__ == "__main__":
     print("[DBG] RAW X_train:", X_train.shape, "Y_train sum:", int(Y_train.sum()))
 
 
-    # ============================================================
-    #               CONVERSIONE IN NCHW FLOAT32
-    # ============================================================
+  
+    # CONVERSIONE IN NCHW FLOAT32
     X_train = X_train.transpose(0, 3, 1, 2).astype(np.float32) / 255.0
     X_test = X_test.transpose(0, 3, 1, 2).astype(np.float32) / 255.0
 
@@ -143,9 +121,8 @@ if __name__ == "__main__":
 
     save_dataset(data_path, X_train, Y_train, X_test, Y_test, GT_train, GT_test)
 
-    # ============================================================
-    #                 COSTRUZIONE DATASET E DATALOADER
-    # ============================================================
+
+    #  COSTRUZIONE DATASET E DATALOADER
     train_set = TensorDatasetAD(data_path, train=True)
     test_set = TensorDatasetAD(data_path, train=False)
     
@@ -162,14 +139,13 @@ if __name__ == "__main__":
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, shuffle=False)
     
     
-    # ============================================================
-    #                         MODELLO
-    # ============================================================
+
+    # MODELLO
+
     model = ViT_CNN_Attn((3, 224, 224))
 
-    # ============================================================
-    #                         TRAINER
-    # ============================================================
+
+    # TRAINER
     trainer = Trainer(
         model=model,
         train_loader=train_loader,
@@ -181,15 +157,12 @@ if __name__ == "__main__":
     """tracker = EmissionsTracker()
     tracker.start()"""
 
-    # ============================================================
-    #                        TRAINING
-    # ============================================================
+
+    # TRAINING
     trainer.train(epochs=args.epochs)
 
-    # ============================================================
-    #                        TESTING
-    # ============================================================
 
+    # TEST
     print(">>> Running TEST ...")
     heatmaps, scores, gtmaps, labels = trainer.test()
 

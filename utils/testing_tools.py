@@ -6,10 +6,7 @@ import torch.nn.functional as F
 from scipy.ndimage import label
 
 
-# ============================================
 # NORMALIZZAZIONE (paper)
-# ============================================
-
 def normalize_error(img, out, mode="2"):
     """
     Return e_tilde as 2D map (H,W), consistent with paper heatmap pipeline.
@@ -23,7 +20,7 @@ def normalize_error(img, out, mode="2"):
         raise ValueError("Unknown normalization mode")
 
     num = (img - out) ** 2           # (3,H,W)
-    den = (F_t - img) ** 2 + 1e-8    # (3,H,W) if F_t scalar broadcasts, OK
+    den = (F_t - img) ** 2 + 1e-8    # (3,H,W) 
     e_tilde_c = num / den            # (3,H,W)
 
     # collapse channels -> (H,W)
@@ -31,24 +28,19 @@ def normalize_error(img, out, mode="2"):
 
 
 
-# ============================================
-# STIMA AUTOMATICA DI k̂ (paper)
-# ============================================
-
+# STIMA AUTOMATICA DI k̂ 
 def estimate_k(e_tilde):
-    # ensure 2D
+
     e_tilde = np.squeeze(e_tilde)
 
     mu = e_tilde.mean()
     sigma = e_tilde.std()
 
     bw = (e_tilde > (mu + sigma)).astype(np.uint8)
-
-    # ensure 2D
     bw = np.squeeze(bw)
 
     if bw.ndim != 2:
-        # fallback: collapse last dimension
+        # fallback: collapse dell'ultima dimensione
         bw = bw[..., 0]
 
     if bw.max() == 0:
@@ -60,7 +52,7 @@ def estimate_k(e_tilde):
     lengths_v = []
 
     for comp in range(1, num + 1):
-        # now ALWAYS yields ys,xs only
+
         ys, xs = np.where(labeled == comp)
 
         if len(xs) > 0:
@@ -74,10 +66,7 @@ def estimate_k(e_tilde):
     L = max(np.mean(lengths_h), np.mean(lengths_v))
     return max(1, int(L / 2))
 
-# ============================================
-# GAUSSIAN FILTER (paper)
-# ============================================
-
+# GAUSSIAN FILTER
 def gaussian_filter_paper(e_tilde, k_hat):
     kernel_size = 2 * k_hat + 1
     sigma = k_hat / 3
@@ -95,14 +84,11 @@ def gaussian_filter_paper(e_tilde, k_hat):
     return h
 
 
-# ============================================
-# SCORE S(t) = || e * h ||
-# ============================================
 
+# SCORE S(t) = || e * h ||
 def compute_score(e, e_filt):
     """
     Paper: S(t) = || e · F_k(e) ||.
-    Use L2 norm (Frobenius) on the 2D map.
     """
     m = e * e_filt
     return float(torch.norm(m, p=2).detach().cpu().numpy())
@@ -110,33 +96,32 @@ def compute_score(e, e_filt):
 
 
 def aexad_heatmap_and_score(img_np, out_np, label):
-    img_t = torch.tensor(img_np, dtype=torch.float32)  # (3,H,W) oppure (H,W,3) ? assumo già (3,H,W)
+    img_t = torch.tensor(img_np, dtype=torch.float32)  
     out_t = torch.tensor(out_np, dtype=torch.float32)
 
-    # se arrivano in HWC, normalizza qui
     if img_t.ndim == 3 and img_t.shape[0] != 3 and img_t.shape[-1] == 3:
         img_t = img_t.permute(2, 0, 1)
         out_t = out_t.permute(2, 0, 1)
 
-    # 1) raw error e (H,W)
+    # raw error 
     e = ((img_t - out_t) ** 2).sum(dim=0)
 
-    # 2) normalized error e_tilde (H,W) - Eq.(3)
+    # normalized error 
     e_tilde = normalize_error(img_t, out_t, mode="2")
 
-    # 3) k-hat from e_tilde
+    # k-hat 
     e_tilde_np = np.squeeze(e_tilde.detach().cpu().numpy())
     k_hat = estimate_k(e_tilde_np)
 
-    # 4) score uses F_k(e) (NOT e_tilde)
+    # score 
     e_filt = gaussian_filter_paper(e, k_hat)
     score = compute_score(e, e_filt)
 
-    # 5) heatmap uses F_k(e_tilde)
+    # heatmap
     h = gaussian_filter_paper(e_tilde, k_hat)
     h_np = h.detach().cpu().numpy()
 
-    # 6) binarization on heatmap
+    # binarization 
     mu_h = h_np.mean()
     sigma_h = h_np.std()
     binary_h = (h_np > (mu_h + sigma_h)).astype(np.uint8)

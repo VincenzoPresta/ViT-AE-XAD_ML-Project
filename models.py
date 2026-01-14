@@ -5,6 +5,7 @@ from torchvision.models import vit_b_16, ViT_B_16_Weights
 import torch.nn.functional as F
 
 
+# MODEL DEFINITION
 class ViT_CNN_Attn(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -22,15 +23,15 @@ class AEXAD_Decoder(nn.Module):
     def __init__(self, out_channels=3):
         super().__init__()
 
-        # BRANCH 1 — NON TRAINABLE (paper)
-        # unico upsample 28 → 224 -> sarebbero: (nearest) + tanh + somma canali 
+        # BRANCH 1 NON TRAINABLE 
+        # unico upsample 28 → 224 
         self.up = nn.Upsample(size=(224, 224), mode="nearest")
         for p in self.up.parameters():
             p.requires_grad = False
 
         self.tanh = nn.Tanh()
 
-        # BRANCH 2 — TRAINABLE (paper)
+        # BRANCH 2 — TRAINABLE
         # 28×28×64 → 56×56×32
         self.dec1 = nn.Sequential(
             nn.Conv2d(64, 32, kernel_size=3, padding=1),
@@ -55,7 +56,7 @@ class AEXAD_Decoder(nn.Module):
             nn.SELU(),
         )
 
-        # FINALE 8 → 3
+        # FINALE
         self.final = nn.Sequential(
             nn.Conv2d(8, 8, kernel_size=3, padding=1),
             nn.SELU(),
@@ -71,12 +72,11 @@ class AEXAD_Decoder(nn.Module):
         b1 = self.tanh(b1)
         b1 = b1.view(B, 8, 8, 224, 224).sum(dim=2)  # 64→8
 
-        # BRANCH 2 (paper)
+        # BRANCH 2 
         b2 = self.dec1(x)
         b2 = self.dec2(b2)
         b2 = self.dec3(b2)
 
-        # MODULATION
         fused = b2 + b1 * b2
 
         # FINAL
@@ -88,7 +88,7 @@ class ViT_Encoder(nn.Module):
     def __init__(self, freeze_vit: bool = True, unfreeze_last_n: int = 0):
         super().__init__()
 
-        # STEM CONV
+        # STEM CONVOLUZIONALE
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64),
@@ -98,15 +98,15 @@ class ViT_Encoder(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        # Visual transformer (originale torchvision)
+        # ViT
         vit = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
 
-        self.hidden_dim = vit.hidden_dim  # 768
+        self.hidden_dim = vit.hidden_dim 
         self.conv_proj = vit.conv_proj
         self.encoder_vit = vit.encoder
         self.class_token = vit.class_token
         
-        # FREEZE / UNFREEZE come prima
+        # FREEZE 
         if freeze_vit:
             for p in self.conv_proj.parameters():
                 p.requires_grad = False
@@ -126,7 +126,7 @@ class ViT_Encoder(nn.Module):
             if hasattr(self.encoder_vit, "ln"):
                 _unfreeze_ln(self.encoder_vit.ln)
 
-        # RICOSTRUZIONE SPAZIALE (uguale)
+        # RICOSTRUZIONE SPAZIALE 
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
             nn.SELU(),
@@ -169,11 +169,12 @@ class ViT_Encoder(nn.Module):
 
         return out
 
-class ViT_Encoder_Scratch(nn.Module):
+#Versione completamente addestrabile
+class ViT_Encoder_Scratch(nn.Module): 
     def __init__(self):
         super().__init__()
 
-        # STEM CONV (la lasci uguale)
+        # STEM 
         self.stem = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64),
@@ -191,7 +192,7 @@ class ViT_Encoder_Scratch(nn.Module):
         self.encoder_vit = vit.encoder
         self.class_token = vit.class_token
 
-        # Ricostruzione spaziale (identica)
+        # Ricostruzione spaziale 
         self.to_spatial = nn.Sequential(
             nn.Conv2d(self.hidden_dim, 256, kernel_size=1),
             nn.SELU(),

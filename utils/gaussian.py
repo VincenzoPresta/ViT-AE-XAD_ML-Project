@@ -4,10 +4,7 @@ import numpy as np
 
 
 def gaussian_smoothing(hm, kernel_size=21, sigma=4.0):
-    """
-    hm: numpy array (B,H,W) o torch tensor (B,H,W)
-    output: numpy array (B,H,W)
-    """
+    
     if isinstance(hm, np.ndarray):
         hm = torch.from_numpy(hm).float()
 

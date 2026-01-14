@@ -11,8 +11,6 @@ class TensorDatasetAD(Dataset):
     - X_train.npy / X_test.npy  (float32, shape N x C x H x W)
     - GT_train.npy / GT_test.npy (float32, shape N x 1 x H x W)
     - Y_train.npy / Y_test.npy  (0/1)
-
-    Nessuna augmentation viene applicata qui.
     """
     def __init__(self, base_path, train=True):
         super().__init__()

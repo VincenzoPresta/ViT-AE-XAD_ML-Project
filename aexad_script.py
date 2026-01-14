@@ -47,16 +47,12 @@ class Trainer:
         if self.cuda:
             self.model.cuda()
 
-        # ----------------------
-        # LOSS AE-XAD (paper)
-        # ----------------------
+        # LOSS AE-XAD 
         self.criterion = AEXAD_Loss(debug=False)
         if self.cuda:
             self.criterion = self.criterion.cuda()
 
-        # ----------------------
         # OPTIMIZER
-        # ----------------------
         
         #ViT frozen
         '''self.optimizer = torch.optim.AdamW(
@@ -130,23 +126,20 @@ class Trainer:
             
            
 
-            # --- periodic evaluation (logging only) ---
-            if (epoch + 1) % 10 == 0:
+            # logging metriche ogni 10 epoche
+            '''if (epoch + 1) % 10 == 0:
                 self.model.eval()
                 metrics = self.evaluate_metrics()
                 print(f"[Eval @ {epoch+1}] {metrics}")
-                self.model.train()
+                self.model.train()'''
                 
-                
-
         torch.save(self.model.state_dict(), os.path.join(self.save_path, "vit_final.pt"))
         print("[Training done] saved vit_final.pt")
 
 
 
-    # ============================================
-    #                   TEST
-    # ============================================
+
+    # TEST
     def test(self):
         self.model.eval()
 
@@ -168,20 +161,15 @@ class Trainer:
                 if self.cuda:
                     img = img.cuda()
 
-                # --------------------------------------------
-                #               MODEL FORWARD
-                # --------------------------------------------
+                
+                # MODEL FORWARD
                 out_t = self.model(img).cpu()  # tensor (1,3,224,224)
                 out = out_t.numpy()[0]  # numpy  (3,224,224)
 
                 img_np = img.cpu().numpy()[0]  # (3,224,224)
                 gt_np = gt.numpy()[0]  # (1,224,224)
 
-                # --------------------------------------------
-                #      AE-XAD HEATMAP & SCORE UFFICIALI
-                # --------------------------------------------
-                
-                
+                # HEATMAP & SCORE 
                 lab_val = int(batch["label"].item())
                 gt_sum = float(gt.sum().item())
 
@@ -197,10 +185,7 @@ class Trainer:
                 print(f"[SAMPLE {i}] LABEL={lab_val} GT_SUM={gt_sum} score={score} k_hat={k_hat}")
 
 
-                # =====================================================
-                #           PLOT 6 IMMAGINI (STILE PAPER)
-                # =====================================================
-
+                # PLOT 
                 fig = plt.figure(figsize=(14, 8))
 
                 plt.subplot(2, 3, 1)
@@ -286,7 +271,7 @@ class Trainer:
                 per_img_auc.append(auc)
         X_AUC = float(np.mean(per_img_auc)) if len(per_img_auc) > 0 else float("nan")
 
-        # IoU/F1 (solo anomalie)
+        # IoU/F1 
         IoUs, F1s = [], []
         for hm, gt, lab in zip(heatmaps, gtmaps, labels):
             if int(lab) == 0:

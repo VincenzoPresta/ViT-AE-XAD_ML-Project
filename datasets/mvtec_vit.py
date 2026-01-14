@@ -11,8 +11,7 @@ import numpy as np
 import random
 import torchvision.transforms as T
 from PIL import Image
-from datasets.transforms_vit import get_vit_augmentation  # la versione FIXATA
-# Assicura che get_vit_augmentation sia quella senza Normalize e senza jitter/rotazioni.
+from datasets.transforms_vit import get_vit_augmentation 
 
 
 def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
@@ -21,7 +20,7 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
 
     np.random.seed(seed)
 
-    # SOLO: Resize + ToTensor + Noise leggerissimo
+    # Resize + ToTensor + Noise 
     aug_train = get_vit_augmentation(224)
 
     labels = (
@@ -35,9 +34,8 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
 
     X_train, X_test, GT_train, GT_test = [], [], [], []
 
-    # ============================================================
-    #                 NORMAL TRAIN (NO AUGMENTATION)
-    # ============================================================
+
+    # NORMAL TRAIN (NO AUGMENTATION)
     normal_tr_path = os.path.join(root, 'train', 'good')
     normal_files_tr = sorted(os.listdir(normal_tr_path))
 
@@ -49,9 +47,7 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
             X_train.append(np.array(img, dtype=np.uint8))
             GT_train.append(np.zeros((224, 224, 1), dtype=np.uint8))
 
-    # ============================================================
-    #                 NORMAL TEST (NO AUGMENTATION)
-    # ============================================================
+    # NORMAL TEST (NO AUGMENTATION)
     normal_te_path = os.path.join(root, 'test', 'good')
     normal_files_te = sorted(os.listdir(normal_te_path))
 
@@ -63,9 +59,8 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
             X_test.append(np.array(img, dtype=np.uint8))
             GT_test.append(np.zeros((224, 224, 1), dtype=np.uint8))
 
-    # ============================================================
-    #   ANOMALIE: SELEZIONE STRATIFICATA (PAPER) -> 3 PER CATEGORIA
-    # ============================================================
+
+    # ANOMALIE: SELEZIONE STRATIFICATA (PAPER) -> 3 PER CATEGORIA
     outlier_path = os.path.join(root, "test")
     outlier_classes = sorted(os.listdir(outlier_path))
 
@@ -98,13 +93,8 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
         for f in te_files:
             test_anoms.append((cl_a, f))
 
-    print(f"[SPLIT] train_anoms={len(train_anoms)} test_anoms={len(test_anoms)} (n_per_cat={n_anom_per_cls})")
 
-
-
-    # ========================================================
-    #        TRAIN ANOMALIES (leggero noise, no rotazioni)
-    # ========================================================
+    # TRAIN ANOMALIES 
 
     for (cl_a, file) in train_anoms:
         img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
@@ -115,9 +105,9 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
         img = img.resize((224, 224), Image.NEAREST)
         mask = mask.resize((224, 224), Image.NEAREST)
 
-        # --- replicate "as-is" 5 volte (paper) ---
+        # replicate 5 volte 
         for rep in range(5):
-            img_aug = aug_train(img)  # solo noise leggero come già fai
+            img_aug = aug_train(img)  
             img_aug = (img_aug.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
 
             X_train.append(img_aug)
@@ -150,9 +140,7 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
                 
 
 
-    # ========================================================
-    #                     TEST ANOMALIES
-    # ========================================================
+    # TEST ANOMALIES
 
     for (cl_a, file) in test_anoms:
         img = Image.open(os.path.join(root, 'test', cl_a, file)).convert('RGB')
@@ -166,9 +154,7 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
         X_test.append(np.array(img, dtype=np.uint8))
         GT_test.append(np.array(mask, dtype=np.uint8)[..., None])
 
-    # ========================================================
-    #               CONVERSIONE FINALE
-    # ========================================================
+    # CONVERSIONE FINALE
     X_train = np.array(X_train, dtype=np.uint8)
     X_test  = np.array(X_test , dtype=np.uint8)
     GT_train = np.array(GT_train, dtype=np.uint8)
@@ -181,9 +167,9 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
     Y_test = np.zeros(X_test.shape[0], dtype=np.uint8)
     Y_test[len(normal_files_te):] = 1
 
-    print(f"X_train {X_train.shape}, X_test {X_test.shape}")
+    '''print(f"X_train {X_train.shape}, X_test {X_test.shape}")
     print(f"GT_train {GT_train.shape}, GT_test {GT_test.shape}")
-    print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")
+    print(f"Training anomalies: {Y_train.sum()}, Test anomalies: {Y_test.sum()}")'''
 
     return X_train, Y_train, X_test, Y_test, GT_train, GT_test
 
@@ -191,7 +177,7 @@ def mvtec_ViT(cl, path, n_anom_per_cls, seed=None, use_copy_paste=False):
 def copy_paste_defect_affine(base_img, anomaly_img, anomaly_mask,
                              rot_deg=20, scale_range=(0.7, 1.3), max_trans_frac=0.10):
     """
-    AE-XAD Arrays compliant cut-paste:
+    AE-XAD Arrays:
     - crop difetto via bbox mask
     - random affine (rot+scale+translation) su difetto e maschera
     - paste su immagine normale in posizione random valida
@@ -210,7 +196,7 @@ def copy_paste_defect_affine(base_img, anomaly_img, anomaly_mask,
     defect = anomaly_img.crop((x1, y1, x2 + 1, y2 + 1))
     defect_mask = anomaly_mask.crop((x1, y1, x2 + 1, y2 + 1))
 
-    # --- random affine params ---
+    # parametri random affine
     angle = float(np.random.uniform(-rot_deg, rot_deg))
     scale = float(np.random.uniform(scale_range[0], scale_range[1]))
 
@@ -219,11 +205,11 @@ def copy_paste_defect_affine(base_img, anomaly_img, anomaly_mask,
     max_dy = int(max_trans_frac * ph)
     trans = (int(np.random.uniform(-max_dx, max_dx)), int(np.random.uniform(-max_dy, max_dy)))
 
-    # apply same affine to defect & mask (NEAREST for mask)
+    # applica trasformazione
     defect_t = TF.affine(defect, angle=angle, translate=trans, scale=scale, shear=[0.0, 0.0], interpolation=Image.BILINEAR)
     mask_t   = TF.affine(defect_mask, angle=angle, translate=trans, scale=scale, shear=[0.0, 0.0], interpolation=Image.NEAREST)
 
-    # bbox after transform (re-crop tight bbox to avoid huge transparent area)
+    # recrop bbox su maschera trasformata
     mask_np2 = np.array(mask_t) > 127
     if mask_np2.sum() == 0:
         return None, None
