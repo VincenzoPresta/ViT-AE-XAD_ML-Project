@@ -21,27 +21,6 @@ a livello di immagine sia a livello pixel-wise. L’efficacia di tali approcci d
 non solo dalla capacità del modello di rappresentare correttamente la normalità, ma anche
 dalla struttura spaziale dell’errore di ricostruzione prodotto.
 
-\subsection{Il framework AE-XAD}
-
-Il framework AE-XAD (AutoEncoder for eXplainable Anomaly Detection) rappresenta un’evoluzione
-degli approcci classici basati su autoencoder, introducendo una pipeline progettata
-specificamente per la localizzazione delle anomalie in contesti industriali
-\cite{angiulli2025aexad}. Il metodo è composto da un encoder convoluzionale, un decoder con una
-struttura a rami e un meccanismo di decisione basato su statistiche globali dell’errore di
-ricostruzione.
-
-Un elemento centrale di AE-XAD è la costruzione di una \emph{reconstruction error map},
-ottenuta confrontando l’immagine di input con la ricostruzione prodotta dal decoder. Tale mappa
-rappresenta la distribuzione spaziale dell’errore di ricostruzione ed è utilizzata come base
-per la localizzazione delle anomalie. Per ridurre il rumore ad alta frequenza, la mappa viene
-sottoposta a un’operazione di filtraggio, seguita da una binarizzazione mediante una soglia
-statistica globale definita come $\mu + \sigma$, dove $\mu$ e $\sigma$ indicano rispettivamente
-la media e la deviazione standard dei valori di errore.
-
-Questo meccanismo di sogliatura implica che le anomalie siano caratterizzate da errori di
-ricostruzione significativamente superiori al rumore di fondo e concentrati in regioni
-spazialmente limitate. Di conseguenza, l’efficacia della pipeline AE-XAD dipende in modo
-critico dalla distribuzione spaziale dell’errore di ricostruzione prodotto dall’encoder–decoder.
 
 \subsection{Inductive bias nelle architetture di visione}
 

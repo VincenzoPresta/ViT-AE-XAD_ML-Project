@@ -1,3 +1,4 @@
+\newpage
 \section{Modifica architetturale: integrazione del Vision Transformer}
 
 In questa sezione viene descritta la modifica architetturale introdotta in questo
@@ -55,7 +56,7 @@ non viene utilizzato. Tale scelta è coerente con il framework AE-XAD,
 che richiede una rappresentazione spaziale densa per la ricostruzione e la 
 localizzazione delle anomalie. Il token CLS, pur veicolando informazione globale, 
 non è associato a una posizione spaziale specifica e risulta pertanto incompatibile 
-con la pipeline di ricostruzione e scoring basata su mappe di errore pixel-wise
+con la pipeline di ricostruzione e scoring basata su mappe di errore pixel-wise.
 \subsection{Componenti mantenuti invariati}
 
 Al fine di isolare l’effetto della sostituzione dell’encoder, tutte le altre
@@ -91,7 +92,7 @@ all’interno del framework AE-XAD, sono stati considerati due distinti regimi d
 addestramento, che differiscono esclusivamente per la modalità di aggiornamento
 dei parametri dell’encoder.
 
-\subsubsection{Encoder ViT completamente frozen}
+\subsubsection{Encoder ViT congelato}
 
 Nel primo setting sperimentale, l’intero encoder Vision Transformer è mantenuto
 congelato durante l’addestramento. In questo caso, vengono aggiornati
@@ -104,7 +105,7 @@ rappresentazioni apprese dal ViT in fase di pre-addestramento siano direttamente
 compatibili con il decoder e con il meccanismo di scoring di AE-XAD, senza alcun
 adattamento al dominio industriale.
 
-\subsubsection{Encoder ViT completamente trainable}
+\subsubsection{Encoder ViT addestrabile}
 
 Nel secondo setting sperimentale, l’encoder Vision Transformer viene reso
 completamente addestrabile e ottimizzato congiuntamente al decoder AE-XAD.

@@ -114,7 +114,7 @@ originale dell’anomalia.
 
 La scelta di adottare una versione semplificata della data augmentation è motivata dalla volontà 
 di evitare l’introduzione di ulteriori inductive bias convoluzionali non legati 
-all’architettura dell’encoder. La pipeline di augmentation proposta in AE-XAD Arrays
+all’architettura dell’encoder. La pipeline di augmentation proposta in \cite{angiulli2025aexad}
 è infatti progettata per rafforzare le proprietà di località e invarianza tipiche 
 delle architetture CNN. L’utilizzo integrale di tale pipeline in combinazione con un 
 encoder Vision Transformer avrebbe reso meno chiara l’attribuzione causale degli effetti 
@@ -124,8 +124,8 @@ applicate ai dati.
 \subsection{Funzione di loss}
 
 In tutti gli esperimenti è stata utilizzata la funzione di loss AE-XAD
-originale, implementata fedelmente secondo la formulazione proposta nel paper
-Arrays. La loss è definita a livello pixel-wise e combina il contributo dei
+originale, implementata fedelmente secondo la formulazione proposta nel paper \cite{angiulli2025aexad}. 
+La loss è definita a livello pixel-wise e combina il contributo dei
 pixel normali e dei pixel anomali mediante un termine di normalizzazione che
 tiene conto del numero di pixel anomali presenti nell’immagine.
 
