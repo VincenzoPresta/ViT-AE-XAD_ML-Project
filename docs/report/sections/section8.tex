@@ -7,12 +7,12 @@
 In questo lavoro è stata analizzata la compatibilità tra un encoder basato su
 Vision Transformer e il framework AE-XAD, mantenendo invariata l’intera
 pipeline di ricostruzione, scoring e localizzazione. L’obiettivo era valutare 
-l’impatto di un diverso inductive bias all’interno di un paradigma di anomaly detection basato su
+l’impatto di un diverso encoder all’interno di un paradigma di anomaly detection basato su
 errori di ricostruzione pixel-wise e sogliatura statistica globale.
 
 I risultati quantitativi mostrano che l’utilizzo di un Vision Transformer come
 encoder consente di mantenere prestazioni image-level discrete, in particolare
-nel setting frozen, dove i valori di X-AUC rimangono relativamente elevati per
+nel setting congelato, dove i valori di X-AUC rimangono relativamente elevati per
 diverse classi del dataset MVTec AD. Ciò indica che le rappresentazioni
 pre-addestrate del ViT sono in grado di supportare il ranking globale delle
 anomalie.
@@ -54,12 +54,12 @@ localizzata dell’errore di ricostruzione.
 Il confronto tra i due regimi di addestramento del Vision Transformer fornisce
 ulteriori indicazioni sul ruolo dell’encoder all’interno del framework AE-XAD.
 Nel setting frozen, l’encoder ViT mantiene rappresentazioni pre-addestrate che,
-pur non ottimali per la localizzazione pixel-wise, conservano una certa
+anche se non ottimali per la localizzazione pixel-wise, conservano una certa
 correlazione con le anomalie presenti nell’immagine.
 
 Nel setting completamente trainable, invece, il fine-tuning end-to-end tende in
 diversi casi a ridurre ulteriormente il segnale di errore associato alle regioni
-anomale, fino alla quasi soppressione dello stesso. Questo comportamento
+anomale, in alcuni casi fino alla quasi soppressione dello stesso. Questo comportamento
 suggerisce che l’adattamento al dominio industriale non solo non compensi il
 disallineamento strutturale introdotto dall’inductive bias globale del Vision
 Transformer, ma possa accentuarlo all’interno di una pipeline basata su
@@ -67,7 +67,7 @@ ricostruzione.
 
 Questa evidenza rafforza l’ipotesi che le limitazioni osservate non siano
 attribuibili a una mancanza di capacità del modello o a un regime di training
-sub-ottimale, bensì a una incompatibilità più profonda tra la natura delle
+sub-ottimale, bensì a una incompatibilità tra la natura delle
 rappresentazioni apprese dal Vision Transformer e il meccanismo di decisione
 pixel-wise adottato da AE-XAD.
 
@@ -102,8 +102,10 @@ utili per il ranking delle anomalie, ma richiedono una riprogettazione del
 meccanismo di scoring e localizzazione per essere pienamente sfruttate in un
 contesto di anomaly detection basato su ricostruzione.
 
-Come prospettive future, risulta pertanto di particolare interesse lo studio di
-pipeline ibride, in cui encoder basati su Vision Transformer siano affiancati da
-meccanismi di localizzazione adattivi o da strategie di sogliatura non globali,
-al fine di riallineare le proprietà rappresentazionali del modello con gli
-obiettivi del task.
+Come prospettive future, risulta pertanto di particolare interesse lo studio di 
+pipeline ibride, in cui encoder basati su Vision Transformer siano affiancati da 
+meccanismi di localizzazione e decisione coerenti con rappresentazioni globali, 
+superando l’ipotesi di una sogliatura statistica unica basata sulla concentrazione 
+locale dell’errore, al fine di riallineare le proprietà rappresentazionali del 
+modello con gli obiettivi del task.
+
