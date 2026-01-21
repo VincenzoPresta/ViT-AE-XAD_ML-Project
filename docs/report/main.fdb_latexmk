@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex main"] 1768663099.12742 "main.aux" "main.bbl" "main" 1768732048.60723 0
+["bibtex main"] 1769003769.29801 "main.aux" "main.bbl" "main" 1769003770.56574 0
   "./bibliography.bib" 1768136639.70383 328 c96bc00d6c91f207c7d9dc3fc3886543 ""
   "/usr/local/texlive/2025/texmf-dist/bibtex/bst/ieeetran/IEEEtran.bst" 1440712899 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "main.aux" 1768732048.19121 11655 7dc3df017a002453cbe2ca11a73769f0 "pdflatex"
+  "main.aux" 1769003770.17735 11655 53ad55e7ee4cd61026a4a11362a08b0d "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1768732047.4054 "/Users/vincenzopresta/Desktop/Uni-current/MDL/progetto/AE-XAD-main/docs/report/main.tex" "main.pdf" "main" 1768732048.60748 0
-  "/Users/vincenzopresta/Desktop/Uni-current/MDL/progetto/AE-XAD-main/docs/report/main.tex" 1768660775.46481 2218 f8726e3cfd56c84b547475edd412645b ""
+["pdflatex"] 1769003769.54042 "/Users/vincenzopresta/Desktop/Uni-current/MDL/progetto/AE-XAD-main/docs/report/main.tex" "main.pdf" "main" 1769003770.56603 0
+  "/Users/vincenzopresta/Desktop/Uni-current/MDL/progetto/AE-XAD-main/docs/report/main.tex" 1769003767.50782 2219 864742dd49abf389e6be3e814fcefeaa ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/tfm/jknappen/ec/tcrm1000.tfm" 1136768653 1536 e07581a4bb3136ece9eeb4c3ffab8233 ""
@@ -90,10 +90,10 @@
   "images/test_34_trainable.jpg" 1768136639.70981 63922 41b4a5607b03282513b9e5e7c777b7a9 ""
   "images/test_79_transistor_frozen.jpg" 1768136639.71053 53628 26b5fa8fb4332fad0bf0ab841a6a2598 ""
   "images/test_79_transistor_trainable.jpg" 1768136639.71137 57302 7e1a20461e112d0053508e579e16b74a ""
-  "main.aux" 1768732048.19121 11655 7dc3df017a002453cbe2ca11a73769f0 "pdflatex"
-  "main.bbl" 1768663099.38535 1048 75f5ce210ed645773335a409d945fc01 "bibtex main"
-  "main.tex" 1768660775.46481 2218 f8726e3cfd56c84b547475edd412645b ""
-  "main.toc" 1768732048.19244 3999 9f790e68defe929cd6d14a557c5ce8f1 "pdflatex"
+  "main.aux" 1769003770.17735 11655 53ad55e7ee4cd61026a4a11362a08b0d "pdflatex"
+  "main.bbl" 1769003769.53739 1048 75f5ce210ed645773335a409d945fc01 "bibtex main"
+  "main.tex" 1769003767.50782 2219 864742dd49abf389e6be3e814fcefeaa ""
+  "main.toc" 1769003770.17859 3999 9f790e68defe929cd6d14a557c5ce8f1 "pdflatex"
   "sections/section1.tex" 1768659085.18398 4714 43eec5a5ca0e7f1218c4d89738ea39ad ""
   "sections/section2.tex" 1768659458.35398 2870 f5acb30ea5b369bf80168f0b8a9e343f ""
   "sections/section3.tex" 1768659619.6025 5978 72464f758ac714bbd88028a336433e3b ""
