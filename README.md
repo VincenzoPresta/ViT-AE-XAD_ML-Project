@@ -32,7 +32,6 @@ The proposed **ViT-AE-XAD** pipeline preserves the original AE-XAD structure whi
 
 The project explicitly **does not redesign the loss or detection logic**, in order to isolate the effect of the encoder architecture.
 
-
 ## 🔍 Key Experiments
 
 The analysis includes:
@@ -63,6 +62,3 @@ This project is based on the original **AE-XAD (AutoEncoder-based eXplainable An
 The present work **extends and re-engineers the original AE-XAD pipeline** by replacing the CNN-based encoder with a Vision Transformer (ViT), while preserving the original decoder, loss functions, evaluation metrics, and experimental protocol.
 
 All credit for the original AE-XAD method and implementation goes to the original authors.
-
-
-These results highlight a **representation–decision mismatch** when global ViT features are paired with local, pixel-wise anomaly scoring.
