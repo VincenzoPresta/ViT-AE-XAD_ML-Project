@@ -4,7 +4,6 @@ This repository contains the implementation and experimental analysis of **ViT-A
 
 The project is developed as part of an academic Machine Learning course and focuses on **faithfully re-engineering the original AE-XAD pipeline** while replacing the CNN-based encoder with a Vision Transformer, in order to study representational alignment, localization behavior, and performance trade-offs.
 
----
 
 ## 📌 Project Motivation
 
@@ -15,7 +14,6 @@ This project explores the following research question:
 
 > *Can a Vision Transformer be integrated into the AE-XAD framework without breaking its explainability and localization properties?*
 
----
 
 ## 🧠 Method Overview
 
@@ -34,7 +32,6 @@ The proposed **ViT-AE-XAD** pipeline preserves the original AE-XAD structure whi
 
 The project explicitly **does not redesign the loss or detection logic**, in order to isolate the effect of the encoder architecture.
 
----
 
 ## 🔍 Key Experiments
 
@@ -48,7 +45,6 @@ The analysis includes:
 
 Experiments are conducted on the **MVTec AD dataset**, following the original AE-XAD evaluation protocol.
 
----
 
 ## 📊 Main Findings
 
@@ -56,5 +52,17 @@ Experiments are conducted on the **MVTec AD dataset**, following the original AE
 - End-to-end fine-tuning of ViT **does not consistently improve performance**
 - The AE-XAD framework appears **implicitly aligned with convolutional inductive biases**
 - A single global threshold based on local reconstruction statistics becomes less effective with ViT features
+
+---
+## Original Work and Acknowledgments
+
+This project is based on the original **AE-XAD (AutoEncoder-based eXplainable Anomaly Detection)** framework developed by AIDALab–DIMES.
+
+- Original repository: https://github.com/AIDALab-DIMES/AE-XAD
+
+The present work **extends and re-engineers the original AE-XAD pipeline** by replacing the CNN-based encoder with a Vision Transformer (ViT), while preserving the original decoder, loss functions, evaluation metrics, and experimental protocol.
+
+All credit for the original AE-XAD method and implementation goes to the original authors.
+
 
 These results highlight a **representation–decision mismatch** when global ViT features are paired with local, pixel-wise anomaly scoring.
